@@ -1,0 +1,1032 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>RightTrain Pinned UX Board</title>
+  <link rel="icon" href="data:,">
+  <style>
+    :root {
+      color-scheme: light;
+      --ink: #18202f;
+      --muted: #657087;
+      --paper: #f4f7f4;
+      --surface: #ffffff;
+      --rail: #1d7f64;
+      --rail-soft: #d8eee6;
+      --blue: #245fba;
+      --amber: #b66a04;
+      --danger: #b83030;
+      --line: #d7ded8;
+      --shadow: 0 22px 60px rgba(32, 44, 48, 0.16);
+      font-family: -apple-system, BlinkMacSystemFont, "SF Pro Text", "Segoe UI", sans-serif;
+    }
+
+    * {
+      box-sizing: border-box;
+    }
+
+    body {
+      margin: 0;
+      color: var(--ink);
+      background:
+        linear-gradient(120deg, rgba(29, 127, 100, 0.08), transparent 42%),
+        linear-gradient(180deg, #fbfcfa 0%, var(--paper) 100%);
+    }
+
+    .masthead {
+      min-height: 76svh;
+      display: grid;
+      grid-template-columns: minmax(280px, 0.9fr) minmax(320px, 1.1fr);
+      gap: clamp(32px, 6vw, 84px);
+      align-items: center;
+      padding: clamp(28px, 6vw, 72px);
+      border-bottom: 1px solid var(--line);
+    }
+
+    .brand {
+      max-width: 620px;
+    }
+
+    .brand-mark {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      color: var(--rail);
+      font-weight: 800;
+      letter-spacing: 0;
+      margin-bottom: 28px;
+    }
+
+    .pin-dot {
+      width: 18px;
+      height: 18px;
+      border: 4px solid var(--rail);
+      border-radius: 50%;
+      box-shadow: 0 0 0 8px var(--rail-soft);
+    }
+
+    h1 {
+      margin: 0;
+      font-size: clamp(48px, 8vw, 108px);
+      line-height: 0.92;
+      letter-spacing: 0;
+    }
+
+    .summary {
+      margin: 24px 0 0;
+      max-width: 500px;
+      font-size: clamp(18px, 2.2vw, 24px);
+      line-height: 1.36;
+      color: var(--muted);
+    }
+
+    .thesis {
+      display: grid;
+      gap: 14px;
+      margin-top: 36px;
+      max-width: 520px;
+    }
+
+    .thesis-row {
+      display: grid;
+      grid-template-columns: 96px 1fr;
+      gap: 14px;
+      padding: 14px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .thesis-row strong {
+      color: var(--rail);
+      font-size: 13px;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+
+    .hero-phone {
+      justify-self: center;
+      animation: float-in 700ms ease-out both;
+    }
+
+    .board {
+      padding: clamp(28px, 5vw, 64px);
+    }
+
+    .section-title {
+      display: flex;
+      justify-content: space-between;
+      gap: 24px;
+      align-items: end;
+      margin-bottom: 24px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 16px;
+    }
+
+    .section-title h2 {
+      margin: 0;
+      font-size: clamp(28px, 4vw, 52px);
+      letter-spacing: 0;
+    }
+
+    .section-title p {
+      max-width: 520px;
+      margin: 0;
+      color: var(--muted);
+      line-height: 1.45;
+    }
+
+    .screen-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+      gap: clamp(22px, 4vw, 44px);
+      align-items: start;
+    }
+
+    .screen-study {
+      display: grid;
+      gap: 12px;
+    }
+
+    .screen-label {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 14px;
+      min-height: 42px;
+    }
+
+    .screen-label h3 {
+      margin: 0;
+      font-size: 16px;
+    }
+
+    .screen-label span {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+      text-align: right;
+    }
+
+    .phone {
+      width: min(100%, 382px);
+      min-height: 760px;
+      margin: 0 auto;
+      padding: 14px;
+      border-radius: 42px;
+      background: #111820;
+      box-shadow: var(--shadow);
+    }
+
+    .screen {
+      min-height: 732px;
+      overflow: hidden;
+      border-radius: 31px;
+      background: var(--paper);
+      position: relative;
+    }
+
+    .statusbar {
+      height: 42px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      padding: 0 22px;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    .nav {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      height: 44px;
+      font-weight: 800;
+    }
+
+    .content {
+      padding: 18px 18px 96px;
+      display: grid;
+      gap: 16px;
+    }
+
+    .tabbar {
+      position: absolute;
+      left: 0;
+      right: 0;
+      bottom: 0;
+      height: 76px;
+      display: grid;
+      grid-template-columns: repeat(4, 1fr);
+      align-items: center;
+      background: rgba(255, 255, 255, 0.92);
+      border-top: 1px solid var(--line);
+      backdrop-filter: blur(20px);
+    }
+
+    .tab {
+      display: grid;
+      justify-items: center;
+      gap: 4px;
+      color: var(--muted);
+      font-size: 11px;
+      font-weight: 650;
+    }
+
+    .tab.active {
+      color: var(--rail);
+    }
+
+    .icon {
+      font-size: 18px;
+      line-height: 1;
+    }
+
+    .pin-card,
+    .option,
+    .empty,
+    .commute-row,
+    .search-panel {
+      background: var(--surface);
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      padding: 16px;
+    }
+
+    .pin-header {
+      display: grid;
+      gap: 10px;
+      border-bottom: 1px solid var(--line);
+      padding-bottom: 14px;
+      margin-bottom: 14px;
+    }
+
+    .topline,
+    .row {
+      display: flex;
+      align-items: flex-start;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .route {
+      font-size: 19px;
+      line-height: 1.18;
+      font-weight: 800;
+    }
+
+    .meta,
+    .caption {
+      color: var(--muted);
+      font-size: 13px;
+      line-height: 1.35;
+    }
+
+    .pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      white-space: nowrap;
+      padding: 5px 9px;
+      border-radius: 999px;
+      color: var(--rail);
+      background: var(--rail-soft);
+      font-size: 12px;
+      font-weight: 760;
+    }
+
+    .pill.blue {
+      color: var(--blue);
+      background: rgba(36, 95, 186, 0.12);
+    }
+
+    .pill.amber {
+      color: var(--amber);
+      background: rgba(182, 106, 4, 0.12);
+    }
+
+    .pill.danger {
+      color: var(--danger);
+      background: rgba(184, 48, 48, 0.12);
+    }
+
+    .primary-time {
+      font-size: 38px;
+      line-height: 1;
+      font-weight: 850;
+      color: var(--rail);
+      font-variant-numeric: tabular-nums;
+    }
+
+    .journey-line {
+      height: 54px;
+      display: grid;
+      grid-template-columns: 18px 1fr 18px;
+      gap: 10px;
+      align-items: center;
+      margin: 8px 0 4px;
+    }
+
+    .node {
+      width: 18px;
+      height: 18px;
+      border-radius: 50%;
+      border: 4px solid var(--rail);
+      background: #fff;
+    }
+
+    .track {
+      height: 5px;
+      border-radius: 999px;
+      background: linear-gradient(90deg, var(--rail) 0 58%, var(--line) 58% 100%);
+      position: relative;
+    }
+
+    .train {
+      position: absolute;
+      top: 50%;
+      left: 54%;
+      transform: translate(-50%, -50%);
+      width: 23px;
+      height: 23px;
+      display: grid;
+      place-items: center;
+      border-radius: 50%;
+      color: #fff;
+      background: var(--rail);
+      font-size: 12px;
+      animation: pulse 1800ms ease-in-out infinite;
+    }
+
+    .metrics {
+      display: grid;
+      grid-template-columns: repeat(3, 1fr);
+      gap: 10px;
+      margin-top: 12px;
+    }
+
+    .metric {
+      display: grid;
+      gap: 3px;
+      padding: 10px;
+      border-radius: 10px;
+      background: #f5f8f5;
+    }
+
+    .metric b {
+      font-size: 15px;
+    }
+
+    .metric span {
+      color: var(--muted);
+      font-size: 11px;
+    }
+
+    .button {
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 8px;
+      min-height: 42px;
+      border-radius: 12px;
+      color: #fff;
+      background: var(--rail);
+      font-size: 14px;
+      font-weight: 760;
+    }
+
+    .button.secondary {
+      color: var(--rail);
+      background: var(--rail-soft);
+    }
+
+    .option {
+      display: grid;
+      gap: 10px;
+    }
+
+    .option-head {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      gap: 10px;
+      align-items: start;
+    }
+
+    .time-row {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-size: 19px;
+      font-weight: 800;
+      font-variant-numeric: tabular-nums;
+    }
+
+    .pin-action {
+      display: inline-grid;
+      place-items: center;
+      width: 38px;
+      height: 38px;
+      border-radius: 50%;
+      color: var(--rail);
+      background: var(--rail-soft);
+      font-weight: 900;
+    }
+
+    .empty {
+      min-height: 380px;
+      display: grid;
+      align-content: center;
+      gap: 18px;
+    }
+
+    .empty-symbol {
+      width: 76px;
+      height: 76px;
+      border-radius: 26px;
+      display: grid;
+      place-items: center;
+      color: var(--rail);
+      background: var(--rail-soft);
+      font-size: 34px;
+    }
+
+    .empty h4 {
+      margin: 0;
+      font-size: 25px;
+      line-height: 1.05;
+    }
+
+    .search-panel {
+      display: grid;
+      gap: 14px;
+    }
+
+    .field {
+      display: grid;
+      gap: 6px;
+    }
+
+    .field span {
+      color: var(--muted);
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .field b {
+      padding: 12px;
+      border-radius: 10px;
+      background: #f5f8f5;
+      font-size: 15px;
+    }
+
+    .window-strip {
+      display: grid;
+      gap: 10px;
+      background: #eef7f2;
+      border: 1px solid #c5e3d8;
+      border-radius: 14px;
+      padding: 14px;
+    }
+
+    .legs {
+      display: grid;
+      gap: 8px;
+    }
+
+    .leg {
+      display: grid;
+      grid-template-columns: 24px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 10px;
+      border-radius: 10px;
+      background: #f5f8f5;
+      font-size: 13px;
+    }
+
+    .stop-list {
+      display: grid;
+      gap: 0;
+      overflow: hidden;
+      border: 1px solid var(--line);
+      border-radius: 14px;
+      background: var(--surface);
+    }
+
+    .stop {
+      display: grid;
+      grid-template-columns: 28px 1fr auto;
+      gap: 10px;
+      align-items: center;
+      padding: 13px;
+      border-bottom: 1px solid var(--line);
+      font-size: 14px;
+    }
+
+    .stop:last-child {
+      border-bottom: 0;
+    }
+
+    .commute-row {
+      display: grid;
+      gap: 12px;
+    }
+
+    .switch {
+      width: 48px;
+      height: 28px;
+      border-radius: 999px;
+      background: var(--rail);
+      padding: 3px;
+    }
+
+    .switch::after {
+      content: "";
+      display: block;
+      width: 22px;
+      height: 22px;
+      margin-left: auto;
+      border-radius: 50%;
+      background: #fff;
+    }
+
+    .sticky-note {
+      position: sticky;
+      top: 18px;
+      align-self: start;
+      padding: 18px;
+      border-left: 4px solid var(--rail);
+      background: rgba(255, 255, 255, 0.76);
+      backdrop-filter: blur(18px);
+    }
+
+    .system {
+      display: grid;
+      grid-template-columns: minmax(240px, 0.6fr) minmax(320px, 1.4fr);
+      gap: clamp(24px, 5vw, 60px);
+      align-items: start;
+      margin-top: 70px;
+    }
+
+    .tokens {
+      display: grid;
+      gap: 16px;
+    }
+
+    .token-row {
+      display: grid;
+      grid-template-columns: 140px 1fr;
+      gap: 18px;
+      padding: 16px 0;
+      border-top: 1px solid var(--line);
+    }
+
+    .token-row strong {
+      color: var(--rail);
+    }
+
+    .motion-in {
+      opacity: 0;
+      transform: translateY(18px);
+      animation: rise 600ms ease-out forwards;
+    }
+
+    .motion-in:nth-child(2) { animation-delay: 80ms; }
+    .motion-in:nth-child(3) { animation-delay: 160ms; }
+
+    @keyframes rise {
+      to {
+        opacity: 1;
+        transform: translateY(0);
+      }
+    }
+
+    @keyframes float-in {
+      from {
+        opacity: 0;
+        transform: translateY(24px) rotate(-1.5deg);
+      }
+      to {
+        opacity: 1;
+        transform: translateY(0) rotate(0);
+      }
+    }
+
+    @keyframes pulse {
+      0%, 100% { box-shadow: 0 0 0 0 rgba(29, 127, 100, 0.28); }
+      50% { box-shadow: 0 0 0 10px rgba(29, 127, 100, 0); }
+    }
+
+    @media (max-width: 860px) {
+      .masthead,
+      .system {
+        grid-template-columns: 1fr;
+      }
+
+      .section-title {
+        display: grid;
+      }
+
+      .section-title p {
+        max-width: none;
+      }
+
+      .screen-label {
+        display: grid;
+      }
+
+      .screen-label span {
+        text-align: left;
+      }
+
+      .phone {
+        min-height: 700px;
+      }
+
+      .screen {
+        min-height: 672px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <header class="masthead">
+    <div class="brand">
+      <div class="brand-mark"><span class="pin-dot"></span> RightTrain</div>
+      <h1>Pins make the app legible.</h1>
+      <p class="summary">One live Pin explains what RightTrain is watching: a time window while choosing, or a journey once the user commits.</p>
+      <div class="thesis">
+        <div class="thesis-row"><strong>Model</strong><span>Search Pins watch possibilities. Journey Pins track progress.</span></div>
+        <div class="thesis-row"><strong>Action</strong><span>Search creates Pins. Commutes can Auto-pin at the right time.</span></div>
+        <div class="thesis-row"><strong>Rhythm</strong><span>Quiet surfaces, clear status pills, and a single pin action repeated everywhere.</span></div>
+      </div>
+    </div>
+    <div class="hero-phone">
+      <div class="phone">
+        <div class="screen">
+          <div class="statusbar"><span>09:41</span><span>5G 87%</span></div>
+          <div class="nav">Pinned</div>
+          <main class="content">
+            <section class="pin-card">
+              <div class="pin-header">
+                <div class="topline">
+                  <div>
+                    <div class="route">Oxford to Paddington</div>
+                    <div class="meta">08:00 - 09:30 window · Updated less than a min ago</div>
+                  </div>
+                  <span class="pill">Search Pin</span>
+                </div>
+              </div>
+              <div class="primary-time">12 min</div>
+              <div class="caption">Best direct train departs from platform 3</div>
+              <div class="journey-line">
+                <span class="node"></span>
+                <span class="track"><span class="train">⌁</span></span>
+                <span class="node"></span>
+              </div>
+              <div class="metrics">
+                <div class="metric"><b>08:27</b><span>Departs</span></div>
+                <div class="metric"><b>09:18</b><span>Arrives</span></div>
+                <div class="metric"><b>Good</b><span>Status</span></div>
+              </div>
+            </section>
+          </main>
+          <nav class="tabbar">
+            <div class="tab active"><span class="icon">⌖</span><span>Pinned</span></div>
+            <div class="tab"><span class="icon">◷</span><span>Commutes</span></div>
+            <div class="tab"><span class="icon">⌕</span><span>Plan</span></div>
+            <div class="tab"><span class="icon">○</span><span>Settings</span></div>
+          </nav>
+        </div>
+      </div>
+    </div>
+  </header>
+
+  <main class="board">
+    <section>
+      <div class="section-title">
+        <h2>Target states</h2>
+        <p>The same header and pill grammar repeats across empty, searching, window monitoring, journey progress, and commute schedules.</p>
+      </div>
+
+      <div class="screen-grid">
+        <article class="screen-study motion-in">
+          <div class="screen-label">
+            <h3>No Pin</h3>
+            <span>Clear destination: create a Pin from Plan.</span>
+          </div>
+          <div class="phone">
+            <div class="screen">
+              <div class="statusbar"><span>09:41</span><span>5G 87%</span></div>
+              <div class="nav">Pinned</div>
+              <main class="content">
+                <section class="empty">
+                  <div class="empty-symbol">⌖</div>
+                  <div>
+                    <h4>No pinned journey</h4>
+                    <p class="meta">Pin a time window or a journey and RightTrain will watch it here.</p>
+                  </div>
+                  <div class="button">⌕ Plan a journey</div>
+                </section>
+              </main>
+              <nav class="tabbar">
+                <div class="tab active"><span class="icon">⌖</span><span>Pinned</span></div>
+                <div class="tab"><span class="icon">◷</span><span>Commutes</span></div>
+                <div class="tab"><span class="icon">⌕</span><span>Plan</span></div>
+                <div class="tab"><span class="icon">○</span><span>Settings</span></div>
+              </nav>
+            </div>
+          </div>
+        </article>
+
+        <article class="screen-study motion-in">
+          <div class="screen-label">
+            <h3>Search results</h3>
+            <span>The route/time header is a pinnable Window; each option is a pinnable Journey.</span>
+          </div>
+          <div class="phone">
+            <div class="screen">
+              <div class="statusbar"><span>09:41</span><span>5G 87%</span></div>
+              <div class="nav">Plan</div>
+              <main class="content">
+                <section class="search-panel">
+                  <div class="field"><span>From</span><b>Oxford</b></div>
+                  <div class="field"><span>To</span><b>London Paddington</b></div>
+                  <div class="field"><span>Departure</span><b>Today, 08:00 · 90m</b></div>
+                  <div class="button">⌕ Search journeys</div>
+                </section>
+                <section class="window-strip">
+                  <div class="topline">
+                    <div>
+                      <div class="route">08:00 - 09:30 window</div>
+                      <div class="meta">Watch the best direct option as conditions change.</div>
+                    </div>
+                    <span class="pin-action">⌖</span>
+                  </div>
+                  <div class="button secondary">Pin search</div>
+                </section>
+                <section class="option">
+                  <div class="option-head">
+                    <div>
+                      <div class="time-row">08:27 → 09:18</div>
+                      <div class="caption">Direct · Platform 3 · Great Western Railway</div>
+                    </div>
+                    <span class="pill">Best</span>
+                  </div>
+                  <div class="button">⌖ Pin journey</div>
+                </section>
+                <section class="option">
+                  <div class="option-head">
+                    <div>
+                      <div class="time-row">08:42 → 09:34</div>
+                      <div class="caption">Direct · Platform 4 · On time</div>
+                    </div>
+                    <span class="pin-action">⌖</span>
+                  </div>
+                </section>
+              </main>
+              <nav class="tabbar">
+                <div class="tab"><span class="icon">⌖</span><span>Pinned</span></div>
+                <div class="tab"><span class="icon">◷</span><span>Commutes</span></div>
+                <div class="tab active"><span class="icon">⌕</span><span>Plan</span></div>
+                <div class="tab"><span class="icon">○</span><span>Settings</span></div>
+              </nav>
+            </div>
+          </div>
+        </article>
+
+        <article class="screen-study motion-in">
+          <div class="screen-label">
+            <h3>Search Pin</h3>
+            <span>Best current option is prominent; other options remain available.</span>
+          </div>
+          <div class="phone">
+            <div class="screen">
+              <div class="statusbar"><span>09:41</span><span>5G 87%</span></div>
+              <div class="nav">Pinned</div>
+              <main class="content">
+                <section class="pin-card">
+                  <div class="pin-header">
+                    <div class="topline">
+                      <div>
+                        <div class="route">Oxford to Paddington</div>
+                        <div class="meta">08:00 - 09:30 window · Updated 1 min ago</div>
+                      </div>
+                      <span class="pill">Search Pin</span>
+                    </div>
+                  </div>
+                  <div class="primary-time">12 min</div>
+                  <div class="caption">Best train · 08:27 from platform 3</div>
+                  <div class="metrics">
+                    <div class="metric"><b>09:18</b><span>Arrival</span></div>
+                    <div class="metric"><b>51m</b><span>Duration</span></div>
+                    <div class="metric"><b>Good</b><span>Status</span></div>
+                  </div>
+                  <div class="button">⌖ Pin this journey</div>
+                </section>
+                <section class="option">
+                  <div class="row">
+                    <div><b>Upcoming</b><div class="caption">2 trains still to depart</div></div>
+                    <span class="pill blue">Options</span>
+                  </div>
+                  <div class="time-row">08:42 → 09:34</div>
+                  <div class="time-row">09:04 → 09:55</div>
+                </section>
+              </main>
+              <nav class="tabbar">
+                <div class="tab active"><span class="icon">⌖</span><span>Pinned</span></div>
+                <div class="tab"><span class="icon">◷</span><span>Commutes</span></div>
+                <div class="tab"><span class="icon">⌕</span><span>Plan</span></div>
+                <div class="tab"><span class="icon">○</span><span>Settings</span></div>
+              </nav>
+            </div>
+          </div>
+        </article>
+
+        <article class="screen-study motion-in">
+          <div class="screen-label">
+            <h3>Journey Pin before boarding</h3>
+            <span>The same object shifts from options to commitment.</span>
+          </div>
+          <div class="phone">
+            <div class="screen">
+              <div class="statusbar"><span>09:41</span><span>5G 87%</span></div>
+              <div class="nav">Pinned</div>
+              <main class="content">
+                <section class="pin-card">
+                  <div class="pin-header">
+                    <div class="topline">
+                      <div>
+                        <div class="route">Oxford to Paddington</div>
+                        <div class="meta">08:27 direct journey · Updated less than a min ago</div>
+                      </div>
+                      <span class="pill">Journey Pin</span>
+                    </div>
+                  </div>
+                  <div class="primary-time">Board in 12 min</div>
+                  <div class="caption">Platform 3 · coach info unavailable</div>
+                  <div class="journey-line">
+                    <span class="node"></span>
+                    <span class="track"><span class="train">⌁</span></span>
+                    <span class="node"></span>
+                  </div>
+                  <div class="button">✓ I'm on this train</div>
+                </section>
+              </main>
+              <nav class="tabbar">
+                <div class="tab active"><span class="icon">⌖</span><span>Pinned</span></div>
+                <div class="tab"><span class="icon">◷</span><span>Commutes</span></div>
+                <div class="tab"><span class="icon">⌕</span><span>Plan</span></div>
+                <div class="tab"><span class="icon">○</span><span>Settings</span></div>
+              </nav>
+            </div>
+          </div>
+        </article>
+
+        <article class="screen-study motion-in">
+          <div class="screen-label">
+            <h3>On-board Journey Pin</h3>
+            <span>Progress and destination replace recommendation ranking.</span>
+          </div>
+          <div class="phone">
+            <div class="screen">
+              <div class="statusbar"><span>09:41</span><span>5G 87%</span></div>
+              <div class="nav">Pinned</div>
+              <main class="content">
+                <section class="pin-card">
+                  <div class="pin-header">
+                    <div class="topline">
+                      <div>
+                        <div class="route">On board to Paddington</div>
+                        <div class="meta">Oxford to Paddington · Updated now</div>
+                      </div>
+                      <span class="pill">Journey Pin</span>
+                    </div>
+                  </div>
+                  <div class="primary-time">09:18</div>
+                  <div class="caption">Expected arrival · Platform 8</div>
+                  <div class="journey-line">
+                    <span class="node"></span>
+                    <span class="track"><span class="train">⌁</span></span>
+                    <span class="node"></span>
+                  </div>
+                  <div class="button secondary">Not on this train</div>
+                </section>
+                <section class="stop-list">
+                  <div class="stop"><span>✓</span><b>Oxford</b><span>08:27</span></div>
+                  <div class="stop"><span>⌁</span><b>Reading</b><span>08:52</span></div>
+                  <div class="stop"><span>○</span><b>Paddington</b><span>09:18</span></div>
+                </section>
+              </main>
+              <nav class="tabbar">
+                <div class="tab active"><span class="icon">⌖</span><span>Pinned</span></div>
+                <div class="tab"><span class="icon">◷</span><span>Commutes</span></div>
+                <div class="tab"><span class="icon">⌕</span><span>Plan</span></div>
+                <div class="tab"><span class="icon">○</span><span>Settings</span></div>
+              </nav>
+            </div>
+          </div>
+        </article>
+
+        <article class="screen-study motion-in">
+          <div class="screen-label">
+            <h3>Multi-leg Journey Pin</h3>
+            <span>Leg state is the primary status, not a separate experience.</span>
+          </div>
+          <div class="phone">
+            <div class="screen">
+              <div class="statusbar"><span>09:41</span><span>5G 87%</span></div>
+              <div class="nav">Pinned</div>
+              <main class="content">
+                <section class="pin-card">
+                  <div class="pin-header">
+                    <div class="topline">
+                      <div>
+                        <div class="route">Oxford to St Albans</div>
+                        <div class="meta">Leg 1 of 2 · approaching interchange</div>
+                      </div>
+                      <span class="pill amber">Journey Pin</span>
+                    </div>
+                  </div>
+                  <div class="primary-time">Change at Reading</div>
+                  <div class="caption">8 min connection · next train platform 12</div>
+                  <div class="legs">
+                    <div class="leg"><span>⌁</span><b>Oxford → Reading</b><span>08:52</span></div>
+                    <div class="leg"><span>○</span><b>Reading → St Albans</b><span>09:04</span></div>
+                  </div>
+                  <div class="button secondary">Not on this journey</div>
+                </section>
+              </main>
+              <nav class="tabbar">
+                <div class="tab active"><span class="icon">⌖</span><span>Pinned</span></div>
+                <div class="tab"><span class="icon">◷</span><span>Commutes</span></div>
+                <div class="tab"><span class="icon">⌕</span><span>Plan</span></div>
+                <div class="tab"><span class="icon">○</span><span>Settings</span></div>
+              </nav>
+            </div>
+          </div>
+        </article>
+
+        <article class="screen-study motion-in">
+          <div class="screen-label">
+            <h3>Commute Auto-pin rows</h3>
+            <span>Commutes stay as templates; Auto-pin creates the live Pin.</span>
+          </div>
+          <div class="phone">
+            <div class="screen">
+              <div class="statusbar"><span>09:41</span><span>5G 87%</span></div>
+              <div class="nav">Commutes</div>
+              <main class="content">
+                <section class="commute-row">
+                  <div class="row">
+                    <div>
+                      <div class="route">Morning commute</div>
+                      <div class="meta">Oxford to Paddington · 08:00 · weekdays</div>
+                    </div>
+                    <span class="pill">Pinned now</span>
+                  </div>
+                  <div class="row">
+                    <span class="caption">Auto-pin 30 min before departure</span>
+                    <span class="switch"></span>
+                  </div>
+                </section>
+                <section class="commute-row">
+                  <div class="row">
+                    <div>
+                      <div class="route">Home</div>
+                      <div class="meta">Paddington to Oxford · 17:40 · Mon-Fri</div>
+                    </div>
+                    <span class="pill blue">Scheduled</span>
+                  </div>
+                  <div class="row">
+                    <span class="caption">Auto-pin 45 min before departure</span>
+                    <span class="switch"></span>
+                  </div>
+                </section>
+              </main>
+              <nav class="tabbar">
+                <div class="tab"><span class="icon">⌖</span><span>Pinned</span></div>
+                <div class="tab active"><span class="icon">◷</span><span>Commutes</span></div>
+                <div class="tab"><span class="icon">⌕</span><span>Plan</span></div>
+                <div class="tab"><span class="icon">○</span><span>Settings</span></div>
+              </nav>
+            </div>
+          </div>
+        </article>
+      </div>
+    </section>
+
+    <section class="system">
+      <aside class="sticky-note">
+        <strong>Implementation rule</strong>
+        <p class="meta">Every monitored surface gets a shared Pin header. The body can change by state, but the object identity stays stable.</p>
+      </aside>
+      <div class="tokens">
+        <div class="token-row"><strong>Search Pin</strong><span>Route + time range + live recommendations. Primary action: pin a specific journey when the user commits.</span></div>
+        <div class="token-row"><strong>Journey Pin</strong><span>Specific train or multi-leg route. Primary action: confirm boarding or recover when the user is not on the pinned journey.</span></div>
+        <div class="token-row"><strong>Auto-pin</strong><span>Saved commute setting that creates a Pin around a schedule. It is not a third Pin type.</span></div>
+        <div class="token-row"><strong>Copy</strong><span>Use Pin, Unpin, Replace current Pin, Pin search, Pin journey, Pinned now, and Not on this train/journey.</span></div>
+      </div>
+    </section>
+  </main>
+</body>
+</html>

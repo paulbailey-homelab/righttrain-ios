@@ -1,0 +1,962 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 56;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		7B0000000000000000000101 /* RightTrainApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000100 /* RightTrainApp.swift */; };
+		7B0000000000000000000103 /* AppConfig.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000102 /* AppConfig.swift */; };
+		7B0000000000000000000105 /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000104 /* AppModel.swift */; };
+		7B0000000000000000000107 /* APIClient.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000106 /* APIClient.swift */; };
+		7B0000000000000000000109 /* APIError.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000108 /* APIError.swift */; };
+		7B000000000000000000010B /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000010A /* Models.swift */; };
+		7B000000000000000000010D /* KeychainSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000010C /* KeychainSessionStore.swift */; };
+		7B000000000000000000010F /* DeviceIdentityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000010E /* DeviceIdentityService.swift */; };
+		7B0000000000000000000111 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000110 /* ContentView.swift */; };
+		7B0000000000000000000113 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000112 /* SignInView.swift */; };
+		7B0000000000000000000115 /* WindowSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000114 /* WindowSetupView.swift */; };
+		7B0000000000000000000117 /* RecommendationResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000116 /* RecommendationResultsView.swift */; };
+		7B0000000000000000000119 /* ActiveWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000118 /* ActiveWindowView.swift */; };
+		7B000000000000000000011B /* NotificationPermissionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000011A /* NotificationPermissionView.swift */; };
+		7B000000000000000000011D /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000011C /* Components.swift */; };
+		7B000000000000000000011F /* PreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000011E /* PreviewSupport.swift */; };
+		7B0000000000000000000131 /* DeviceCheck.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000130 /* DeviceCheck.framework */; };
+		7B0000000000000000000133 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000132 /* Security.framework */; };
+		7B0000000000000000000135 /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000134 /* UserNotifications.framework */; };
+		7B0000000000000000000151 /* AppOperationState.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000150 /* AppOperationState.swift */; };
+		7B0000000000000000000153 /* DeviceRegistrationContextFactory.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000152 /* DeviceRegistrationContextFactory.swift */; };
+		7B0000000000000000000155 /* AuthViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000154 /* AuthViewModel.swift */; };
+		7B0000000000000000000157 /* NotificationViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000156 /* NotificationViewModel.swift */; };
+		7B0000000000000000000159 /* ActiveWindowViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000158 /* ActiveWindowViewModel.swift */; };
+		7B000000000000000000015B /* WindowSetupViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000015A /* WindowSetupViewModel.swift */; };
+		7B000000000000000000015D /* JourneyDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000015C /* JourneyDetailViewModel.swift */; };
+		7B0000000000000000000161 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000160 /* Theme.swift */; };
+		7B0000000000000000000163 /* JourneyFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000162 /* JourneyFormatting.swift */; };
+		7B0000000000000000000165 /* ActiveWindowPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000164 /* ActiveWindowPresentation.swift */; };
+		7B0000000000000000000167 /* StartupSplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000166 /* StartupSplashView.swift */; };
+		7B0000000000000000000169 /* CollapsedWindowSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000168 /* CollapsedWindowSetupView.swift */; };
+		7B000000000000000000016B /* HeaderView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000016A /* HeaderView.swift */; };
+		7B000000000000000000016D /* UserDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000016C /* UserDisplay.swift */; };
+		7B000000000000000000016F /* BetaOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000016E /* BetaOnboardingView.swift */; };
+		7B0000000000000000000171 /* SettingsProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000170 /* SettingsProfileView.swift */; };
+		7B0000000000000000000173 /* CommuteRoutinesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000172 /* CommuteRoutinesViewModel.swift */; };
+		7B0000000000000000000175 /* CommuteRoutinesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000174 /* CommuteRoutinesView.swift */; };
+		7B0000000000000000000177 /* SubscriptionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000176 /* SubscriptionViewModel.swift */; };
+		7B0000000000000000000179 /* StoreKitSubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000178 /* StoreKitSubscriptionService.swift */; };
+		7B0000000000000000000183 /* ActiveJourneyCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000182 /* ActiveJourneyCache.swift */; };
+		7B0000000000000000000185 /* JourneyMutationQueue.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000184 /* JourneyMutationQueue.swift */; };
+		7B0000000000000000000187 /* ConnectivityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000186 /* ConnectivityService.swift */; };
+		7B0000000000000000000189 /* BackgroundSyncScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000188 /* BackgroundSyncScheduler.swift */; };
+		7B0000000000000000000191 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000190 /* AppEnvironment.swift */; };
+		7B0000000000000000000193 /* ActiveTrainComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000192 /* ActiveTrainComponents.swift */; };
+		7B0000000000000000000195 /* ItineraryFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000194 /* ItineraryFormatting.swift */; };
+		7B0000000000000000000197 /* JourneyDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000196 /* JourneyDetailView.swift */; };
+		7B0000000000000000000181 /* ItineraryActiveJourneyViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000180 /* ItineraryActiveJourneyViews.swift */; };
+		7B0000000000000000000311 /* LocalInterchangeNotification.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000310 /* LocalInterchangeNotification.swift */; };
+		7B0000000000000000000201 /* RightTrainLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000200 /* RightTrainLiveActivityAttributes.swift */; };
+		7B0000000000000000000202 /* RightTrainLiveActivityAttributes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000200 /* RightTrainLiveActivityAttributes.swift */; };
+		7B0000000000000000000204 /* LiveActivityCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000203 /* LiveActivityCoordinator.swift */; };
+		7B0000000000000000000206 /* RightTrainLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000205 /* RightTrainLiveActivityWidget.swift */; };
+		7B0000000000000000000221 /* LiveActivityIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000220 /* LiveActivityIntents.swift */; };
+		7B0000000000000000000222 /* LiveActivityIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000220 /* LiveActivityIntents.swift */; };
+		7B000000000000000000020A /* ActivityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000209 /* ActivityKit.framework */; };
+		7B000000000000000000020C /* ActivityKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000209 /* ActivityKit.framework */; };
+		7B000000000000000000020E /* WidgetKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000207 /* WidgetKit.framework */; };
+		7B0000000000000000000211 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000136 /* StoreKit.framework */; };
+		7B0000000000000000000139 /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000138 /* Network.framework */; };
+		7B000000000000000000013B /* BackgroundTasks.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000013A /* BackgroundTasks.framework */; };
+		7B0000000000000000000210 /* RightTrainLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000020F /* RightTrainLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
+		7B0000000000000000000301 /* PushNotificationsAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000300 /* PushNotificationsAppDelegate.swift */; };
+		7B0000000000000000000303 /* PushNotificationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000302 /* PushNotificationCoordinator.swift */; };
+		7B0000000000000000000401 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000400 /* Assets.xcassets */; };
+		7B0000000000000000000402 /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000400 /* Assets.xcassets */; };
+		7B1000000000000000000101 /* AppModelTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1000000000000000000100 /* AppModelTests.swift */; };
+		7B1000000000000000000103 /* JourneyFormattingTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1000000000000000000102 /* JourneyFormattingTests.swift */; };
+		7B1000000000000000000105 /* TestSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1000000000000000000104 /* TestSupport.swift */; };
+		7B1000000000000000000107 /* LiveActivityLayoutTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1000000000000000000106 /* LiveActivityLayoutTests.swift */; };
+		7B1000000000000000000108 /* RightTrainLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000205 /* RightTrainLiveActivityWidget.swift */; };
+		7B1000000000000000000115 /* ConnectivityServiceTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1000000000000000000114 /* ConnectivityServiceTests.swift */; };
+		7B1000000000000000000113 /* APIClientTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1000000000000000000112 /* APIClientTests.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		7B000000000000000000021A /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7B0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7B0000000000000000000216;
+			remoteInfo = RightTrainLiveActivityExtension;
+		};
+		7B1000000000000000000110 /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = 7B0000000000000000000001 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 7B0000000000000000000002;
+			remoteInfo = RightTrain;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		7B0000000000000000000219 /* Embed Foundation Extensions */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 13;
+			files = (
+				7B0000000000000000000210 /* RightTrainLiveActivityExtension.appex in Embed Foundation Extensions */,
+			);
+			name = "Embed Foundation Extensions";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		7B0000000000000000000009 /* RightTrain.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = RightTrain.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		7B0000000000000000000100 /* RightTrainApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightTrainApp.swift; sourceTree = "<group>"; };
+		7B0000000000000000000102 /* AppConfig.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppConfig.swift; sourceTree = "<group>"; };
+		7B0000000000000000000104 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		7B0000000000000000000106 /* APIClient.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClient.swift; sourceTree = "<group>"; };
+		7B0000000000000000000108 /* APIError.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIError.swift; sourceTree = "<group>"; };
+		7B000000000000000000010A /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		7B000000000000000000010C /* KeychainSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainSessionStore.swift; sourceTree = "<group>"; };
+		7B000000000000000000010E /* DeviceIdentityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceIdentityService.swift; sourceTree = "<group>"; };
+		7B0000000000000000000110 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		7B0000000000000000000112 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
+		7B0000000000000000000114 /* WindowSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSetupView.swift; sourceTree = "<group>"; };
+		7B0000000000000000000116 /* RecommendationResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationResultsView.swift; sourceTree = "<group>"; };
+		7B0000000000000000000118 /* ActiveWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveWindowView.swift; sourceTree = "<group>"; };
+		7B000000000000000000011A /* NotificationPermissionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPermissionView.swift; sourceTree = "<group>"; };
+		7B000000000000000000011C /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
+		7B000000000000000000011E /* PreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewSupport.swift; sourceTree = "<group>"; };
+		7B0000000000000000000120 /* RightTrain.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RightTrain.entitlements; sourceTree = "<group>"; };
+		7B0000000000000000000122 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7B0000000000000000000130 /* DeviceCheck.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceCheck.framework; path = System/Library/Frameworks/DeviceCheck.framework; sourceTree = SDKROOT; };
+		7B0000000000000000000132 /* Security.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Security.framework; path = System/Library/Frameworks/Security.framework; sourceTree = SDKROOT; };
+		7B0000000000000000000134 /* UserNotifications.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = UserNotifications.framework; path = System/Library/Frameworks/UserNotifications.framework; sourceTree = SDKROOT; };
+		7B0000000000000000000136 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
+		7B0000000000000000000138 /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Network.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
+		7B000000000000000000013A /* BackgroundTasks.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = BackgroundTasks.framework; path = System/Library/Frameworks/BackgroundTasks.framework; sourceTree = SDKROOT; };
+		7B0000000000000000000150 /* AppOperationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppOperationState.swift; sourceTree = "<group>"; };
+		7B0000000000000000000152 /* DeviceRegistrationContextFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceRegistrationContextFactory.swift; sourceTree = "<group>"; };
+		7B0000000000000000000154 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
+		7B0000000000000000000156 /* NotificationViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationViewModel.swift; sourceTree = "<group>"; };
+		7B0000000000000000000158 /* ActiveWindowViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveWindowViewModel.swift; sourceTree = "<group>"; };
+		7B000000000000000000015A /* WindowSetupViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSetupViewModel.swift; sourceTree = "<group>"; };
+		7B000000000000000000015C /* JourneyDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyDetailViewModel.swift; sourceTree = "<group>"; };
+		7B0000000000000000000160 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		7B0000000000000000000162 /* JourneyFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyFormatting.swift; sourceTree = "<group>"; };
+		7B0000000000000000000164 /* ActiveWindowPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveWindowPresentation.swift; sourceTree = "<group>"; };
+		7B0000000000000000000166 /* StartupSplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupSplashView.swift; sourceTree = "<group>"; };
+		7B0000000000000000000168 /* CollapsedWindowSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CollapsedWindowSetupView.swift; sourceTree = "<group>"; };
+		7B000000000000000000016A /* HeaderView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = HeaderView.swift; sourceTree = "<group>"; };
+		7B000000000000000000016C /* UserDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = UserDisplay.swift; sourceTree = "<group>"; };
+		7B000000000000000000016E /* BetaOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetaOnboardingView.swift; sourceTree = "<group>"; };
+		7B0000000000000000000170 /* SettingsProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsProfileView.swift; sourceTree = "<group>"; };
+		7B0000000000000000000172 /* CommuteRoutinesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommuteRoutinesViewModel.swift; sourceTree = "<group>"; };
+		7B0000000000000000000174 /* CommuteRoutinesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommuteRoutinesView.swift; sourceTree = "<group>"; };
+		7B0000000000000000000176 /* SubscriptionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionViewModel.swift; sourceTree = "<group>"; };
+		7B0000000000000000000178 /* StoreKitSubscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitSubscriptionService.swift; sourceTree = "<group>"; };
+		7B0000000000000000000182 /* ActiveJourneyCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveJourneyCache.swift; sourceTree = "<group>"; };
+		7B0000000000000000000184 /* JourneyMutationQueue.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyMutationQueue.swift; sourceTree = "<group>"; };
+		7B0000000000000000000186 /* ConnectivityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectivityService.swift; sourceTree = "<group>"; };
+		7B0000000000000000000188 /* BackgroundSyncScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BackgroundSyncScheduler.swift; sourceTree = "<group>"; };
+		7B0000000000000000000190 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
+		7B0000000000000000000192 /* ActiveTrainComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveTrainComponents.swift; sourceTree = "<group>"; };
+		7B0000000000000000000194 /* ItineraryFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItineraryFormatting.swift; sourceTree = "<group>"; };
+		7B0000000000000000000196 /* JourneyDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyDetailView.swift; sourceTree = "<group>"; };
+		7B0000000000000000000180 /* ItineraryActiveJourneyViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItineraryActiveJourneyViews.swift; sourceTree = "<group>"; };
+		7B0000000000000000000310 /* LocalInterchangeNotification.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LocalInterchangeNotification.swift; sourceTree = "<group>"; };
+		7B0000000000000000000200 /* RightTrainLiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightTrainLiveActivityAttributes.swift; sourceTree = "<group>"; };
+		7B0000000000000000000203 /* LiveActivityCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityCoordinator.swift; sourceTree = "<group>"; };
+		7B0000000000000000000205 /* RightTrainLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightTrainLiveActivityWidget.swift; sourceTree = "<group>"; };
+		7B0000000000000000000220 /* LiveActivityIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityIntents.swift; sourceTree = "<group>"; };
+		7B0000000000000000000223 /* RightTrainLiveActivityExtension.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RightTrainLiveActivityExtension.entitlements; sourceTree = "<group>"; };
+		7B0000000000000000000207 /* WidgetKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = WidgetKit.framework; path = System/Library/Frameworks/WidgetKit.framework; sourceTree = SDKROOT; };
+		7B0000000000000000000209 /* ActivityKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = ActivityKit.framework; path = System/Library/Frameworks/ActivityKit.framework; sourceTree = SDKROOT; };
+		7B000000000000000000020F /* RightTrainLiveActivityExtension.appex */ = {isa = PBXFileReference; explicitFileType = "wrapper.app-extension"; includeInIndex = 0; path = RightTrainLiveActivityExtension.appex; sourceTree = BUILT_PRODUCTS_DIR; };
+		7B0000000000000000000212 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
+		7B0000000000000000000300 /* PushNotificationsAppDelegate.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationsAppDelegate.swift; sourceTree = "<group>"; };
+		7B0000000000000000000302 /* PushNotificationCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PushNotificationCoordinator.swift; sourceTree = "<group>"; };
+		7B0000000000000000000400 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		7B1000000000000000000009 /* RightTrainTests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = RightTrainTests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		7B1000000000000000000100 /* AppModelTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModelTests.swift; sourceTree = "<group>"; };
+		7B1000000000000000000102 /* JourneyFormattingTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyFormattingTests.swift; sourceTree = "<group>"; };
+		7B1000000000000000000104 /* TestSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = TestSupport.swift; sourceTree = "<group>"; };
+		7B1000000000000000000106 /* LiveActivityLayoutTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityLayoutTests.swift; sourceTree = "<group>"; };
+		7B1000000000000000000114 /* ConnectivityServiceTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectivityServiceTests.swift; sourceTree = "<group>"; };
+		7B1000000000000000000112 /* APIClientTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = APIClientTests.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		7B0000000000000000000011 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7B0000000000000000000131 /* DeviceCheck.framework in Frameworks */,
+				7B000000000000000000020A /* ActivityKit.framework in Frameworks */,
+				7B0000000000000000000133 /* Security.framework in Frameworks */,
+				7B0000000000000000000135 /* UserNotifications.framework in Frameworks */,
+				7B0000000000000000000211 /* StoreKit.framework in Frameworks */,
+				7B0000000000000000000139 /* Network.framework in Frameworks */,
+				7B000000000000000000013B /* BackgroundTasks.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7B0000000000000000000213 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7B000000000000000000020C /* ActivityKit.framework in Frameworks */,
+				7B000000000000000000020E /* WidgetKit.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7B1000000000000000000011 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		7B0000000000000000000003 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				7B0000000000000000000009 /* RightTrain.app */,
+				7B000000000000000000020F /* RightTrainLiveActivityExtension.appex */,
+				7B1000000000000000000009 /* RightTrainTests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		7B0000000000000000000004 = {
+			isa = PBXGroup;
+			children = (
+				7B0000000000000000000005 /* RightTrain */,
+				7B0000000000000000000215 /* RightTrainLiveActivityExtension */,
+				7B1000000000000000000005 /* RightTrainTests */,
+				7B0000000000000000000130 /* DeviceCheck.framework */,
+				7B0000000000000000000209 /* ActivityKit.framework */,
+				7B0000000000000000000132 /* Security.framework */,
+				7B0000000000000000000134 /* UserNotifications.framework */,
+				7B0000000000000000000136 /* StoreKit.framework */,
+				7B0000000000000000000138 /* Network.framework */,
+				7B000000000000000000013A /* BackgroundTasks.framework */,
+				7B0000000000000000000207 /* WidgetKit.framework */,
+				7B0000000000000000000003 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		7B0000000000000000000005 /* RightTrain */ = {
+			isa = PBXGroup;
+			children = (
+				7B000000000000000000000A /* App */,
+				7B000000000000000000000B /* API */,
+				7B000000000000000000000C /* Auth */,
+				7B0000000000000000000214 /* LiveActivity */,
+				7B0000000000000000000304 /* PushNotifications */,
+				7B000000000000000000000D /* Views */,
+				7B0000000000000000000400 /* Assets.xcassets */,
+				7B0000000000000000000122 /* Info.plist */,
+				7B0000000000000000000120 /* RightTrain.entitlements */,
+			);
+			path = RightTrain;
+			sourceTree = "<group>";
+		};
+		7B000000000000000000000A /* App */ = {
+			isa = PBXGroup;
+			children = (
+				7B0000000000000000000100 /* RightTrainApp.swift */,
+				7B0000000000000000000102 /* AppConfig.swift */,
+				7B0000000000000000000104 /* AppModel.swift */,
+				7B0000000000000000000190 /* AppEnvironment.swift */,
+				7B0000000000000000000150 /* AppOperationState.swift */,
+				7B0000000000000000000152 /* DeviceRegistrationContextFactory.swift */,
+				7B0000000000000000000154 /* AuthViewModel.swift */,
+				7B0000000000000000000156 /* NotificationViewModel.swift */,
+				7B0000000000000000000158 /* ActiveWindowViewModel.swift */,
+				7B000000000000000000015A /* WindowSetupViewModel.swift */,
+				7B000000000000000000015C /* JourneyDetailViewModel.swift */,
+				7B0000000000000000000172 /* CommuteRoutinesViewModel.swift */,
+				7B0000000000000000000176 /* SubscriptionViewModel.swift */,
+				7B0000000000000000000178 /* StoreKitSubscriptionService.swift */,
+				7B0000000000000000000182 /* ActiveJourneyCache.swift */,
+				7B0000000000000000000184 /* JourneyMutationQueue.swift */,
+				7B0000000000000000000186 /* ConnectivityService.swift */,
+				7B0000000000000000000188 /* BackgroundSyncScheduler.swift */,
+			);
+			path = App;
+			sourceTree = "<group>";
+		};
+		7B000000000000000000000B /* API */ = {
+			isa = PBXGroup;
+			children = (
+				7B0000000000000000000106 /* APIClient.swift */,
+				7B0000000000000000000108 /* APIError.swift */,
+				7B000000000000000000010A /* Models.swift */,
+			);
+			path = API;
+			sourceTree = "<group>";
+		};
+		7B000000000000000000000C /* Auth */ = {
+			isa = PBXGroup;
+			children = (
+				7B000000000000000000010C /* KeychainSessionStore.swift */,
+				7B000000000000000000010E /* DeviceIdentityService.swift */,
+			);
+			path = Auth;
+			sourceTree = "<group>";
+		};
+		7B000000000000000000000D /* Views */ = {
+			isa = PBXGroup;
+			children = (
+				7B0000000000000000000110 /* ContentView.swift */,
+				7B0000000000000000000166 /* StartupSplashView.swift */,
+				7B000000000000000000016A /* HeaderView.swift */,
+				7B000000000000000000016E /* BetaOnboardingView.swift */,
+				7B0000000000000000000168 /* CollapsedWindowSetupView.swift */,
+				7B0000000000000000000174 /* CommuteRoutinesView.swift */,
+				7B0000000000000000000170 /* SettingsProfileView.swift */,
+				7B0000000000000000000112 /* SignInView.swift */,
+				7B0000000000000000000114 /* WindowSetupView.swift */,
+				7B0000000000000000000116 /* RecommendationResultsView.swift */,
+				7B0000000000000000000118 /* ActiveWindowView.swift */,
+				7B0000000000000000000192 /* ActiveTrainComponents.swift */,
+				7B0000000000000000000164 /* ActiveWindowPresentation.swift */,
+				7B0000000000000000000180 /* ItineraryActiveJourneyViews.swift */,
+				7B0000000000000000000194 /* ItineraryFormatting.swift */,
+				7B0000000000000000000196 /* JourneyDetailView.swift */,
+				7B000000000000000000011A /* NotificationPermissionView.swift */,
+				7B000000000000000000011C /* Components.swift */,
+				7B0000000000000000000162 /* JourneyFormatting.swift */,
+				7B000000000000000000016C /* UserDisplay.swift */,
+				7B0000000000000000000160 /* Theme.swift */,
+				7B000000000000000000011E /* PreviewSupport.swift */,
+			);
+			path = Views;
+			sourceTree = "<group>";
+		};
+		7B0000000000000000000214 /* LiveActivity */ = {
+			isa = PBXGroup;
+			children = (
+				7B0000000000000000000200 /* RightTrainLiveActivityAttributes.swift */,
+				7B0000000000000000000203 /* LiveActivityCoordinator.swift */,
+				7B0000000000000000000220 /* LiveActivityIntents.swift */,
+			);
+			path = LiveActivity;
+			sourceTree = "<group>";
+		};
+		7B0000000000000000000215 /* RightTrainLiveActivityExtension */ = {
+			isa = PBXGroup;
+			children = (
+				7B0000000000000000000205 /* RightTrainLiveActivityWidget.swift */,
+				7B0000000000000000000212 /* Info.plist */,
+				7B0000000000000000000223 /* RightTrainLiveActivityExtension.entitlements */,
+			);
+			path = RightTrainLiveActivityExtension;
+			sourceTree = "<group>";
+		};
+		7B0000000000000000000304 /* PushNotifications */ = {
+			isa = PBXGroup;
+			children = (
+				7B0000000000000000000300 /* PushNotificationsAppDelegate.swift */,
+				7B0000000000000000000302 /* PushNotificationCoordinator.swift */,
+				7B0000000000000000000310 /* LocalInterchangeNotification.swift */,
+			);
+			path = PushNotifications;
+			sourceTree = "<group>";
+		};
+		7B1000000000000000000005 /* RightTrainTests */ = {
+			isa = PBXGroup;
+			children = (
+				7B1000000000000000000112 /* APIClientTests.swift */,
+				7B1000000000000000000100 /* AppModelTests.swift */,
+				7B1000000000000000000114 /* ConnectivityServiceTests.swift */,
+				7B1000000000000000000102 /* JourneyFormattingTests.swift */,
+				7B1000000000000000000106 /* LiveActivityLayoutTests.swift */,
+				7B1000000000000000000104 /* TestSupport.swift */,
+			);
+			path = RightTrainTests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		7B0000000000000000000002 /* RightTrain */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7B0000000000000000000014 /* Build configuration list for PBXNativeTarget "RightTrain" */;
+			buildPhases = (
+				7B0000000000000000000010 /* Sources */,
+				7B0000000000000000000011 /* Frameworks */,
+				7B0000000000000000000012 /* Resources */,
+				7B0000000000000000000219 /* Embed Foundation Extensions */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7B000000000000000000021B /* PBXTargetDependency */,
+			);
+			name = RightTrain;
+			packageProductDependencies = (
+			);
+			productName = RightTrain;
+			productReference = 7B0000000000000000000009 /* RightTrain.app */;
+			productType = "com.apple.product-type.application";
+		};
+		7B0000000000000000000216 /* RightTrainLiveActivityExtension */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7B000000000000000000021E /* Build configuration list for PBXNativeTarget "RightTrainLiveActivityExtension" */;
+			buildPhases = (
+				7B0000000000000000000218 /* Sources */,
+				7B0000000000000000000213 /* Frameworks */,
+				7B0000000000000000000217 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = RightTrainLiveActivityExtension;
+			packageProductDependencies = (
+			);
+			productName = RightTrainLiveActivityExtension;
+			productReference = 7B000000000000000000020F /* RightTrainLiveActivityExtension.appex */;
+			productType = "com.apple.product-type.app-extension";
+		};
+		7B1000000000000000000002 /* RightTrainTests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 7B1000000000000000000014 /* Build configuration list for PBXNativeTarget "RightTrainTests" */;
+			buildPhases = (
+				7B1000000000000000000010 /* Sources */,
+				7B1000000000000000000011 /* Frameworks */,
+				7B1000000000000000000012 /* Resources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7B1000000000000000000111 /* PBXTargetDependency */,
+			);
+			name = RightTrainTests;
+			packageProductDependencies = (
+			);
+			productName = RightTrainTests;
+			productReference = 7B1000000000000000000009 /* RightTrainTests.xctest */;
+			productType = "com.apple.product-type.bundle.unit-test";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		7B0000000000000000000001 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = 1;
+				LastSwiftUpdateCheck = 2620;
+				LastUpgradeCheck = 2650;
+				TargetAttributes = {
+					7B0000000000000000000002 = {
+						CreatedOnToolsVersion = 26.2;
+						SystemCapabilities = {
+							com.apple.Push = {
+								enabled = 1;
+							};
+							com.apple.SignInWithApple = {
+								enabled = 1;
+							};
+						};
+					};
+					7B0000000000000000000216 = {
+						CreatedOnToolsVersion = 26.2;
+					};
+					7B1000000000000000000002 = {
+						CreatedOnToolsVersion = 26.2;
+						TestTargetID = 7B0000000000000000000002;
+					};
+				};
+			};
+			buildConfigurationList = 7B0000000000000000000013 /* Build configuration list for PBXProject "RightTrain" */;
+			compatibilityVersion = "Xcode 14.0";
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				en,
+				Base,
+			);
+			mainGroup = 7B0000000000000000000004;
+			productRefGroup = 7B0000000000000000000003 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				7B0000000000000000000002 /* RightTrain */,
+				7B0000000000000000000216 /* RightTrainLiveActivityExtension */,
+				7B1000000000000000000002 /* RightTrainTests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXResourcesBuildPhase section */
+		7B0000000000000000000012 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7B0000000000000000000401 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7B0000000000000000000217 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7B0000000000000000000402 /* Assets.xcassets in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7B1000000000000000000012 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
+/* Begin PBXSourcesBuildPhase section */
+		7B0000000000000000000010 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7B0000000000000000000101 /* RightTrainApp.swift in Sources */,
+				7B0000000000000000000103 /* AppConfig.swift in Sources */,
+				7B0000000000000000000105 /* AppModel.swift in Sources */,
+				7B0000000000000000000151 /* AppOperationState.swift in Sources */,
+				7B0000000000000000000153 /* DeviceRegistrationContextFactory.swift in Sources */,
+				7B0000000000000000000155 /* AuthViewModel.swift in Sources */,
+				7B0000000000000000000157 /* NotificationViewModel.swift in Sources */,
+				7B0000000000000000000159 /* ActiveWindowViewModel.swift in Sources */,
+				7B000000000000000000015B /* WindowSetupViewModel.swift in Sources */,
+				7B000000000000000000015D /* JourneyDetailViewModel.swift in Sources */,
+				7B0000000000000000000173 /* CommuteRoutinesViewModel.swift in Sources */,
+				7B0000000000000000000177 /* SubscriptionViewModel.swift in Sources */,
+				7B0000000000000000000179 /* StoreKitSubscriptionService.swift in Sources */,
+				7B0000000000000000000183 /* ActiveJourneyCache.swift in Sources */,
+				7B0000000000000000000185 /* JourneyMutationQueue.swift in Sources */,
+				7B0000000000000000000187 /* ConnectivityService.swift in Sources */,
+				7B0000000000000000000189 /* BackgroundSyncScheduler.swift in Sources */,
+				7B0000000000000000000191 /* AppEnvironment.swift in Sources */,
+				7B0000000000000000000107 /* APIClient.swift in Sources */,
+				7B0000000000000000000109 /* APIError.swift in Sources */,
+				7B000000000000000000010B /* Models.swift in Sources */,
+				7B000000000000000000010D /* KeychainSessionStore.swift in Sources */,
+				7B000000000000000000010F /* DeviceIdentityService.swift in Sources */,
+				7B0000000000000000000111 /* ContentView.swift in Sources */,
+				7B0000000000000000000113 /* SignInView.swift in Sources */,
+				7B0000000000000000000115 /* WindowSetupView.swift in Sources */,
+				7B0000000000000000000117 /* RecommendationResultsView.swift in Sources */,
+				7B0000000000000000000119 /* ActiveWindowView.swift in Sources */,
+				7B0000000000000000000193 /* ActiveTrainComponents.swift in Sources */,
+				7B000000000000000000011B /* NotificationPermissionView.swift in Sources */,
+				7B000000000000000000011D /* Components.swift in Sources */,
+				7B0000000000000000000161 /* Theme.swift in Sources */,
+				7B0000000000000000000163 /* JourneyFormatting.swift in Sources */,
+				7B0000000000000000000165 /* ActiveWindowPresentation.swift in Sources */,
+				7B0000000000000000000167 /* StartupSplashView.swift in Sources */,
+				7B0000000000000000000169 /* CollapsedWindowSetupView.swift in Sources */,
+				7B000000000000000000016B /* HeaderView.swift in Sources */,
+				7B000000000000000000016D /* UserDisplay.swift in Sources */,
+				7B000000000000000000016F /* BetaOnboardingView.swift in Sources */,
+				7B0000000000000000000171 /* SettingsProfileView.swift in Sources */,
+				7B0000000000000000000175 /* CommuteRoutinesView.swift in Sources */,
+				7B000000000000000000011F /* PreviewSupport.swift in Sources */,
+				7B0000000000000000000201 /* RightTrainLiveActivityAttributes.swift in Sources */,
+				7B0000000000000000000204 /* LiveActivityCoordinator.swift in Sources */,
+				7B0000000000000000000221 /* LiveActivityIntents.swift in Sources */,
+				7B0000000000000000000301 /* PushNotificationsAppDelegate.swift in Sources */,
+				7B0000000000000000000303 /* PushNotificationCoordinator.swift in Sources */,
+				7B0000000000000000000311 /* LocalInterchangeNotification.swift in Sources */,
+				7B0000000000000000000181 /* ItineraryActiveJourneyViews.swift in Sources */,
+				7B0000000000000000000195 /* ItineraryFormatting.swift in Sources */,
+				7B0000000000000000000197 /* JourneyDetailView.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7B0000000000000000000218 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7B0000000000000000000202 /* RightTrainLiveActivityAttributes.swift in Sources */,
+				7B0000000000000000000206 /* RightTrainLiveActivityWidget.swift in Sources */,
+				7B0000000000000000000222 /* LiveActivityIntents.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		7B1000000000000000000010 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				7B1000000000000000000113 /* APIClientTests.swift in Sources */,
+				7B1000000000000000000101 /* AppModelTests.swift in Sources */,
+				7B1000000000000000000115 /* ConnectivityServiceTests.swift in Sources */,
+				7B1000000000000000000103 /* JourneyFormattingTests.swift in Sources */,
+				7B1000000000000000000107 /* LiveActivityLayoutTests.swift in Sources */,
+				7B1000000000000000000108 /* RightTrainLiveActivityWidget.swift in Sources */,
+				7B1000000000000000000105 /* TestSupport.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		7B000000000000000000021B /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7B0000000000000000000216 /* RightTrainLiveActivityExtension */;
+			targetProxy = 7B000000000000000000021A /* PBXContainerItemProxy */;
+		};
+		7B1000000000000000000111 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 7B0000000000000000000002 /* RightTrain */;
+			targetProxy = 7B1000000000000000000110 /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		7B0000000000000000000015 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"DEBUG=1",
+					"$(inherited)",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG $(inherited)";
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+			};
+			name = Debug;
+		};
+		7B0000000000000000000016 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				ASSETCATALOG_COMPILER_GENERATE_SWIFT_ASSET_SYMBOL_EXTENSIONS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++20";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_USER_SCRIPT_SANDBOXING = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu17;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				SDKROOT = iphoneos;
+				STRING_CATALOG_GENERATE_SYMBOLS = YES;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				VALIDATE_PRODUCT = YES;
+			};
+			name = Release;
+		};
+		7B0000000000000000000017 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APS_ENVIRONMENT = development;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = RightTrain/RightTrain.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "$(RIGHTTRAIN_DEVELOPMENT_TEAM)";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = RightTrain/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(RIGHTTRAIN_BUNDLE_IDENTIFIER)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				RIGHTTRAIN_API_BASE_URL = "https://clearsignal-api.lan.dreamshake.net";
+				RIGHTTRAIN_APNS_ENVIRONMENT = sandbox;
+				RIGHTTRAIN_BUNDLE_IDENTIFIER = com.righttrain.ios;
+				RIGHTTRAIN_DEVELOPMENT_TEAM = CV8JK3JKZX;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		7B0000000000000000000018 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APS_ENVIRONMENT = production;
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = RightTrain/RightTrain.entitlements;
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "$(RIGHTTRAIN_DEVELOPMENT_TEAM)";
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = RightTrain/Info.plist;
+				INFOPLIST_KEY_LSApplicationCategoryType = "public.app-category.travel";
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(RIGHTTRAIN_BUNDLE_IDENTIFIER)";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				RIGHTTRAIN_API_BASE_URL = "https://api.righttrain.app";
+				RIGHTTRAIN_APNS_ENVIRONMENT = production;
+				RIGHTTRAIN_BUNDLE_IDENTIFIER = com.righttrain.ios;
+				RIGHTTRAIN_DEVELOPMENT_TEAM = CV8JK3JKZX;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		7B000000000000000000021C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = RightTrainLiveActivityExtension/RightTrainLiveActivityExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CV8JK3JKZX;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = RightTrainLiveActivityExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(RIGHTTRAIN_BUNDLE_IDENTIFIER).liveactivity";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				RIGHTTRAIN_BUNDLE_IDENTIFIER = com.righttrain.ios;
+				RIGHTTRAIN_DEVELOPMENT_TEAM = CV8JK3JKZX;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Debug;
+		};
+		7B000000000000000000021D /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				APPLICATION_EXTENSION_API_ONLY = YES;
+				CODE_SIGN_ENTITLEMENTS = RightTrainLiveActivityExtension/RightTrainLiveActivityExtension.entitlements;
+				CODE_SIGN_IDENTITY = "Apple Development";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = CV8JK3JKZX;
+				GENERATE_INFOPLIST_FILE = NO;
+				INFOPLIST_FILE = RightTrainLiveActivityExtension/Info.plist;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@executable_path/../../Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(RIGHTTRAIN_BUNDLE_IDENTIFIER).liveactivity";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				PROVISIONING_PROFILE_SPECIFIER = "";
+				RIGHTTRAIN_BUNDLE_IDENTIFIER = com.righttrain.ios;
+				RIGHTTRAIN_DEVELOPMENT_TEAM = CV8JK3JKZX;
+				SKIP_INSTALL = YES;
+				SWIFT_EMIT_LOC_STRINGS = YES;
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+			};
+			name = Release;
+		};
+		7B1000000000000000000017 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "$(RIGHTTRAIN_DEVELOPMENT_TEAM)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(RIGHTTRAIN_BUNDLE_IDENTIFIER).tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				RIGHTTRAIN_BUNDLE_IDENTIFIER = com.righttrain.ios;
+				RIGHTTRAIN_DEVELOPMENT_TEAM = CV8JK3JKZX;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "DEBUG RIGHTTRAIN_LAYOUT_TESTS $(inherited)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RightTrain.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RightTrain";
+				TEST_TARGET_NAME = RightTrain;
+			};
+			name = Debug;
+		};
+		7B1000000000000000000018 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				CODE_SIGN_STYLE = Automatic;
+				CURRENT_PROJECT_VERSION = 1;
+				DEVELOPMENT_TEAM = "$(RIGHTTRAIN_DEVELOPMENT_TEAM)";
+				GENERATE_INFOPLIST_FILE = YES;
+				IPHONEOS_DEPLOYMENT_TARGET = 17.0;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				MARKETING_VERSION = 1.0.0;
+				PRODUCT_BUNDLE_IDENTIFIER = "$(RIGHTTRAIN_BUNDLE_IDENTIFIER).tests";
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				RIGHTTRAIN_BUNDLE_IDENTIFIER = com.righttrain.ios;
+				RIGHTTRAIN_DEVELOPMENT_TEAM = CV8JK3JKZX;
+				SKIP_INSTALL = YES;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "RIGHTTRAIN_LAYOUT_TESTS $(inherited)";
+				SWIFT_VERSION = 5.0;
+				TARGETED_DEVICE_FAMILY = 1;
+				TEST_HOST = "$(BUILT_PRODUCTS_DIR)/RightTrain.app/$(BUNDLE_EXECUTABLE_FOLDER_PATH)/RightTrain";
+				TEST_TARGET_NAME = RightTrain;
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		7B0000000000000000000013 /* Build configuration list for PBXProject "RightTrain" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7B0000000000000000000015 /* Debug */,
+				7B0000000000000000000016 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7B0000000000000000000014 /* Build configuration list for PBXNativeTarget "RightTrain" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7B0000000000000000000017 /* Debug */,
+				7B0000000000000000000018 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7B000000000000000000021E /* Build configuration list for PBXNativeTarget "RightTrainLiveActivityExtension" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7B000000000000000000021C /* Debug */,
+				7B000000000000000000021D /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+		7B1000000000000000000014 /* Build configuration list for PBXNativeTarget "RightTrainTests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7B1000000000000000000017 /* Debug */,
+				7B1000000000000000000018 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Release;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = 7B0000000000000000000001 /* Project object */;
+}
