@@ -45,8 +45,7 @@ struct SignInView: View {
                         .padding(.horizontal, RTSpacing.pageHorizontal)
                         .padding(.bottom, RTSpacing.sectionGap)
 
-                    // "Anonymous by default" callout card
-                    anonymousCallout
+                    privacyCallout
                         .padding(.horizontal, RTSpacing.pageHorizontal)
                         .padding(.bottom, RTSpacing.sectionGap)
 
@@ -105,7 +104,7 @@ struct SignInView: View {
         .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
     }
 
-    private var anonymousCallout: some View {
+    private var privacyCallout: some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: "shield.lefthalf.filled")
                 .font(.system(size: 18, weight: .semibold))
@@ -114,10 +113,10 @@ struct SignInView: View {
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("Anonymous by default")
+                Text("No contact details by default")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.rightTrainInk)
-                Text("Your device gets a private key for journeys, routines, and live alerts. No email or password is needed.")
+                Text("Your device gets a private key for journeys, routines, and live alerts. No email, phone number, or password is needed.")
                     .font(.system(size: 12, weight: .regular))
                     .foregroundStyle(Color.rightTrainInk.opacity(0.55))
                     .fixedSize(horizontal: false, vertical: true)

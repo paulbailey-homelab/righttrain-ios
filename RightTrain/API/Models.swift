@@ -17,6 +17,174 @@ struct AuthResponse: Decodable {
     var session: Session
 }
 
+struct AccountRegistrationOptionsResponse: Decodable, Equatable {
+    var attemptId: String
+    var expiresAt: Date
+    var credentialOptions: AccountCredentialOptions
+}
+
+struct AccountCredentialOptions: Decodable, Equatable {
+    var challenge: String
+    var relyingPartyId: String
+    var userHandle: String
+    var displayName: String
+}
+
+struct RegisterAccountRequest: Encodable, Equatable {
+    var attemptId: String
+    var credentialAttestation: AccountCredentialAttestation
+    var migrateCurrentDevicePreferences: Bool
+    var clientDeviceId: String?
+}
+
+struct AccountCredentialAttestation: Codable, Equatable {
+    var credentialId: String
+    var clientDataJSON: String
+    var attestationObject: String
+}
+
+struct RegisterAccountResponse: Decodable, Equatable {
+    var account: PrivacyAccount
+    var preferenceSet: AccountPreferenceSet
+    var recoveryCode: String
+}
+
+struct PrivacyAccount: Codable, Identifiable, Equatable {
+    var id: String
+    var mode: String
+    var createdAt: Date
+    var updatedAt: Date
+}
+
+struct AccountAssertionOptionsRequest: Encodable, Equatable {
+    var credentialHint: String?
+}
+
+struct AccountAssertionOptionsResponse: Decodable, Equatable {
+    var attemptId: String
+    var expiresAt: Date
+    var assertionOptions: AccountAssertionOptions
+}
+
+struct AccountAssertionOptions: Decodable, Equatable {
+    var challenge: String
+    var relyingPartyId: String
+    var allowCredentials: [String]
+}
+
+struct AccountSignInRequest: Encodable, Equatable {
+    var attemptId: String
+    var credentialAssertion: AccountCredentialAssertion
+    var clientDeviceId: String?
+}
+
+struct AccountCredentialAssertion: Codable, Equatable {
+    var credentialId: String
+    var clientDataJSON: String
+    var authenticatorData: String
+    var signature: String
+    var userHandle: String
+}
+
+struct AccountRecoveryRequest: Encodable, Equatable {
+    var recoveryCode: String
+    var newCredentialAttestation: AccountCredentialAttestation
+    var clientDeviceId: String?
+}
+
+struct AccountPreferenceSet: Codable, Equatable {
+    var version: Int
+    var updatedAt: Date
+    var stationDefaults: UserStationDefaults
+    var commuteRoutines: [AccountPreferenceRoutine]
+    var routeSetupDefaults: [String: String]
+    var notificationPreferences: AccountNotificationPreferences
+    var productPreferences: [String: String]
+}
+
+struct AccountPreferenceRoutine: Codable, Identifiable, Equatable {
+    var id: String
+    var name: String?
+    var status: String
+    var originCrs: String
+    var destinationCrs: String
+    var departureTime: String
+    var windowMinutes: Int
+    var activeWeekdays: [Int]
+    var autoArmEnabled: Bool
+    var autoArmLeadMinutes: Int
+    var notificationsEnabled: Bool
+    var updatedAt: Date
+}
+
+struct AccountNotificationPreferences: Codable, Equatable {
+    var routineNotificationsEnabled: Bool?
+}
+
+struct UpdateAccountPreferenceSetRequest: Encodable, Equatable {
+    var baseVersion: Int
+    var mergeStrategy: String
+    var stationDefaults: UserStationDefaults
+    var commuteRoutines: [AccountPreferenceRoutine]
+    var routeSetupDefaults: [String: String]
+    var notificationPreferences: AccountNotificationPreferences
+    var productPreferences: [String: String]
+}
+
+struct UpdateAccountPreferenceSetResponse: Decodable, Equatable {
+    var version: Int
+    var updatedAt: Date
+    var conflict: PreferenceConflict?
+}
+
+struct PreferenceConflictResponse: Decodable, Equatable {
+    var error: String
+    var message: String
+    var currentVersion: Int
+    var conflict: PreferenceConflict
+}
+
+struct PreferenceConflict: Codable, Equatable {
+    var fields: [String]
+    var allowedResolutions: [String]
+}
+
+struct LinkedDevicesResponse: Decodable, Equatable {
+    var devices: [LinkedDevice]
+}
+
+struct LinkedDevice: Codable, Identifiable, Equatable {
+    var id: String
+    var platform: String
+    var deviceClass: String
+    var appVersion: String?
+    var buildNumber: String?
+    var lastSeenAt: Date?
+    var currentDevice: Bool
+    var state: String
+}
+
+struct AccountExportResponse: Decodable, Equatable {
+    var generatedAt: Date
+    var account: PrivacyAccount
+    var preferenceSet: AccountPreferenceSet
+    var linkedDevices: [ExportLinkedDevice]
+    var retainedRecords: [RetainedMinimalRecord]?
+}
+
+struct ExportLinkedDevice: Codable, Equatable {
+    var platform: String
+    var deviceClass: String
+    var lastSeenAt: Date?
+    var state: String
+}
+
+struct RetainedMinimalRecord: Codable, Equatable {
+    var purpose: String
+    var retentionUntil: Date
+    var dataCategories: [String]
+}
+
 struct ServiceStatus: Decodable, Equatable {
     var status: String
     var checkedAt: Date

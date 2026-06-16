@@ -10,9 +10,45 @@ protocol SessionStoring {
 struct StoredSession: Codable {
     var session: Session
     var user: User
+    var portableAccount: PortableAccountSessionMetadata? = nil
 
     var accessToken: String? {
         session.accessToken
+    }
+}
+
+struct PortableAccountSessionMetadata: Codable, Equatable {
+    var account: PrivacyAccount
+    var lastSyncedPreferenceVersion: Int
+    var lastSyncedAt: Date?
+    var recovery: PortableAccountRecoveryMetadata?
+}
+
+struct PortableAccountRecoveryMetadata: Codable, Equatable {
+    var issuedAt: Date
+    var acknowledgedAt: Date?
+    var replacementCredentialRequired: Bool
+}
+
+extension SessionStoring {
+    func loadPortableAccountMetadata() throws -> PortableAccountSessionMetadata? {
+        try load()?.portableAccount
+    }
+
+    func savePortableAccountMetadata(_ metadata: PortableAccountSessionMetadata) throws {
+        guard var storedSession = try load() else {
+            throw SessionStoreError.noStoredSession
+        }
+        storedSession.portableAccount = metadata
+        try save(storedSession)
+    }
+
+    func clearPortableAccountMetadata() throws {
+        guard var storedSession = try load(), storedSession.portableAccount != nil else {
+            return
+        }
+        storedSession.portableAccount = nil
+        try save(storedSession)
     }
 }
 
@@ -75,5 +111,13 @@ struct KeychainError: LocalizedError {
 
     var errorDescription: String? {
         "Keychain operation failed with status \(status)."
+    }
+}
+
+enum SessionStoreError: LocalizedError {
+    case noStoredSession
+
+    var errorDescription: String? {
+        "No stored RightTrain session is available."
     }
 }

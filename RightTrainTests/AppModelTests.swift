@@ -428,6 +428,148 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
+    func testCreatePortableAccountStoresMetadataAndOneTimeRecoveryCode() async {
+        let apiClient = FakeAPIClient()
+        let sessionStore = FakeSessionStore()
+        let credentialService = FakeAccountCredentialService()
+        sessionStore.session = TestFactory.storedSession(accessToken: "device-token")
+        apiClient.currentUserResult = .success(TestFactory.user(id: "user-123"))
+        apiClient.registerAccountResult = .success(TestFactory.registerAccountResponse())
+        apiClient.linkedDevicesResult = .success(LinkedDevicesResponse(devices: [TestFactory.linkedDevice()]))
+        let model = makeModel(
+            apiClient: apiClient,
+            sessionStore: sessionStore,
+            accountCredentialService: credentialService
+        )
+        await model.bootstrap()
+
+        let didCreate = await model.authViewModel.createPortableAccount(migrateCurrentDevicePreferences: true)
+
+        XCTAssertTrue(didCreate)
+        XCTAssertEqual(credentialService.createCredentialOptions.count, 1)
+        XCTAssertEqual(apiClient.registerAccountRequests.last?.accessToken, "device-token")
+        XCTAssertTrue(apiClient.registerAccountRequests.last?.input.migrateCurrentDevicePreferences == true)
+        XCTAssertEqual(model.authViewModel.portableAccount?.account.mode, "portable")
+        XCTAssertEqual(model.authViewModel.portableAccount?.lastSyncedPreferenceVersion, 1)
+        XCTAssertEqual(model.authViewModel.oneTimeRecoveryCode, "shown-once-to-user")
+        XCTAssertEqual(model.authViewModel.accountStatusMessage, "Account preferences are ready to use on another device.")
+        XCTAssertEqual(sessionStore.session?.portableAccount?.account.mode, "portable")
+        XCTAssertFalse(String(describing: sessionStore.session).contains("shown-once-to-user"))
+
+        model.authViewModel.acknowledgeRecoveryCode()
+
+        XCTAssertNil(model.authViewModel.oneTimeRecoveryCode)
+        XCTAssertNotNil(sessionStore.session?.portableAccount?.recovery?.acknowledgedAt)
+    }
+
+    @MainActor
+    func testCreatePortableAccountFailureLeavesDeviceSessionOnly() async {
+        let apiClient = FakeAPIClient()
+        let sessionStore = FakeSessionStore()
+        sessionStore.session = TestFactory.storedSession(accessToken: "device-token")
+        apiClient.currentUserResult = .success(TestFactory.user(id: "user-123"))
+        apiClient.registerAccountResult = .failure(APIError.transport("offline"))
+        let model = makeModel(apiClient: apiClient, sessionStore: sessionStore)
+        await model.bootstrap()
+
+        let didCreate = await model.authViewModel.createPortableAccount()
+
+        XCTAssertFalse(didCreate)
+        XCTAssertEqual(model.accessToken, "device-token")
+        XCTAssertNil(model.authViewModel.portableAccount)
+        XCTAssertNil(sessionStore.session?.portableAccount)
+    }
+
+    @MainActor
+    func testRestorePortableAccountInstallsSessionAndPreferenceFreshness() async {
+        let apiClient = FakeAPIClient()
+        let sessionStore = FakeSessionStore()
+        let credentialService = FakeAccountCredentialService()
+        let restoredUser = TestFactory.user(id: "portable-user")
+        apiClient.accountSignInResult = .success(TestFactory.authResponse(user: restoredUser, accessToken: "portable-token"))
+        apiClient.accountPreferenceSetResult = .success(TestFactory.accountPreferenceSet(version: 4))
+        apiClient.linkedDevicesResult = .success(LinkedDevicesResponse(devices: [TestFactory.linkedDevice()]))
+        let model = makeModel(
+            apiClient: apiClient,
+            sessionStore: sessionStore,
+            accountCredentialService: credentialService
+        )
+
+        let didRestore = await model.authViewModel.restorePortableAccount()
+
+        XCTAssertTrue(didRestore)
+        XCTAssertEqual(credentialService.assertionOptions.count, 1)
+        XCTAssertEqual(apiClient.accountSignInRequests.count, 1)
+        XCTAssertEqual(model.accessToken, "portable-token")
+        XCTAssertEqual(model.user?.id, "portable-user")
+        XCTAssertEqual(model.authViewModel.portableAccount?.lastSyncedPreferenceVersion, 4)
+        XCTAssertEqual(model.authViewModel.linkedDevices.count, 1)
+        XCTAssertEqual(sessionStore.session?.portableAccount?.account.id, "portable-user")
+    }
+
+    @MainActor
+    func testLinkedDeviceRevocationUpdatesAccountState() async {
+        let apiClient = FakeAPIClient()
+        let sessionStore = FakeSessionStore()
+        sessionStore.session = TestFactory.storedSession(
+            accessToken: "portable-token",
+            portableAccount: PortableAccountSessionMetadata(
+                account: TestFactory.privacyAccount(),
+                lastSyncedPreferenceVersion: 1,
+                lastSyncedAt: TestFactory.now,
+                recovery: nil
+            )
+        )
+        apiClient.currentUserResult = .success(TestFactory.user())
+        apiClient.linkedDevicesResult = .success(LinkedDevicesResponse(devices: [
+            TestFactory.linkedDevice(id: "linked-device-1", currentDevice: false)
+        ]))
+        let model = makeModel(apiClient: apiClient, sessionStore: sessionStore)
+        await model.bootstrap()
+
+        guard let device = model.authViewModel.linkedDevices.first else {
+            return XCTFail("expected linked device")
+        }
+        await model.authViewModel.revokeLinkedDevice(device)
+
+        XCTAssertEqual(apiClient.revokedLinkedDevices.last?.id, "linked-device-1")
+        XCTAssertEqual(apiClient.revokedLinkedDevices.last?.accessToken, "portable-token")
+        XCTAssertEqual(model.authViewModel.linkedDevices.first?.state, "revoked")
+    }
+
+    @MainActor
+    func testExportAndDeletePortableAccountState() async {
+        let apiClient = FakeAPIClient()
+        let sessionStore = FakeSessionStore()
+        sessionStore.session = TestFactory.storedSession(
+            accessToken: "portable-token",
+            portableAccount: PortableAccountSessionMetadata(
+                account: TestFactory.privacyAccount(),
+                lastSyncedPreferenceVersion: 1,
+                lastSyncedAt: TestFactory.now,
+                recovery: nil
+            )
+        )
+        apiClient.currentUserResult = .success(TestFactory.user())
+        apiClient.accountExportResult = .success(TestFactory.accountExportResponse())
+        let model = makeModel(apiClient: apiClient, sessionStore: sessionStore)
+        await model.bootstrap()
+
+        await model.authViewModel.exportPortableAccountData()
+
+        XCTAssertEqual(apiClient.accountExportAccessTokens, ["portable-token"])
+        XCTAssertNotNil(model.authViewModel.accountExport)
+
+        let didDelete = await model.deleteAccount()
+
+        XCTAssertTrue(didDelete)
+        XCTAssertEqual(apiClient.deleteCurrentUserAccessTokens, ["portable-token"])
+        XCTAssertNil(model.authViewModel.portableAccount)
+        XCTAssertNil(model.authViewModel.accountExport)
+        XCTAssertEqual(sessionStore.clearCount, 1)
+    }
+
+    @MainActor
     func testSignInRegistersLiveActivityRemoteStartWithoutActiveWindow() async {
         let apiClient = FakeAPIClient()
         let sessionStore = FakeSessionStore()
@@ -2186,6 +2328,7 @@ final class AppModelTests: XCTestCase {
         pushNotificationCoordinator: FakePushNotificationCoordinator = FakePushNotificationCoordinator(),
         storeKitSubscriptionService: FakeStoreKitSubscriptionService? = nil,
         deviceIdentityService: FakeDeviceIdentityService? = nil,
+        accountCredentialService: FakeAccountCredentialService? = nil,
         notificationFeedbackGenerator: FakeNotificationFeedbackGenerator = FakeNotificationFeedbackGenerator(),
         applicationStateProvider: FakeApplicationStateProvider = FakeApplicationStateProvider(),
         activeJourneyCache: ActiveJourneyCache? = nil,
@@ -2201,6 +2344,7 @@ final class AppModelTests: XCTestCase {
             pushNotificationCoordinator: pushNotificationCoordinator,
             storeKitSubscriptionService: storeKitSubscriptionService,
             deviceIdentityService: deviceIdentityService ?? FakeDeviceIdentityService(),
+            accountCredentialService: accountCredentialService ?? FakeAccountCredentialService(),
             notificationFeedbackGenerator: notificationFeedbackGenerator,
             applicationStateProvider: applicationStateProvider,
             activeJourneyCache: activeJourneyCache,

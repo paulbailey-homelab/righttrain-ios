@@ -105,7 +105,7 @@ struct SettingsProfileView: View {
                 SettingsValueRow(
                     title: "Account",
                     systemImage: "iphone",
-                    value: "Anonymous (this device)"
+                    value: "Device-only"
                 )
             }
         } header: {
@@ -323,6 +323,67 @@ struct SettingsProfileView: View {
     private var accountSection: some View {
         Group {
             Section {
+                if let portableAccount = authViewModel.portableAccount {
+                    SettingsValueRow(
+                        title: "Account Mode",
+                        systemImage: "key",
+                        value: portableAccount.account.mode.capitalized
+                    )
+                    SettingsValueRow(
+                        title: "Preference Version",
+                        systemImage: "number",
+                        value: "\(portableAccount.lastSyncedPreferenceVersion)"
+                    )
+                    if let lastSyncedAt = portableAccount.lastSyncedAt {
+                        SettingsValueRow(
+                            title: "Last Synced",
+                            systemImage: "clock",
+                            value: lastSyncedAt.formatted(date: .abbreviated, time: .shortened)
+                        )
+                    }
+                    if let preferenceSet = authViewModel.accountPreferenceSet {
+                        SettingsValueRow(
+                            title: "Synced Categories",
+                            systemImage: "checklist",
+                            value: preferenceCategorySummary(preferenceSet)
+                        )
+                    }
+                    NavigationLink {
+                        LinkedDevicesView()
+                    } label: {
+                        Label("Linked Devices", systemImage: "iphone.gen3")
+                    }
+                    NavigationLink {
+                        AccountPrivacyControlsView()
+                    } label: {
+                        Label("Privacy Controls", systemImage: "hand.raised")
+                    }
+                } else {
+                    NavigationLink {
+                        AccountCreationView()
+                    } label: {
+                        Label("Create Account", systemImage: "key.badge.plus")
+                    }
+                    NavigationLink {
+                        AccountRestoreView()
+                    } label: {
+                        Label("Restore Account", systemImage: "arrow.down.circle")
+                    }
+                }
+
+                if let message = authViewModel.accountStatusMessage {
+                    Label(message, systemImage: "checkmark.seal")
+                        .font(.footnote)
+                        .foregroundStyle(Color.rightTrainActionInk)
+                }
+            } header: {
+                settingsSectionHeader("Portable Account", systemImage: "person.crop.circle.badge.checkmark")
+            } footer: {
+                Text("Account creation is optional. Device-only use stays available, and portable accounts sync preferences without email or phone number lookup.")
+            }
+            .listRowBackground(Color.rightTrainPaperCream)
+
+            Section {
                 Button(role: .destructive) {
                     confirmation = .signOut
                 } label: {
@@ -336,6 +397,14 @@ struct SettingsProfileView: View {
             .listRowBackground(Color.rightTrainPaperCream)
 
             Section {
+                if authViewModel.hasPortableAccount {
+                    NavigationLink {
+                        AccountPrivacyControlsView()
+                    } label: {
+                        Label("Export or Delete Account", systemImage: "hand.raised")
+                    }
+                }
+
                 Button(role: .destructive) {
                     confirmation = .deleteAccount
                 } label: {
@@ -343,7 +412,7 @@ struct SettingsProfileView: View {
                 }
                 .foregroundStyle(Color.rightTrainDanger)
             } footer: {
-                Text("Permanently removes your profile, journeys, and all account data. Cannot be undone.")
+                Text("Permanently removes active profile, journey, and account preference data. Limited audit records may be retained where required.")
                     .foregroundStyle(Color.rightTrainDanger)
             }
             .listRowBackground(Color.rightTrainPaperCream)
@@ -406,6 +475,20 @@ struct SettingsProfileView: View {
     private func settingsSectionHeader(_ title: String, systemImage: String) -> some View {
         Label(title, systemImage: systemImage)
             .font(.caption.weight(.semibold))
+    }
+
+    private func preferenceCategorySummary(_ preferenceSet: AccountPreferenceSet) -> String {
+        var categories = ["stations"]
+        if !preferenceSet.commuteRoutines.isEmpty {
+            categories.append("routines")
+        }
+        if preferenceSet.notificationPreferences.routineNotificationsEnabled != nil {
+            categories.append("notifications")
+        }
+        if !preferenceSet.productPreferences.isEmpty {
+            categories.append("products")
+        }
+        return categories.joined(separator: ", ")
     }
 }
 

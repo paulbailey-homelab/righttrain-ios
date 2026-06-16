@@ -15,8 +15,13 @@
 		7B000000000000000000010B /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000010A /* Models.swift */; };
 		7B000000000000000000010D /* KeychainSessionStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000010C /* KeychainSessionStore.swift */; };
 		7B000000000000000000010F /* DeviceIdentityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000010E /* DeviceIdentityService.swift */; };
+		7B0000000000000000000501 /* AccountCredentialService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000500 /* AccountCredentialService.swift */; };
 		7B0000000000000000000111 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000110 /* ContentView.swift */; };
 		7B0000000000000000000113 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000112 /* SignInView.swift */; };
+		7B0000000000000000000503 /* AccountCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000502 /* AccountCreationView.swift */; };
+		7B0000000000000000000505 /* AccountRestoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000504 /* AccountRestoreView.swift */; };
+		7B0000000000000000000507 /* LinkedDevicesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000506 /* LinkedDevicesView.swift */; };
+		7B0000000000000000000509 /* AccountPrivacyControlsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000508 /* AccountPrivacyControlsView.swift */; };
 		7B0000000000000000000115 /* WindowSetupView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000114 /* WindowSetupView.swift */; };
 		7B0000000000000000000117 /* RecommendationResultsView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000116 /* RecommendationResultsView.swift */; };
 		7B0000000000000000000119 /* ActiveWindowView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000118 /* ActiveWindowView.swift */; };
@@ -72,6 +77,7 @@
 		7B0000000000000000000211 /* StoreKit.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000136 /* StoreKit.framework */; };
 		7B0000000000000000000139 /* Network.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000138 /* Network.framework */; };
 		7B000000000000000000013B /* BackgroundTasks.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000013A /* BackgroundTasks.framework */; };
+		7B000000000000000000050B /* AuthenticationServices.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000050A /* AuthenticationServices.framework */; };
 		7B0000000000000000000210 /* RightTrainLiveActivityExtension.appex in Embed Foundation Extensions */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000020F /* RightTrainLiveActivityExtension.appex */; settings = {ATTRIBUTES = (RemoveHeadersOnCopy, ); }; };
 		7B0000000000000000000301 /* PushNotificationsAppDelegate.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000300 /* PushNotificationsAppDelegate.swift */; };
 		7B0000000000000000000303 /* PushNotificationCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000302 /* PushNotificationCoordinator.swift */; };
@@ -127,8 +133,13 @@
 		7B000000000000000000010A /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		7B000000000000000000010C /* KeychainSessionStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeychainSessionStore.swift; sourceTree = "<group>"; };
 		7B000000000000000000010E /* DeviceIdentityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceIdentityService.swift; sourceTree = "<group>"; };
+		7B0000000000000000000500 /* AccountCredentialService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountCredentialService.swift; sourceTree = "<group>"; };
 		7B0000000000000000000110 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		7B0000000000000000000112 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
+		7B0000000000000000000502 /* AccountCreationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountCreationView.swift; sourceTree = "<group>"; };
+		7B0000000000000000000504 /* AccountRestoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountRestoreView.swift; sourceTree = "<group>"; };
+		7B0000000000000000000506 /* LinkedDevicesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LinkedDevicesView.swift; sourceTree = "<group>"; };
+		7B0000000000000000000508 /* AccountPrivacyControlsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountPrivacyControlsView.swift; sourceTree = "<group>"; };
 		7B0000000000000000000114 /* WindowSetupView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSetupView.swift; sourceTree = "<group>"; };
 		7B0000000000000000000116 /* RecommendationResultsView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RecommendationResultsView.swift; sourceTree = "<group>"; };
 		7B0000000000000000000118 /* ActiveWindowView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveWindowView.swift; sourceTree = "<group>"; };
@@ -143,6 +154,7 @@
 		7B0000000000000000000136 /* StoreKit.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = StoreKit.framework; path = System/Library/Frameworks/StoreKit.framework; sourceTree = SDKROOT; };
 		7B0000000000000000000138 /* Network.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = Network.framework; path = System/Library/Frameworks/Network.framework; sourceTree = SDKROOT; };
 		7B000000000000000000013A /* BackgroundTasks.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = BackgroundTasks.framework; path = System/Library/Frameworks/BackgroundTasks.framework; sourceTree = SDKROOT; };
+		7B000000000000000000050A /* AuthenticationServices.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = AuthenticationServices.framework; path = System/Library/Frameworks/AuthenticationServices.framework; sourceTree = SDKROOT; };
 		7B0000000000000000000150 /* AppOperationState.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppOperationState.swift; sourceTree = "<group>"; };
 		7B0000000000000000000152 /* DeviceRegistrationContextFactory.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceRegistrationContextFactory.swift; sourceTree = "<group>"; };
 		7B0000000000000000000154 /* AuthViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AuthViewModel.swift; sourceTree = "<group>"; };
@@ -206,6 +218,7 @@
 				7B0000000000000000000131 /* DeviceCheck.framework in Frameworks */,
 				7B000000000000000000020A /* ActivityKit.framework in Frameworks */,
 				7B0000000000000000000133 /* Security.framework in Frameworks */,
+				7B000000000000000000050B /* AuthenticationServices.framework in Frameworks */,
 				7B0000000000000000000135 /* UserNotifications.framework in Frameworks */,
 				7B0000000000000000000211 /* StoreKit.framework in Frameworks */,
 				7B0000000000000000000139 /* Network.framework in Frameworks */,
@@ -255,6 +268,7 @@
 				7B0000000000000000000136 /* StoreKit.framework */,
 				7B0000000000000000000138 /* Network.framework */,
 				7B000000000000000000013A /* BackgroundTasks.framework */,
+				7B000000000000000000050A /* AuthenticationServices.framework */,
 				7B0000000000000000000207 /* WidgetKit.framework */,
 				7B0000000000000000000003 /* Products */,
 			);
@@ -319,6 +333,7 @@
 			children = (
 				7B000000000000000000010C /* KeychainSessionStore.swift */,
 				7B000000000000000000010E /* DeviceIdentityService.swift */,
+				7B0000000000000000000500 /* AccountCredentialService.swift */,
 			);
 			path = Auth;
 			sourceTree = "<group>";
@@ -334,6 +349,10 @@
 				7B0000000000000000000174 /* CommuteRoutinesView.swift */,
 					7B0000000000000000000170 /* SettingsProfileView.swift */,
 					7B0000000000000000000112 /* SignInView.swift */,
+					7B0000000000000000000502 /* AccountCreationView.swift */,
+					7B0000000000000000000504 /* AccountRestoreView.swift */,
+					7B0000000000000000000506 /* LinkedDevicesView.swift */,
+					7B0000000000000000000508 /* AccountPrivacyControlsView.swift */,
 					7B0000000000000000000114 /* WindowSetupView.swift */,
 					7B00000000000000000001A6 /* StationPickerView.swift */,
 					7B0000000000000000000116 /* RecommendationResultsView.swift */,
@@ -566,8 +585,13 @@
 				7B000000000000000000010B /* Models.swift in Sources */,
 				7B000000000000000000010D /* KeychainSessionStore.swift in Sources */,
 				7B000000000000000000010F /* DeviceIdentityService.swift in Sources */,
+				7B0000000000000000000501 /* AccountCredentialService.swift in Sources */,
 					7B0000000000000000000111 /* ContentView.swift in Sources */,
 					7B0000000000000000000113 /* SignInView.swift in Sources */,
+					7B0000000000000000000503 /* AccountCreationView.swift in Sources */,
+					7B0000000000000000000505 /* AccountRestoreView.swift in Sources */,
+					7B0000000000000000000507 /* LinkedDevicesView.swift in Sources */,
+					7B0000000000000000000509 /* AccountPrivacyControlsView.swift in Sources */,
 					7B0000000000000000000115 /* WindowSetupView.swift in Sources */,
 					7B00000000000000000001A7 /* StationPickerView.swift in Sources */,
 					7B0000000000000000000117 /* RecommendationResultsView.swift in Sources */,

@@ -38,6 +38,10 @@ struct DeviceRegistrationContextFactory {
         )
     }
 
+    static var accountClientDeviceID: String {
+        clientDeviceID
+    }
+
     private static var clientDeviceID: String {
         let key = "righttrain.ios.clientDeviceID"
         if let existing = UserDefaults.standard.string(forKey: key), !existing.isEmpty {

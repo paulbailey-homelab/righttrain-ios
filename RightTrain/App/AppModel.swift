@@ -74,6 +74,7 @@ final class AppCoordinator {
         pushNotificationCoordinator: PushNotificationCoordinating = NoopPushNotificationCoordinator(),
         storeKitSubscriptionService: any StoreKitSubscriptionServicing,
         deviceIdentityService: (any DeviceIdentityHandling)? = nil,
+        accountCredentialService: (any AccountCredentialHandling)? = nil,
         notificationFeedbackGenerator: any NotificationFeedbackGenerating = SystemNotificationFeedbackGenerator(),
         applicationStateProvider: any ApplicationStateProviding = SystemApplicationStateProvider(),
         stationProximityMonitor: any StationProximityMonitoring = SystemStationProximityMonitor(),
@@ -94,7 +95,8 @@ final class AppCoordinator {
             apiClient: apiClient,
             sessionStore: sessionStore,
             operationState: operationState,
-            deviceIdentityService: deviceIdentityService
+            deviceIdentityService: deviceIdentityService,
+            accountCredentialService: accountCredentialService
         )
         let activeWindowViewModel = ActiveWindowViewModel(
             apiClient: apiClient,

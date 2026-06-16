@@ -3,11 +3,21 @@ import Foundation
 protocol APIClienting {
     func createDeviceChallenge() async throws -> DeviceChallengeResponse
     func registerDevice(attemptId: String, keyId: String, attestationObject: String) async throws -> AuthResponse
+    func createAccountRegistrationOptions(accessToken: String) async throws -> AccountRegistrationOptionsResponse
+    func registerAccount(input: RegisterAccountRequest, accessToken: String) async throws -> RegisterAccountResponse
+    func createAccountAssertionOptions(credentialHint: String?) async throws -> AccountAssertionOptionsResponse
+    func signInWithAccount(input: AccountSignInRequest) async throws -> AuthResponse
+    func recoverAccount(input: AccountRecoveryRequest) async throws -> AuthResponse
     func serviceStatus() async throws -> ServiceStatus
     func appCapabilities() async throws -> AppCapabilitiesResponse
     func currentUser(accessToken: String) async throws -> User
     func updateStationDefaults(input: UpdateStationDefaultsRequest, accessToken: String) async throws -> User
     func deleteCurrentUser(accessToken: String) async throws
+    func getAccountPreferenceSet(accessToken: String) async throws -> AccountPreferenceSet
+    func updateAccountPreferenceSet(input: UpdateAccountPreferenceSetRequest, accessToken: String) async throws -> UpdateAccountPreferenceSetResponse
+    func listLinkedDevices(accessToken: String) async throws -> LinkedDevicesResponse
+    func revokeLinkedDevice(id: String, accessToken: String) async throws
+    func exportAccountPreferences(accessToken: String) async throws -> AccountExportResponse
     func billingProducts(accessToken: String) async throws -> BillingProductsResponse
     func syncStoreKitTransactions(signedTransactions: [String], accessToken: String) async throws -> User
     func searchStations(query: String, limit: Int) async throws -> [StationSuggestion]
@@ -261,6 +271,48 @@ struct APIClient {
         )
     }
 
+    func createAccountRegistrationOptions(accessToken: String) async throws -> AccountRegistrationOptionsResponse {
+        try await send(
+            path: "/v1/auth/account/registration-options",
+            method: "POST",
+            accessToken: accessToken,
+            body: Optional<String>.none
+        )
+    }
+
+    func registerAccount(input: RegisterAccountRequest, accessToken: String) async throws -> RegisterAccountResponse {
+        try await send(
+            path: "/v1/auth/account/register",
+            method: "POST",
+            accessToken: accessToken,
+            body: input
+        )
+    }
+
+    func createAccountAssertionOptions(credentialHint: String? = nil) async throws -> AccountAssertionOptionsResponse {
+        try await send(
+            path: "/v1/auth/account/assertion-options",
+            method: "POST",
+            body: AccountAssertionOptionsRequest(credentialHint: credentialHint)
+        )
+    }
+
+    func signInWithAccount(input: AccountSignInRequest) async throws -> AuthResponse {
+        try await send(
+            path: "/v1/auth/account/sign-in",
+            method: "POST",
+            body: input
+        )
+    }
+
+    func recoverAccount(input: AccountRecoveryRequest) async throws -> AuthResponse {
+        try await send(
+            path: "/v1/auth/account/recover",
+            method: "POST",
+            body: input
+        )
+    }
+
     func serviceStatus() async throws -> ServiceStatus {
         try await send(path: "/v1/status")
     }
@@ -288,6 +340,35 @@ struct APIClient {
             method: "DELETE",
             accessToken: accessToken
         )
+    }
+
+    func getAccountPreferenceSet(accessToken: String) async throws -> AccountPreferenceSet {
+        try await send(path: "/v1/me/preference-set", accessToken: accessToken)
+    }
+
+    func updateAccountPreferenceSet(input: UpdateAccountPreferenceSetRequest, accessToken: String) async throws -> UpdateAccountPreferenceSetResponse {
+        try await send(
+            path: "/v1/me/preference-set",
+            method: "PUT",
+            accessToken: accessToken,
+            body: input
+        )
+    }
+
+    func listLinkedDevices(accessToken: String) async throws -> LinkedDevicesResponse {
+        try await send(path: "/v1/me/linked-devices", accessToken: accessToken)
+    }
+
+    func revokeLinkedDevice(id: String, accessToken: String) async throws {
+        try await send(
+            path: "/v1/me/linked-devices/\(id)",
+            method: "DELETE",
+            accessToken: accessToken
+        )
+    }
+
+    func exportAccountPreferences(accessToken: String) async throws -> AccountExportResponse {
+        try await send(path: "/v1/me/export", accessToken: accessToken)
     }
 
     func billingProducts(accessToken: String) async throws -> BillingProductsResponse {

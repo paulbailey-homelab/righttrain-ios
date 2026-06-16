@@ -59,8 +59,17 @@ final class FakeAPIClient: APIClienting {
         AppCapabilitiesResponse(multiLegRoutingEnabled: false)
     )
     var registerDeviceResult: Result<AuthResponse, Error> = .failure(TestFailure.unimplemented)
+    var accountRegistrationOptionsResult: Result<AccountRegistrationOptionsResponse, Error> = .success(TestFactory.accountCredentialOptions())
+    var registerAccountResult: Result<RegisterAccountResponse, Error> = .success(TestFactory.registerAccountResponse())
+    var accountAssertionOptionsResult: Result<AccountAssertionOptionsResponse, Error> = .success(TestFactory.accountAssertionOptions())
+    var accountSignInResult: Result<AuthResponse, Error> = .failure(TestFailure.unimplemented)
+    var accountRecoveryResult: Result<AuthResponse, Error> = .failure(TestFailure.unimplemented)
     var currentUserResult: Result<User, Error> = .failure(TestFailure.unimplemented)
     var updateStationDefaultsResult: Result<User, Error> = .failure(TestFailure.unimplemented)
+    var accountPreferenceSetResult: Result<AccountPreferenceSet, Error> = .success(TestFactory.accountPreferenceSet())
+    var updateAccountPreferenceSetResult: Result<UpdateAccountPreferenceSetResponse, Error> = .success(UpdateAccountPreferenceSetResponse(version: 2, updatedAt: Date(timeIntervalSince1970: 0), conflict: nil))
+    var linkedDevicesResult: Result<LinkedDevicesResponse, Error> = .success(LinkedDevicesResponse(devices: []))
+    var accountExportResult: Result<AccountExportResponse, Error> = .success(TestFactory.accountExportResponse())
     var billingProductsResult: Result<BillingProductsResponse, Error> = .success(BillingProductsResponse(products: [], entitlements: UserEntitlements(tier: "free_beta", status: "active", activeWindowLimit: 1, commuteRoutineLimit: 2)))
     var storeKitSyncResult: Result<User, Error> = .failure(TestFailure.unimplemented)
     var stationSearchResult: Result<[StationSuggestion], Error> = .success([])
@@ -115,8 +124,19 @@ final class FakeAPIClient: APIClienting {
     var resetPooledConnectionsCallCount = 0
     var appCapabilitiesCallCount = 0
     var registerDeviceRequests: [DeviceRegistrationRequest] = []
+    var accountRegistrationOptionTokens: [String] = []
+    var registerAccountRequests: [(input: RegisterAccountRequest, accessToken: String)] = []
+    var accountAssertionOptionHints: [String?] = []
+    var accountSignInRequests: [AccountSignInRequest] = []
+    var accountRecoveryRequests: [AccountRecoveryRequest] = []
     var currentUserAccessTokens: [String] = []
     var updateStationDefaultsRequests: [(input: UpdateStationDefaultsRequest, accessToken: String)] = []
+    var deleteCurrentUserAccessTokens: [String] = []
+    var accountPreferenceSetTokens: [String] = []
+    var updateAccountPreferenceSetRequests: [(input: UpdateAccountPreferenceSetRequest, accessToken: String)] = []
+    var linkedDevicesAccessTokens: [String] = []
+    var revokedLinkedDevices: [(id: String, accessToken: String)] = []
+    var accountExportAccessTokens: [String] = []
     var billingProductAccessTokens: [String] = []
     var storeKitSyncRequests: [(signedTransactions: [String], accessToken: String)] = []
     var stationSearchRequests: [(query: String, limit: Int)] = []
@@ -183,6 +203,31 @@ final class FakeAPIClient: APIClienting {
         return try registerDeviceResult.get()
     }
 
+    func createAccountRegistrationOptions(accessToken: String) async throws -> AccountRegistrationOptionsResponse {
+        accountRegistrationOptionTokens.append(accessToken)
+        return try accountRegistrationOptionsResult.get()
+    }
+
+    func registerAccount(input: RegisterAccountRequest, accessToken: String) async throws -> RegisterAccountResponse {
+        registerAccountRequests.append((input, accessToken))
+        return try registerAccountResult.get()
+    }
+
+    func createAccountAssertionOptions(credentialHint: String?) async throws -> AccountAssertionOptionsResponse {
+        accountAssertionOptionHints.append(credentialHint)
+        return try accountAssertionOptionsResult.get()
+    }
+
+    func signInWithAccount(input: AccountSignInRequest) async throws -> AuthResponse {
+        accountSignInRequests.append(input)
+        return try accountSignInResult.get()
+    }
+
+    func recoverAccount(input: AccountRecoveryRequest) async throws -> AuthResponse {
+        accountRecoveryRequests.append(input)
+        return try accountRecoveryResult.get()
+    }
+
     func currentUser(accessToken: String) async throws -> User {
         currentUserAccessTokens.append(accessToken)
         return try currentUserResult.get()
@@ -194,9 +239,34 @@ final class FakeAPIClient: APIClienting {
     }
 
     func deleteCurrentUser(accessToken: String) async throws {
+        deleteCurrentUserAccessTokens.append(accessToken)
         if let deleteUserError {
             throw deleteUserError
         }
+    }
+
+    func getAccountPreferenceSet(accessToken: String) async throws -> AccountPreferenceSet {
+        accountPreferenceSetTokens.append(accessToken)
+        return try accountPreferenceSetResult.get()
+    }
+
+    func updateAccountPreferenceSet(input: UpdateAccountPreferenceSetRequest, accessToken: String) async throws -> UpdateAccountPreferenceSetResponse {
+        updateAccountPreferenceSetRequests.append((input, accessToken))
+        return try updateAccountPreferenceSetResult.get()
+    }
+
+    func listLinkedDevices(accessToken: String) async throws -> LinkedDevicesResponse {
+        linkedDevicesAccessTokens.append(accessToken)
+        return try linkedDevicesResult.get()
+    }
+
+    func revokeLinkedDevice(id: String, accessToken: String) async throws {
+        revokedLinkedDevices.append((id, accessToken))
+    }
+
+    func exportAccountPreferences(accessToken: String) async throws -> AccountExportResponse {
+        accountExportAccessTokens.append(accessToken)
+        return try accountExportResult.get()
     }
 
     func billingProducts(accessToken: String) async throws -> BillingProductsResponse {
@@ -808,6 +878,32 @@ final class FakeDeviceIdentityService: DeviceIdentityHandling {
     }
 }
 
+@MainActor
+final class FakeAccountCredentialService: AccountCredentialHandling {
+    var isSupported: Bool = true
+    var createCredentialResult: Result<AccountCredentialAttestation, Error> = .success(TestFactory.accountCredentialAttestation())
+    var assertCredentialResult: Result<AccountCredentialAssertion, Error> = .success(TestFactory.accountCredentialAssertion())
+    var recoveryCredentialResult: Result<AccountCredentialAttestation, Error> = .success(TestFactory.accountCredentialAttestation(credentialId: "recovery-credential"))
+    private(set) var createCredentialOptions: [AccountCredentialOptions] = []
+    private(set) var assertionOptions: [AccountAssertionOptions] = []
+    private(set) var recoveryRelyingPartyIDs: [String] = []
+
+    func createCredential(options: AccountCredentialOptions) async throws -> AccountCredentialAttestation {
+        createCredentialOptions.append(options)
+        return try createCredentialResult.get()
+    }
+
+    func assertCredential(options: AccountAssertionOptions) async throws -> AccountCredentialAssertion {
+        assertionOptions.append(options)
+        return try assertCredentialResult.get()
+    }
+
+    func createRecoveryCredential(relyingPartyID: String) async throws -> AccountCredentialAttestation {
+        recoveryRelyingPartyIDs.append(relyingPartyID)
+        return try recoveryCredentialResult.get()
+    }
+}
+
 enum TestFactory {
     static let now = DateFormatting.date(from: "2026-01-10T09:00:00.000Z")!
 
@@ -841,7 +937,8 @@ enum TestFactory {
     static func storedSession(
         user: User = user(),
         accessToken: String? = "token",
-        expiresAt: Date = Date().addingTimeInterval(3600)
+        expiresAt: Date = Date().addingTimeInterval(3600),
+        portableAccount: PortableAccountSessionMetadata? = nil
     ) -> StoredSession {
         StoredSession(
             session: Session(
@@ -851,12 +948,149 @@ enum TestFactory {
                 expiresAt: expiresAt,
                 createdAt: now
             ),
-            user: user
+            user: user,
+            portableAccount: portableAccount
         )
     }
 
     static func authResponse(user: User = user(), accessToken: String? = "token") -> AuthResponse {
         AuthResponse(user: user, session: storedSession(user: user, accessToken: accessToken).session)
+    }
+
+    static func privacyAccount(
+        id: String = "4b4f16d9-6ff7-4755-9b64-890e3c205404",
+        mode: String = "portable"
+    ) -> PrivacyAccount {
+        PrivacyAccount(id: id, mode: mode, createdAt: now, updatedAt: now)
+    }
+
+    static func accountCredentialOptions() -> AccountRegistrationOptionsResponse {
+        AccountRegistrationOptionsResponse(
+            attemptId: "8f64b3bd-9c64-4ab7-8b57-f2b6ab8c3f12",
+            expiresAt: now.addingTimeInterval(300),
+            credentialOptions: AccountCredentialOptions(
+                challenge: "base64url-challenge",
+                relyingPartyId: "righttrain.app",
+                userHandle: "base64url-user-handle",
+                displayName: "RightTrain account"
+            )
+        )
+    }
+
+    static func accountAssertionOptions() -> AccountAssertionOptionsResponse {
+        AccountAssertionOptionsResponse(
+            attemptId: "26864ba9-4052-41e3-9fb9-135baf8766c0",
+            expiresAt: now.addingTimeInterval(300),
+            assertionOptions: AccountAssertionOptions(
+                challenge: "base64url-assertion-challenge",
+                relyingPartyId: "righttrain.app",
+                allowCredentials: ["base64url-credential-id"]
+            )
+        )
+    }
+
+    static func accountCredentialAttestation(
+        credentialId: String = "base64url-credential-id"
+    ) -> AccountCredentialAttestation {
+        AccountCredentialAttestation(
+            credentialId: credentialId,
+            clientDataJSON: "base64url-client-data",
+            attestationObject: "base64url-attestation-object"
+        )
+    }
+
+    static func accountCredentialAssertion(
+        credentialId: String = "base64url-credential-id"
+    ) -> AccountCredentialAssertion {
+        AccountCredentialAssertion(
+            credentialId: credentialId,
+            clientDataJSON: "base64url-client-data",
+            authenticatorData: "base64url-authenticator-data",
+            signature: "base64url-signature",
+            userHandle: "base64url-user-handle"
+        )
+    }
+
+    static func accountPreferenceRoutine(
+        id: String = "afcb09c3-7017-4746-a963-7814d95470f4",
+        originCrs: String = "EUS",
+        destinationCrs: String = "MAN"
+    ) -> AccountPreferenceRoutine {
+        AccountPreferenceRoutine(
+            id: id,
+            name: "Morning commute",
+            status: "active",
+            originCrs: originCrs,
+            destinationCrs: destinationCrs,
+            departureTime: "08:10",
+            windowMinutes: 120,
+            activeWeekdays: [1, 2, 3, 4, 5],
+            autoArmEnabled: true,
+            autoArmLeadMinutes: 30,
+            notificationsEnabled: true,
+            updatedAt: now
+        )
+    }
+
+    static func accountPreferenceSet(
+        version: Int = 1,
+        homeStationCrs: String? = "EUS",
+        workStationCrs: String? = "MAN",
+        routines: [AccountPreferenceRoutine]? = nil
+    ) -> AccountPreferenceSet {
+        AccountPreferenceSet(
+            version: version,
+            updatedAt: now,
+            stationDefaults: UserStationDefaults(homeStationCrs: homeStationCrs, workStationCrs: workStationCrs),
+            commuteRoutines: routines ?? [accountPreferenceRoutine()],
+            routeSetupDefaults: [:],
+            notificationPreferences: AccountNotificationPreferences(routineNotificationsEnabled: true),
+            productPreferences: [:]
+        )
+    }
+
+    static func registerAccountResponse() -> RegisterAccountResponse {
+        RegisterAccountResponse(
+            account: privacyAccount(),
+            preferenceSet: accountPreferenceSet(),
+            recoveryCode: "shown-once-to-user"
+        )
+    }
+
+    static func preferenceConflict() -> PreferenceConflict {
+        PreferenceConflict(
+            fields: ["stationDefaults.homeStationCrs", "commuteRoutines"],
+            allowedResolutions: ["keep_local", "replace_with_account", "merge_non_conflicting"]
+        )
+    }
+
+    static func linkedDevice(
+        id: String = "f73aa4cc-0f64-44bc-a0e2-822ef509d685",
+        currentDevice: Bool = true,
+        state: String = "active"
+    ) -> LinkedDevice {
+        LinkedDevice(
+            id: id,
+            platform: "iOS",
+            deviceClass: "iPhone",
+            appVersion: "0.1.0",
+            buildNumber: "42",
+            lastSeenAt: now,
+            currentDevice: currentDevice,
+            state: state
+        )
+    }
+
+    static func accountExportResponse() -> AccountExportResponse {
+        AccountExportResponse(
+            generatedAt: now,
+            account: privacyAccount(),
+            preferenceSet: accountPreferenceSet(),
+            linkedDevices: [
+                ExportLinkedDevice(platform: "iOS", deviceClass: "iPhone", lastSeenAt: now, state: "active")
+            ],
+            retainedRecords: nil
+        )
     }
 
     static func publicJourneyShare(shareID: String = "share-1") -> PublicJourneyShare {

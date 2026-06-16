@@ -744,11 +744,73 @@ struct PreviewAPIClient: APIClienting {
     var windowNotificationDetail: WindowSubscriptionNotificationDetail?
     var nearbyResponse: NearbyStationSearchResponse?
 
+    private var previewPrivacyAccount: PrivacyAccount {
+        PrivacyAccount(
+            id: PreviewFixtures.user.id,
+            mode: "portable",
+            createdAt: PreviewFixtures.baseDate,
+            updatedAt: PreviewFixtures.baseDate
+        )
+    }
+
+    private var previewAccountPreferenceSet: AccountPreferenceSet {
+        AccountPreferenceSet(
+            version: 1,
+            updatedAt: PreviewFixtures.baseDate,
+            stationDefaults: PreviewFixtures.user.stationDefaults,
+            commuteRoutines: [],
+            routeSetupDefaults: [:],
+            notificationPreferences: AccountNotificationPreferences(routineNotificationsEnabled: true),
+            productPreferences: [:]
+        )
+    }
+
     func createDeviceChallenge() async throws -> DeviceChallengeResponse {
         DeviceChallengeResponse(attemptId: "preview-attempt", challenge: "Y2hhbGxlbmdl", expiresAt: Date().addingTimeInterval(300))
     }
 
     func registerDevice(attemptId: String, keyId: String, attestationObject: String) async throws -> AuthResponse {
+        AuthResponse(user: PreviewFixtures.user, session: PreviewFixtures.storedSession.session)
+    }
+
+    func createAccountRegistrationOptions(accessToken: String) async throws -> AccountRegistrationOptionsResponse {
+        AccountRegistrationOptionsResponse(
+            attemptId: "preview-account-registration",
+            expiresAt: Date().addingTimeInterval(300),
+            credentialOptions: AccountCredentialOptions(
+                challenge: "preview-challenge",
+                relyingPartyId: "righttrain.app",
+                userHandle: "preview-user-handle",
+                displayName: "RightTrain account"
+            )
+        )
+    }
+
+    func registerAccount(input: RegisterAccountRequest, accessToken: String) async throws -> RegisterAccountResponse {
+        RegisterAccountResponse(
+            account: previewPrivacyAccount,
+            preferenceSet: previewAccountPreferenceSet,
+            recoveryCode: "preview-recovery-code"
+        )
+    }
+
+    func createAccountAssertionOptions(credentialHint: String?) async throws -> AccountAssertionOptionsResponse {
+        AccountAssertionOptionsResponse(
+            attemptId: "preview-account-assertion",
+            expiresAt: Date().addingTimeInterval(300),
+            assertionOptions: AccountAssertionOptions(
+                challenge: "preview-assertion-challenge",
+                relyingPartyId: "righttrain.app",
+                allowCredentials: ["preview-credential"]
+            )
+        )
+    }
+
+    func signInWithAccount(input: AccountSignInRequest) async throws -> AuthResponse {
+        AuthResponse(user: PreviewFixtures.user, session: PreviewFixtures.storedSession.session)
+    }
+
+    func recoverAccount(input: AccountRecoveryRequest) async throws -> AuthResponse {
         AuthResponse(user: PreviewFixtures.user, session: PreviewFixtures.storedSession.session)
     }
 
@@ -765,6 +827,43 @@ struct PreviewAPIClient: APIClienting {
     func currentUser(accessToken: String) async throws -> User { PreviewFixtures.user }
     func updateStationDefaults(input: UpdateStationDefaultsRequest, accessToken: String) async throws -> User { PreviewFixtures.user }
     func deleteCurrentUser(accessToken: String) async throws {}
+
+    func getAccountPreferenceSet(accessToken: String) async throws -> AccountPreferenceSet {
+        previewAccountPreferenceSet
+    }
+
+    func updateAccountPreferenceSet(input: UpdateAccountPreferenceSetRequest, accessToken: String) async throws -> UpdateAccountPreferenceSetResponse {
+        UpdateAccountPreferenceSetResponse(version: input.baseVersion + 1, updatedAt: PreviewFixtures.baseDate, conflict: nil)
+    }
+
+    func listLinkedDevices(accessToken: String) async throws -> LinkedDevicesResponse {
+        LinkedDevicesResponse(devices: [
+            LinkedDevice(
+                id: "preview-linked-device",
+                platform: "iOS",
+                deviceClass: "iPhone",
+                appVersion: "0.1",
+                buildNumber: "1",
+                lastSeenAt: PreviewFixtures.baseDate,
+                currentDevice: true,
+                state: "active"
+            )
+        ])
+    }
+
+    func revokeLinkedDevice(id: String, accessToken: String) async throws {}
+
+    func exportAccountPreferences(accessToken: String) async throws -> AccountExportResponse {
+        AccountExportResponse(
+            generatedAt: PreviewFixtures.baseDate,
+            account: previewPrivacyAccount,
+            preferenceSet: previewAccountPreferenceSet,
+            linkedDevices: [
+                ExportLinkedDevice(platform: "iOS", deviceClass: "iPhone", lastSeenAt: PreviewFixtures.baseDate, state: "active")
+            ],
+            retainedRecords: nil
+        )
+    }
 
     func billingProducts(accessToken: String) async throws -> BillingProductsResponse {
         BillingProductsResponse(
