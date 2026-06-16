@@ -1016,7 +1016,7 @@ final class AppModelTests: XCTestCase {
         apiClient.createWindowResult = .failure(TestFactory.notFoundError(message: "404 page not found"))
         await model.createActiveWindow()
 
-        XCTAssertEqual(model.alertState, .backendVersion("This backend does not expose the live Pin API yet. Deploy a compatible API image."))
+        XCTAssertEqual(model.alertState, .backendVersion("This backend does not expose the requested API yet. Deploy a compatible API image."))
         XCTAssertNil(model.activeWindow)
     }
 

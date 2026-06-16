@@ -40,7 +40,7 @@ final class AppOperationState {
                 alertState = .auth(Self.expiredSessionMessage)
                 notifyAuthFailure()
             } else if apiError.isMissingEndpoint {
-                alertState = .backendVersion("This backend does not expose the live Pin API yet. Deploy a compatible API image.")
+                alertState = .backendVersion("This backend does not expose the requested API yet. Deploy a compatible API image.")
             } else if apiError.isEmptyWindow {
                 alertState = .emptyWindow("No journeys were found in that range. Try a wider departure range.")
             } else {
