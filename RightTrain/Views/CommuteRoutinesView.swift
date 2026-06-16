@@ -92,12 +92,33 @@ struct CommuteRoutinesView: View {
                 .foregroundStyle(Color.rightTrainInk.opacity(0.55))
 
             VStack(spacing: RTSpacing.listItem) {
-                StationSearchField(title: "Home", selection: $homeStation) { query in
-                    try await viewModel.searchStations(query: query)
+                NavigationLink {
+                    StationPickerView(
+                        context: defaultPickerContext(role: .origin, previousSelection: homeStation, counterpart: workStation),
+                        apiClient: appCoordinator.stationPickerAPIClient,
+                        favourites: localStationFavourites,
+                        locationProvider: SystemStationLocationProvider()
+                    ) { station in
+                        homeStation = station
+                    }
+                } label: {
+                    StationPickerEntryLabel(title: "Home", station: homeStation, placeholder: "Choose home station")
                 }
-                StationSearchField(title: "Work", selection: $workStation) { query in
-                    try await viewModel.searchStations(query: query)
+                .buttonStyle(.plain)
+
+                NavigationLink {
+                    StationPickerView(
+                        context: defaultPickerContext(role: .destination, previousSelection: workStation, counterpart: homeStation),
+                        apiClient: appCoordinator.stationPickerAPIClient,
+                        favourites: localStationFavourites,
+                        locationProvider: SystemStationLocationProvider()
+                    ) { station in
+                        workStation = station
+                    }
+                } label: {
+                    StationPickerEntryLabel(title: "Work", station: workStation, placeholder: "Choose work station")
                 }
+                .buttonStyle(.plain)
             }
 
             VStack(spacing: RTSpacing.listItem) {
@@ -305,6 +326,31 @@ struct CommuteRoutinesView: View {
         authViewModel.user?.stationDefaults.workStationCrs
     }
 
+    private var localStationFavourites: [StationFavourite] {
+        StationFavoritesProvider.favourites(
+            homeStationCRS: homeStation?.crs ?? currentHomeDefault,
+            workStationCRS: workStation?.crs ?? currentWorkDefault,
+            routines: viewModel.routines,
+            stationResolver: { crs in viewModel.stationSuggestion(for: crs) }
+        )
+    }
+
+    private func defaultPickerContext(
+        role: StationPickerSelectionRole,
+        previousSelection: StationSuggestion?,
+        counterpart: StationSuggestion?
+    ) -> StationPickerContext {
+        StationPickerContext(
+            selectionRole: role,
+            routeMode: .direct,
+            selectedCounterpartCRS: counterpart?.crs,
+            departureStart: nil,
+            windowMinutes: 180,
+            sourceSurface: .commuteDefaults,
+            previousSelection: previousSelection
+        )
+    }
+
     private func weekdayText(_ weekdays: [Int]) -> String {
         let labels = [1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri", 6: "Sat", 7: "Sun"]
         return weekdays.compactMap { labels[$0] }.joined(separator: ", ")
@@ -411,6 +457,7 @@ struct RoutineEditorSheet: Identifiable {
 
 private struct RoutineEditorView: View {
     @Environment(\.dismiss) private var dismiss
+    @Environment(AppCoordinator.self) private var appCoordinator
     @Environment(CommuteRoutinesViewModel.self) private var viewModel
     var sheet: RoutineEditorSheet
 
@@ -430,12 +477,33 @@ private struct RoutineEditorView: View {
             Form {
                 Section("Route") {
                     TextField("Name", text: $name)
-                    StationSearchField(title: "From", selection: $origin) { query in
-                        try await viewModel.searchStations(query: query)
+                    NavigationLink {
+                        StationPickerView(
+                            context: routinePickerContext(role: .origin, previousSelection: origin, counterpart: destination),
+                            apiClient: appCoordinator.stationPickerAPIClient,
+                            favourites: appCoordinator.stationFavourites(),
+                            locationProvider: SystemStationLocationProvider()
+                        ) { station in
+                            origin = station
+                        }
+                    } label: {
+                        StationPickerEntryLabel(title: "From", station: origin, placeholder: "Choose origin")
                     }
-                    StationSearchField(title: "To", selection: $destination) { query in
-                        try await viewModel.searchStations(query: query)
+                    .buttonStyle(.plain)
+
+                    NavigationLink {
+                        StationPickerView(
+                            context: routinePickerContext(role: .destination, previousSelection: destination, counterpart: origin),
+                            apiClient: appCoordinator.stationPickerAPIClient,
+                            favourites: appCoordinator.stationFavourites(),
+                            locationProvider: SystemStationLocationProvider()
+                        ) { station in
+                            destination = station
+                        }
+                    } label: {
+                        StationPickerEntryLabel(title: "To", station: destination, placeholder: "Choose destination")
                     }
+                    .buttonStyle(.plain)
                 }
 
                 Section("Schedule") {
@@ -537,6 +605,22 @@ private struct RoutineEditorView: View {
 
     private func station(crs: String?) -> StationSuggestion? {
         viewModel.stationSuggestion(for: crs)
+    }
+
+    private func routinePickerContext(
+        role: StationPickerSelectionRole,
+        previousSelection: StationSuggestion?,
+        counterpart: StationSuggestion?
+    ) -> StationPickerContext {
+        StationPickerContext(
+            selectionRole: role,
+            routeMode: .direct,
+            selectedCounterpartCRS: counterpart?.crs,
+            departureStart: departureTime,
+            windowMinutes: windowMinutes,
+            sourceSurface: .routineEditor,
+            previousSelection: previousSelection
+        )
     }
 
     private func date(fromClock value: String) -> Date {

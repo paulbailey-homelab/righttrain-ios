@@ -293,6 +293,28 @@ final class WindowSetupViewModel {
         )
     }
 
+    func stationPickerContext(for role: StationPickerSelectionRole) -> StationPickerContext {
+        StationPickerContext(
+            selectionRole: role,
+            routeMode: directRoutesOnly ? .direct : .anyRoute,
+            selectedCounterpartCRS: role == .origin ? destination?.crs : origin?.crs,
+            departureStart: departureStart,
+            windowMinutes: windowMinutes,
+            sourceSurface: .journeySetup,
+            previousSelection: role == .origin ? origin : destination
+        )
+    }
+
+    func applyStationPickerSelection(_ station: StationSuggestion, role: StationPickerSelectionRole) {
+        switch role {
+        case .origin:
+            origin = station
+        case .destination:
+            destination = station
+        }
+        operationState.alertState = nil
+    }
+
     @discardableResult
     func loadRecommendations() async -> Bool {
         guard let origin, let destination else {

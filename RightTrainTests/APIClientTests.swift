@@ -12,12 +12,14 @@ private final class StubURLProtocol: URLProtocol {
 
     static let lock = NSLock()
     static var outcomes: [Outcome] = []
+    static var requests: [URLRequest] = []
     static var requestCount = 0
 
     static func reset(_ outcomes: [Outcome]) {
         lock.lock()
         defer { lock.unlock() }
         self.outcomes = outcomes
+        requests = []
         requestCount = 0
     }
 
@@ -37,10 +39,19 @@ private final class StubURLProtocol: URLProtocol {
         return requestCount
     }
 
+    static var recordedRequests: [URLRequest] {
+        lock.lock()
+        defer { lock.unlock() }
+        return requests
+    }
+
     override class func canInit(with request: URLRequest) -> Bool { true }
     override class func canonicalRequest(for request: URLRequest) -> URLRequest { request }
 
     override func startLoading() {
+        Self.lock.lock()
+        Self.requests.append(request)
+        Self.lock.unlock()
         switch StubURLProtocol.nextOutcome() {
         case .failure(let error):
             client?.urlProtocol(self, didFailWithError: error)
@@ -132,5 +143,57 @@ final class APIClientTests: XCTestCase {
         } catch {
             XCTFail("Expected APIError, got \(error)")
         }
+    }
+
+    func testNearbyStationsRequestAndDecode() async throws {
+        StubURLProtocol.reset([
+            .success(statusCode: 200, body: Data("""
+            {
+              "stations": [
+                {
+                  "crs": "EUS",
+                  "name": "London Euston",
+                  "tpl": "EUSTON",
+                  "latitude": 51.5284,
+                  "longitude": -0.1331,
+                  "distanceMeters": 142,
+                  "monitoringRadiusMeters": 300
+                }
+              ],
+              "generatedAt": "2026-06-16T12:00:00Z",
+              "sourceFreshness": {
+                "status": "fresh",
+                "lastSuccessfulImportAt": "2026-06-16T03:00:00Z"
+              }
+            }
+            """.utf8))
+        ])
+        let client = makeClient()
+
+        let response = try await client.searchNearbyStations(
+            latitude: 51.5282,
+            longitude: -0.1337,
+            selectionRole: .destination,
+            routeMode: .direct,
+            originCRS: "MAN",
+            departureStart: Date(timeIntervalSince1970: 1_781_621_600),
+            windowMinutes: 120,
+            limit: 6
+        )
+
+        XCTAssertEqual(response.stations.first?.crs, "EUS")
+        XCTAssertEqual(response.stations.first?.distanceMeters, 142)
+        XCTAssertTrue(response.sourceFreshness.isFresh)
+        let requestURL = try XCTUnwrap(StubURLProtocol.recordedRequests.first?.url)
+        let components = try XCTUnwrap(URLComponents(url: requestURL, resolvingAgainstBaseURL: false))
+        XCTAssertEqual(components.path, "/v1/stations/nearby")
+        let query = Dictionary(uniqueKeysWithValues: (components.queryItems ?? []).compactMap { item in
+            item.value.map { (item.name, $0) }
+        })
+        XCTAssertEqual(query["selection_role"], "destination")
+        XCTAssertEqual(query["route_mode"], "direct")
+        XCTAssertEqual(query["origin_crs"], "MAN")
+        XCTAssertEqual(query["window_minutes"], "120")
+        XCTAssertEqual(query["limit"], "6")
     }
 }

@@ -5,6 +5,7 @@ struct WindowSetupView: View {
     @Environment(WindowSetupViewModel.self) private var viewModel
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var onStationFieldEditingBegan: (ContentScrollTarget) -> Void = { _ in }
+    var openStationPicker: (StationPickerSelectionRole) -> Void = { _ in }
     var showSearchResults: () -> Void = {}
 
     var body: some View {
@@ -21,17 +22,27 @@ struct WindowSetupView: View {
             routeModeSummary
 
             VStack(alignment: .leading, spacing: RTSpacing.compact) {
-                StationSearchField(
+                StationPickerEntryRow(
                     title: "From",
-                    selection: $viewModel.origin,
-                    onBeginEditing: { onStationFieldEditingBegan(.originStationField) }
-                ) { query in
-                    try await viewModel.searchStations(query: query)
+                    station: viewModel.origin,
+                    placeholder: "Choose origin"
+                ) {
+                    onStationFieldEditingBegan(.originStationField)
+                    openStationPicker(.origin)
                 }
                 .id(ContentScrollTarget.originStationField)
                 .frame(maxWidth: .infinity)
 
-                destinationStationField(selection: $viewModel.destination)
+                StationPickerEntryRow(
+                    title: "To",
+                    station: viewModel.destination,
+                    placeholder: "Choose destination"
+                ) {
+                    onStationFieldEditingBegan(.destinationStationField)
+                    openStationPicker(.destination)
+                }
+                .id(ContentScrollTarget.destinationStationField)
+                .frame(maxWidth: .infinity)
             }
 
             VStack(alignment: .leading, spacing: RTSpacing.listItem) {
@@ -158,19 +169,6 @@ struct WindowSetupView: View {
             return
         }
         showSearchResults()
-    }
-
-    private func destinationStationField(selection: Binding<StationSuggestion?>) -> some View {
-        StationSearchField(
-            title: "To",
-            selection: selection,
-            minQueryLength: viewModel.destinationMinQueryLength,
-            onBeginEditing: { onStationFieldEditingBegan(.destinationStationField) }
-        ) { query in
-            try await viewModel.searchDestinationStations(query: query)
-        }
-        .id(ContentScrollTarget.destinationStationField)
-        .frame(maxWidth: .infinity)
     }
 
     private func windowRangeText(_ minutes: Int) -> String {

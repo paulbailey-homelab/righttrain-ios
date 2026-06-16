@@ -1216,6 +1216,7 @@ private struct NotificationDetailContentView: View {
 private enum PlanRoute: Hashable {
     case searchResults
     case journeyDetail(JourneyDetailIdentity)
+    case stationPicker(StationPickerSelectionRole)
 }
 
 private enum PendingPinAction {
@@ -1254,6 +1255,15 @@ private struct PlanTabView: View {
                         PlanSearchResultsView(openItineraryLegDetail: openDetail(for:))
                     case .journeyDetail(let identity):
                         JourneyDetailView(identity: identity)
+                    case .stationPicker(let role):
+                        StationPickerView(
+                            context: appCoordinator.windowSetupViewModel.stationPickerContext(for: role),
+                            apiClient: appCoordinator.stationPickerAPIClient,
+                            favourites: appCoordinator.stationFavourites(),
+                            locationProvider: SystemStationLocationProvider()
+                        ) { station in
+                            appCoordinator.windowSetupViewModel.applyStationPickerSelection(station, role: role)
+                        }
                     }
                 }
             }
@@ -1286,6 +1296,9 @@ private struct PlanTabView: View {
                         try? await Task.sleep(for: .milliseconds(80))
                         scrollProxy.scrollTo(target, anchor: .top)
                     }
+                },
+                openStationPicker: { role in
+                    routePath.append(.stationPicker(role))
                 },
                 showSearchResults: {
                     routePath.append(.searchResults)

@@ -39,6 +39,110 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
+    func testStationPickerContextPreservesSetupState() {
+        let model = makeModel()
+        let setup = model.windowSetupViewModel
+        let origin = TestFactory.station(crs: "EUS", name: "London Euston")
+        let destination = TestFactory.station(crs: "MAN", name: "Manchester Piccadilly")
+        let replacement = TestFactory.station(crs: "CRE", name: "Crewe")
+        let departure = Date(timeIntervalSince1970: 1_781_621_600)
+        setup.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: true))
+        setup.origin = origin
+        setup.destination = destination
+        setup.departureStart = departure
+        setup.windowMinutes = 180
+        setup.setSearchMode(.anyRoute)
+
+        let context = setup.stationPickerContext(for: .destination)
+        setup.applyStationPickerSelection(replacement, role: .destination)
+
+        XCTAssertEqual(context.selectionRole, .destination)
+        XCTAssertEqual(context.routeMode, .anyRoute)
+        XCTAssertEqual(context.selectedCounterpartCRS, "EUS")
+        XCTAssertEqual(context.departureStart, departure)
+        XCTAssertEqual(context.windowMinutes, 180)
+        XCTAssertEqual(context.previousSelection, destination)
+        XCTAssertEqual(setup.origin, origin)
+        XCTAssertEqual(setup.destination, replacement)
+        XCTAssertEqual(setup.departureStart, departure)
+        XCTAssertEqual(setup.windowMinutes, 180)
+        XCTAssertFalse(setup.directRoutesOnly)
+    }
+
+    @MainActor
+    func testStationPickerRejectsSameCRSCommit() {
+        let viewModel = StationPickerViewModel(
+            context: StationPickerContext(
+                selectionRole: .destination,
+                routeMode: .direct,
+                selectedCounterpartCRS: "EUS",
+                departureStart: Date(),
+                windowMinutes: 120,
+                sourceSurface: .journeySetup,
+                previousSelection: nil
+            ),
+            apiClient: FakeAPIClient(),
+            favourites: [],
+            locationProvider: FakeStationLocationProvider()
+        )
+
+        XCTAssertFalse(viewModel.commit(TestFactory.station(crs: "EUS", name: "London Euston")))
+        XCTAssertEqual(viewModel.validationMessage, "Origin and destination cannot both be EUS.")
+    }
+
+    @MainActor
+    func testStationFavoritesDeduplicateByCRS() {
+        let favourites = StationFavoritesProvider.favourites(
+            homeStationCRS: "eus",
+            workStationCRS: "MAN",
+            routines: [
+                TestFactory.commuteRoutine(id: "routine-1", originCrs: "EUS", destinationCrs: "CRE"),
+                TestFactory.commuteRoutine(id: "routine-2", originCrs: "CRE", destinationCrs: "MAN")
+            ],
+            stationResolver: { TestFactory.station(crs: $0, name: $0) }
+        )
+
+        XCTAssertEqual(favourites.map(\.crs), ["EUS", "MAN", "CRE"])
+        XCTAssertEqual(Set(favourites.map(\.crs)).count, favourites.count)
+    }
+
+    @MainActor
+    func testNearestStationsRequestLocationOnlyWhenNearestSelected() async {
+        let apiClient = FakeAPIClient()
+        apiClient.nearbyStationResult = .success(NearbyStationSearchResponse(
+            stations: [TestFactory.station(crs: "EUS", name: "London Euston")],
+            generatedAt: Date(timeIntervalSince1970: 0),
+            sourceFreshness: StationMetadataFreshness(status: "fresh", lastSuccessfulImportAt: nil, unavailableReason: nil)
+        ))
+        let locationProvider = FakeStationLocationProvider()
+        let viewModel = StationPickerViewModel(
+            context: StationPickerContext(
+                selectionRole: .origin,
+                routeMode: .direct,
+                selectedCounterpartCRS: nil,
+                departureStart: nil,
+                windowMinutes: 120,
+                sourceSurface: .journeySetup,
+                previousSelection: nil
+            ),
+            apiClient: apiClient,
+            favourites: [],
+            locationProvider: locationProvider
+        )
+
+        await viewModel.loadSearchIfNeeded()
+        await viewModel.loadFavourites()
+        XCTAssertEqual(locationProvider.requestCount, 0)
+
+        viewModel.activeChoice = .nearest
+        await viewModel.loadNearest()
+
+        XCTAssertEqual(locationProvider.requestCount, 1)
+        XCTAssertEqual(apiClient.nearbyStationRequests.count, 1)
+        XCTAssertEqual(apiClient.nearbyStationRequests.first?.selectionRole, .origin)
+    }
+
+    @MainActor
     func testBootstrapHappyPathRefreshesUserAndLoadsActiveWindow() async {
         let apiClient = FakeAPIClient()
         let sessionStore = FakeSessionStore()

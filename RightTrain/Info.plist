@@ -44,7 +44,7 @@
 		<key>NSSupportsLiveActivitiesFrequentUpdates</key>
 		<true />
 		<key>NSLocationWhenInUseUsageDescription</key>
-		<string>RightTrain uses your location after you create a journey to update station guidance when you are near your origin station.</string>
+		<string>RightTrain uses your location when you choose nearest stations, and after you create a journey to update station guidance near your origin station.</string>
 		<key>NSLocationAlwaysAndWhenInUseUsageDescription</key>
 		<string>RightTrain uses location in the background while you have a pinned journey to detect when you reach your origin station and whether you caught the selected train.</string>
 		<key>UIBackgroundModes</key>

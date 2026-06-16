@@ -38,6 +38,17 @@ final class FakeAPIClient: APIClienting {
         var limit: Int
     }
 
+    struct NearbyStationRequest {
+        var latitude: Double
+        var longitude: Double
+        var selectionRole: StationPickerSelectionRole
+        var routeMode: StationPickerRouteMode
+        var originCRS: String?
+        var departureStart: Date?
+        var windowMinutes: Int
+        var limit: Int
+    }
+
     var deviceChallengeResult: Result<DeviceChallengeResponse, Error> = .success(
         DeviceChallengeResponse(attemptId: "attempt-1", challenge: "Y2hhbGxlbmdl", expiresAt: Date().addingTimeInterval(300))
     )
@@ -54,6 +65,12 @@ final class FakeAPIClient: APIClienting {
     var storeKitSyncResult: Result<User, Error> = .failure(TestFailure.unimplemented)
     var stationSearchResult: Result<[StationSuggestion], Error> = .success([])
     var stationSearchResultsByQuery: [String: [StationSuggestion]] = [:]
+    var directDestinationStationResult: Result<[StationSuggestion], Error> = .success([])
+    var nearbyStationResult: Result<NearbyStationSearchResponse, Error> = .success(NearbyStationSearchResponse(
+        stations: [],
+        generatedAt: Date(timeIntervalSince1970: 0),
+        sourceFreshness: StationMetadataFreshness(status: "fresh", lastSuccessfulImportAt: nil, unavailableReason: nil)
+    ))
     var recommendationsResult: Result<DirectWindowRecommendationResponse, Error> = .failure(TestFailure.unimplemented)
     var journeyPlanResult: Result<JourneyPlanResponse, Error> = .failure(TestFailure.unimplemented)
     var commuteRoutinesResult: Result<[CommuteRoutine], Error> = .success([])
@@ -104,6 +121,7 @@ final class FakeAPIClient: APIClienting {
     var storeKitSyncRequests: [(signedTransactions: [String], accessToken: String)] = []
     var stationSearchRequests: [(query: String, limit: Int)] = []
     var directDestinationStationRequests: [DirectDestinationStationRequest] = []
+    var nearbyStationRequests: [NearbyStationRequest] = []
     var recommendationRequests: [RecommendationRequest] = []
     var journeyPlanRequests: [JourneyPlanRequest] = []
     var createWindowRequests: [(input: CreateWindowSubscriptionRequest, accessToken: String)] = []
@@ -214,7 +232,30 @@ final class FakeAPIClient: APIClienting {
             windowMinutes: windowMinutes,
             limit: limit
         ))
-        return []
+        return try directDestinationStationResult.get()
+    }
+
+    func searchNearbyStations(
+        latitude: Double,
+        longitude: Double,
+        selectionRole: StationPickerSelectionRole,
+        routeMode: StationPickerRouteMode,
+        originCRS: String?,
+        departureStart: Date?,
+        windowMinutes: Int,
+        limit: Int
+    ) async throws -> NearbyStationSearchResponse {
+        nearbyStationRequests.append(NearbyStationRequest(
+            latitude: latitude,
+            longitude: longitude,
+            selectionRole: selectionRole,
+            routeMode: routeMode,
+            originCRS: originCRS,
+            departureStart: departureStart,
+            windowMinutes: windowMinutes,
+            limit: limit
+        ))
+        return try nearbyStationResult.get()
     }
 
     func recommendDirectWindow(
@@ -629,6 +670,26 @@ struct FakeNotificationAuthorizer: NotificationAuthorizing {
             throw requestError
         }
         return requestedStatus
+    }
+}
+
+@MainActor
+final class FakeStationLocationProvider: StationLocationProviding {
+    var result: Result<StationSelectionLocation, Error>
+    private(set) var requestCount = 0
+
+    init(result: Result<StationSelectionLocation, Error> = .success(StationSelectionLocation(
+        latitude: 51.5282,
+        longitude: -0.1337,
+        horizontalAccuracyMeters: 30,
+        capturedAt: Date(timeIntervalSince1970: 0)
+    ))) {
+        self.result = result
+    }
+
+    func currentLocation() async throws -> StationSelectionLocation {
+        requestCount += 1
+        return try result.get()
     }
 }
 

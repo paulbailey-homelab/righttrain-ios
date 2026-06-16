@@ -18,6 +18,29 @@ struct PreviewNotificationAuthorizer: NotificationAuthorizing {
 }
 
 @MainActor
+final class PreviewStationLocationProvider: StationLocationProviding {
+    var result: Result<StationSelectionLocation, Error>
+    var delayNanoseconds: UInt64
+
+    init(result: Result<StationSelectionLocation, Error> = .success(StationSelectionLocation(
+        latitude: 51.5282,
+        longitude: -0.1337,
+        horizontalAccuracyMeters: 35,
+        capturedAt: PreviewFixtures.baseDate
+    )), delayNanoseconds: UInt64 = 0) {
+        self.result = result
+        self.delayNanoseconds = delayNanoseconds
+    }
+
+    func currentLocation() async throws -> StationSelectionLocation {
+        if delayNanoseconds > 0 {
+            try await Task.sleep(nanoseconds: delayNanoseconds)
+        }
+        return try result.get()
+    }
+}
+
+@MainActor
 struct PreviewAppContainer<Content: View>: View {
     @State private var appCoordinator: AppCoordinator
     private let content: () -> Content
@@ -111,17 +134,41 @@ enum PreviewFixtures {
             notificationAuthorizer: PreviewNotificationAuthorizer(status: notificationStatus),
             liveActivityCoordinator: NoopLiveActivityCoordinator(),
             pushNotificationCoordinator: NoopPushNotificationCoordinator(),
-            storeKitSubscriptionService: PreviewStoreKitSubscriptionService()
+            storeKitSubscriptionService: PreviewStoreKitSubscriptionService(),
+            stationProximityMonitor: NoopStationProximityMonitor()
         )
     }
 
     static var stations: [StationSuggestion] {
         [
-            StationSuggestion(crs: "EUS", name: "London Euston", tpl: "EUSTON", toc: nil),
-            StationSuggestion(crs: "MAN", name: "Manchester Piccadilly", tpl: "MNCRPIC", toc: nil),
-            StationSuggestion(crs: "CRE", name: "Crewe", tpl: "CREWE", toc: nil),
-            StationSuggestion(crs: "WML", name: "Wilmslow", tpl: "WILMSLW", toc: nil)
+            StationSuggestion(crs: "EUS", name: "London Euston", tpl: "EUSTON", toc: nil, latitude: 51.5284, longitude: -0.1331),
+            StationSuggestion(crs: "MAN", name: "Manchester Piccadilly", tpl: "MNCRPIC", toc: nil, latitude: 53.4774, longitude: -2.2309),
+            StationSuggestion(crs: "CRE", name: "Crewe", tpl: "CREWE", toc: nil, latitude: 53.0896, longitude: -2.4329),
+            StationSuggestion(crs: "WML", name: "Wilmslow", tpl: "WILMSLW", toc: nil, latitude: 53.3269, longitude: -2.2263)
         ]
+    }
+
+    static var nearbyStations: [StationSuggestion] {
+        [
+            StationSuggestion(crs: "EUS", name: "London Euston", tpl: "EUSTON", toc: nil, latitude: 51.5284, longitude: -0.1331, distanceMeters: 142),
+            StationSuggestion(crs: "KGX", name: "London Kings Cross", tpl: "KNGX", toc: nil, latitude: 51.5317, longitude: -0.1235, distanceMeters: 720),
+            StationSuggestion(crs: "STP", name: "London St Pancras International", tpl: "STPX", toc: nil, latitude: 51.5321, longitude: -0.1264, distanceMeters: 770)
+        ]
+    }
+
+    static var stationFavourites: [StationFavourite] {
+        StationFavoritesProvider.favourites(
+            homeStationCRS: user.stationDefaults.homeStationCrs,
+            workStationCRS: user.stationDefaults.workStationCrs,
+            routines: commuteRoutines,
+            stationResolver: { crs in
+                stations.first { $0.crs.caseInsensitiveCompare(crs) == .orderedSame }
+            }
+        )
+    }
+
+    static var previewAPIClient: PreviewAPIClient {
+        PreviewAPIClient()
     }
 
     static var activeWindow: WindowSubscription {
@@ -689,12 +736,13 @@ enum PreviewFixtures {
     }
 }
 
-private struct PreviewAPIClient: APIClienting {
+struct PreviewAPIClient: APIClienting {
     var activeWindow: WindowSubscription? = PreviewFixtures.activeWindow
     var activeItinerary: ItinerarySubscription?
     var routines: [CommuteRoutine] = PreviewFixtures.commuteRoutines
     var multiLegRoutingEnabled = false
     var windowNotificationDetail: WindowSubscriptionNotificationDetail?
+    var nearbyResponse: NearbyStationSearchResponse?
 
     func createDeviceChallenge() async throws -> DeviceChallengeResponse {
         DeviceChallengeResponse(attemptId: "preview-attempt", challenge: "Y2hhbGxlbmdl", expiresAt: Date().addingTimeInterval(300))
@@ -735,6 +783,26 @@ private struct PreviewAPIClient: APIClienting {
 
     func searchDirectDestinationStations(originCRS: String, query: String, departureStart: Date, windowMinutes: Int, limit: Int) async throws -> [StationSuggestion] {
         try await searchStations(query: query, limit: limit)
+    }
+
+    func searchNearbyStations(
+        latitude: Double,
+        longitude: Double,
+        selectionRole: StationPickerSelectionRole,
+        routeMode: StationPickerRouteMode,
+        originCRS: String?,
+        departureStart: Date?,
+        windowMinutes: Int,
+        limit: Int
+    ) async throws -> NearbyStationSearchResponse {
+        if let nearbyResponse {
+            return nearbyResponse
+        }
+        return NearbyStationSearchResponse(
+            stations: Array(PreviewFixtures.nearbyStations.prefix(limit)),
+            generatedAt: PreviewFixtures.baseDate,
+            sourceFreshness: StationMetadataFreshness(status: "fresh", lastSuccessfulImportAt: PreviewFixtures.baseDate, unavailableReason: nil)
+        )
     }
 
     func recommendDirectWindow(originCRS: String, destinationCRS: String, departureStart: Date, windowMinutes: Int) async throws -> DirectWindowRecommendationResponse {
@@ -1013,6 +1081,119 @@ struct PreviewFeedbackReviewScreen: View {
 }
 
 @MainActor
+struct PreviewStationPickerReviewScreen: View {
+    var surface: RightTrainPreviewLaunch.Surface
+
+    var body: some View {
+        NavigationStack {
+            StationPickerView(
+                context: context,
+                apiClient: apiClient,
+                favourites: favourites,
+                locationProvider: locationProvider,
+                initialChoice: initialChoice,
+                initialQuery: initialQuery
+            ) { _ in }
+        }
+        .environment(\.colorScheme, .light)
+    }
+
+    private var context: StationPickerContext {
+        StationPickerContext(
+            selectionRole: selectionRole,
+            routeMode: routeMode,
+            selectedCounterpartCRS: selectedCounterpartCRS,
+            departureStart: PreviewFixtures.baseDate,
+            windowMinutes: 120,
+            sourceSurface: .journeySetup,
+            previousSelection: previousSelection
+        )
+    }
+
+    private var selectionRole: StationPickerSelectionRole {
+        switch surface {
+        case .stationPickerSelectedDestination, .stationPickerCancelBack:
+            return .destination
+        default:
+            return .origin
+        }
+    }
+
+    private var routeMode: StationPickerRouteMode {
+        surface == .stationPickerCancelBack ? .anyRoute : .direct
+    }
+
+    private var selectedCounterpartCRS: String? {
+        selectionRole == .destination ? "EUS" : "MAN"
+    }
+
+    private var previousSelection: StationSuggestion? {
+        switch surface {
+        case .stationPickerSelectedOrigin:
+            return PreviewFixtures.stations[0]
+        case .stationPickerSelectedDestination, .stationPickerCancelBack:
+            return PreviewFixtures.stations[1]
+        default:
+            return nil
+        }
+    }
+
+    private var initialChoice: StationPickerSource {
+        switch surface {
+        case .stationPickerFavourites, .stationPickerNoFavourites:
+            return .favourites
+        case .stationPickerNearestLoading, .stationPickerNearestResults, .stationPickerLocationDenied, .stationPickerNearbyUnavailable:
+            return .nearest
+        default:
+            return .search
+        }
+    }
+
+    private var initialQuery: String {
+        switch surface {
+        case .stationPickerSearch:
+            return "London"
+        case .stationPickerCancelBack:
+            return "Cre"
+        default:
+            return ""
+        }
+    }
+
+    private var favourites: [StationFavourite] {
+        surface == .stationPickerNoFavourites ? [] : PreviewFixtures.stationFavourites
+    }
+
+    private var apiClient: PreviewAPIClient {
+        switch surface {
+        case .stationPickerNearbyUnavailable:
+            return PreviewAPIClient(nearbyResponse: NearbyStationSearchResponse(
+                stations: [],
+                generatedAt: PreviewFixtures.baseDate,
+                sourceFreshness: StationMetadataFreshness(
+                    status: "unavailable",
+                    lastSuccessfulImportAt: PreviewFixtures.baseDate.addingTimeInterval(-90 * 60),
+                    unavailableReason: "station_metadata_stale"
+                )
+            ))
+        default:
+            return PreviewFixtures.previewAPIClient
+        }
+    }
+
+    private var locationProvider: PreviewStationLocationProvider {
+        switch surface {
+        case .stationPickerNearestLoading:
+            return PreviewStationLocationProvider(delayNanoseconds: 8_000_000_000)
+        case .stationPickerLocationDenied:
+            return PreviewStationLocationProvider(result: .failure(StationLocationProviderError.denied))
+        default:
+            return PreviewStationLocationProvider()
+        }
+    }
+}
+
+@MainActor
 struct RightTrainPreviewLaunch {
     enum Surface: String {
         case signedOut
@@ -1058,6 +1239,16 @@ struct RightTrainPreviewLaunch {
         case us4SharedJourney
         case us4SharedExpired
         case us4SharedUnavailable
+        case stationPickerSearch
+        case stationPickerSelectedOrigin
+        case stationPickerSelectedDestination
+        case stationPickerCancelBack
+        case stationPickerFavourites
+        case stationPickerNoFavourites
+        case stationPickerNearestLoading
+        case stationPickerNearestResults
+        case stationPickerLocationDenied
+        case stationPickerNearbyUnavailable
     }
 
     var surface: Surface
@@ -1101,6 +1292,18 @@ struct RightTrainPreviewLaunch {
 
     var usesFeedbackReview: Bool {
         surface == .us4Feedback
+    }
+
+    var stationPickerReviewSurface: Surface? {
+        switch surface {
+        case .stationPickerSearch, .stationPickerSelectedOrigin, .stationPickerSelectedDestination,
+                .stationPickerCancelBack, .stationPickerFavourites, .stationPickerNoFavourites,
+                .stationPickerNearestLoading, .stationPickerNearestResults, .stationPickerLocationDenied,
+                .stationPickerNearbyUnavailable:
+            return surface
+        default:
+            return nil
+        }
     }
 
     private var usesSignedOutSession: Bool {

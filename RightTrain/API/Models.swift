@@ -129,6 +129,22 @@ struct StationSearchResponse: Decodable {
     var stations: [StationSuggestion]
 }
 
+struct NearbyStationSearchResponse: Decodable, Equatable {
+    var stations: [StationSuggestion]
+    var generatedAt: Date
+    var sourceFreshness: StationMetadataFreshness
+}
+
+struct StationMetadataFreshness: Decodable, Equatable {
+    var status: String
+    var lastSuccessfulImportAt: Date?
+    var unavailableReason: String?
+
+    var isFresh: Bool {
+        status.trimmingCharacters(in: .whitespacesAndNewlines).lowercased() == "fresh"
+    }
+}
+
 struct StationSuggestion: Codable, Identifiable, Equatable {
     var crs: String
     var name: String
@@ -137,6 +153,7 @@ struct StationSuggestion: Codable, Identifiable, Equatable {
     var toc: String?
     var latitude: Double? = nil
     var longitude: Double? = nil
+    var distanceMeters: Int? = nil
     var monitoringRadiusMeters: Int? = nil
 
     var id: String { crs }

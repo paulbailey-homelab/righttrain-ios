@@ -73,6 +73,16 @@ APP_SURFACES=(
   "41-us4-shared-journey|us4SharedJourney"
   "42-us4-shared-expired|us4SharedExpired"
   "43-us4-shared-unavailable|us4SharedUnavailable"
+  "44-station-picker-search|stationPickerSearch"
+  "45-station-picker-selected-origin|stationPickerSelectedOrigin"
+  "46-station-picker-selected-destination|stationPickerSelectedDestination"
+  "47-station-picker-cancel-back|stationPickerCancelBack"
+  "48-station-picker-favourites|stationPickerFavourites"
+  "49-station-picker-no-favourites|stationPickerNoFavourites"
+  "50-station-picker-nearest-loading|stationPickerNearestLoading"
+  "51-station-picker-nearest-results|stationPickerNearestResults"
+  "52-station-picker-location-denied|stationPickerLocationDenied"
+  "53-station-picker-nearby-unavailable|stationPickerNearbyUnavailable"
 )
 
 LIVE_ACTIVITY_SCENARIOS=(
@@ -247,9 +257,13 @@ build_and_install() {
     exit 1
   fi
 
+  terminate_app
+  xcrun simctl uninstall "$SIMULATOR_UDID" "$BUNDLE_ID" >/dev/null 2>&1 || true
+
   log "Installing $app_path"
   xcrun simctl install "$SIMULATOR_UDID" "$app_path"
   xcrun simctl privacy "$SIMULATOR_UDID" grant notifications "$BUNDLE_ID" >/dev/null 2>&1 || true
+  xcrun simctl privacy "$SIMULATOR_UDID" grant location "$BUNDLE_ID" >/dev/null 2>&1 || true
 }
 
 terminate_app() {

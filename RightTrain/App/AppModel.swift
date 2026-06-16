@@ -76,6 +76,7 @@ final class AppCoordinator {
         deviceIdentityService: (any DeviceIdentityHandling)? = nil,
         notificationFeedbackGenerator: any NotificationFeedbackGenerating = SystemNotificationFeedbackGenerator(),
         applicationStateProvider: any ApplicationStateProviding = SystemApplicationStateProvider(),
+        stationProximityMonitor: any StationProximityMonitoring = SystemStationProximityMonitor(),
         connectivityService: ConnectivityService? = nil,
         activeJourneyCache: ActiveJourneyCache? = nil,
         journeyMutationQueue: JourneyMutationQueue? = nil
@@ -99,7 +100,7 @@ final class AppCoordinator {
             apiClient: apiClient,
             operationState: operationState,
             liveActivityCoordinator: liveActivityCoordinator,
-            stationProximityMonitor: SystemStationProximityMonitor(),
+            stationProximityMonitor: stationProximityMonitor,
             registrationContextFactory: registrationContextFactory,
             accessTokenProvider: { authViewModel.accessToken },
             notificationFeedbackGenerator: notificationFeedbackGenerator,
@@ -450,6 +451,19 @@ extension AppCoordinator {
     var pinnedLiveActivityServiceID: Int? { activeWindowViewModel.pinnedLiveActivityServiceID }
     var isSignedIn: Bool { authViewModel.isSignedIn }
     var accessToken: String? { authViewModel.accessToken }
+
+    var stationPickerAPIClient: any APIClienting { apiClient }
+
+    func stationFavourites() -> [StationFavourite] {
+        StationFavoritesProvider.favourites(
+            homeStationCRS: user?.stationDefaults.homeStationCrs,
+            workStationCRS: user?.stationDefaults.workStationCrs,
+            routines: commuteRoutines,
+            stationResolver: { [commuteRoutinesViewModel] crs in
+                commuteRoutinesViewModel.stationSuggestion(for: crs)
+            }
+        )
+    }
 
     var origin: StationSuggestion? {
         get { windowSetupViewModel.origin }

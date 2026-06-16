@@ -24,7 +24,7 @@ For normal app visual review, use the app-only target:
 make ios-screenshots-app SIMULATOR_UDID=5485A22C-AF33-4C4B-9E7A-23B723B49952
 ```
 
-This captures the 43 in-app preview states and only needs normal simulator access.
+This captures the 53 in-app preview states and only needs normal simulator access.
 
 For Live Activity review only, use:
 
@@ -65,14 +65,14 @@ App-only output should contain:
 ```text
 app/01-signed-out.jpg
 ...
-app/43-us4-shared-unavailable.jpg
+app/53-station-picker-nearby-unavailable.jpg
 index.html
 ```
 
 Full output should contain:
 
 ```text
-app/                         43 screenshots
+app/                         53 screenshots
 live-activity/lock-screen/   15 screenshots
 live-activity/home-compact/  15 screenshots
 live-activity/dynamic-expanded/ 15 screenshots
@@ -96,7 +96,7 @@ find design/review-screenshots/YYYY-MM-DD-HHMMSS/live-activity/dynamic-expanded 
 test -f design/review-screenshots/YYYY-MM-DD-HHMMSS/index.html
 ```
 
-Expected counts are `43`, `15`, `15`, and `15`.
+Expected counts are `53`, `15`, `15`, and `15`.
 
 The redesign may add more app or Live Activity preview states. If it does,
 update `ios/RightTrain/scripts/capture-review-screenshots.sh`, record the new
@@ -177,6 +177,9 @@ App preview states:
   denied states
 - US4 onboarding, signed-out, settings, feedback, journey detail, shared
   journey, shared expired, and shared unavailable states
+- Station picker search, selected origin, selected destination, cancel/back
+  preservation, favourites, no favourites, nearest loading, nearest results,
+  location denied, and nearby unavailable states
 
 Live Activity scenarios:
 

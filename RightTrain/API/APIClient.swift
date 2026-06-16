@@ -18,6 +18,16 @@ protocol APIClienting {
         windowMinutes: Int,
         limit: Int
     ) async throws -> [StationSuggestion]
+    func searchNearbyStations(
+        latitude: Double,
+        longitude: Double,
+        selectionRole: StationPickerSelectionRole,
+        routeMode: StationPickerRouteMode,
+        originCRS: String?,
+        departureStart: Date?,
+        windowMinutes: Int,
+        limit: Int
+    ) async throws -> NearbyStationSearchResponse
     func recommendDirectWindow(
         originCRS: String,
         destinationCRS: String,
@@ -322,6 +332,33 @@ struct APIClient {
             ]
         )
         return response.stations
+    }
+
+    func searchNearbyStations(
+        latitude: Double,
+        longitude: Double,
+        selectionRole: StationPickerSelectionRole,
+        routeMode: StationPickerRouteMode,
+        originCRS: String?,
+        departureStart: Date?,
+        windowMinutes: Int,
+        limit: Int = 8
+    ) async throws -> NearbyStationSearchResponse {
+        var queryItems = [
+            URLQueryItem(name: "latitude", value: String(latitude)),
+            URLQueryItem(name: "longitude", value: String(longitude)),
+            URLQueryItem(name: "selection_role", value: selectionRole.rawValue),
+            URLQueryItem(name: "route_mode", value: routeMode.rawValue),
+            URLQueryItem(name: "window_minutes", value: String(windowMinutes)),
+            URLQueryItem(name: "limit", value: String(limit))
+        ]
+        if let originCRS, !originCRS.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+            queryItems.append(URLQueryItem(name: "origin_crs", value: originCRS))
+        }
+        if let departureStart {
+            queryItems.append(URLQueryItem(name: "departure_start", value: DateFormatting.apiDateTime.string(from: departureStart)))
+        }
+        return try await send(path: "/v1/stations/nearby", queryItems: queryItems)
     }
 
     func recommendDirectWindow(

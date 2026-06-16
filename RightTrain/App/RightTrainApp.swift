@@ -83,6 +83,8 @@ struct RightTrainApp: App {
             PreviewOnboardingReviewScreen()
         } else if previewLaunch?.usesFeedbackReview == true {
             PreviewFeedbackReviewScreen()
+        } else if let surface = previewLaunch?.stationPickerReviewSurface {
+            PreviewStationPickerReviewScreen(surface: surface)
         } else {
             ContentView()
         }
