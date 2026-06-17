@@ -45,7 +45,7 @@ struct LinkedDevicesView: View {
             }
             Button("Cancel", role: .cancel) {}
         } message: {
-            Text("That device will need to restore the account again before it can read or change synced preferences.")
+            Text("That device will need to log in again before it can read or change synced preferences.")
         }
         .environment(\.colorScheme, .light)
     }

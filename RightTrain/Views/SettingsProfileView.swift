@@ -1,13 +1,16 @@
 import SwiftUI
 
 private enum SettingsConfirmation {
-    case signOut
+    case logOutAccount
+    case clearDevice
     case deleteAccount
 
     var title: String {
         switch self {
-        case .signOut:
-            return "Sign out of RightTrain?"
+        case .logOutAccount:
+            return "Log out of RightTrain?"
+        case .clearDevice:
+            return "Clear this device?"
         case .deleteAccount:
             return "Permanently delete your RightTrain account?"
         }
@@ -15,8 +18,10 @@ private enum SettingsConfirmation {
 
     var message: String {
         switch self {
-        case .signOut:
-            return "Your journeys and pins are saved to your account. You can sign back in on this device."
+        case .logOutAccount:
+            return "Your synced preferences stay in your account. You can log in again with your passkey."
+        case .clearDevice:
+            return "This removes this device's saved journeys, pins, routines, and local RightTrain setup. It does not delete a passkey account."
         case .deleteAccount:
             return "This permanently deletes your account and all saved journeys. It cannot be undone."
         }
@@ -76,14 +81,14 @@ struct SettingsProfileView: View {
     private func profileSection(_ user: User) -> some View {
         Section {
             HStack(alignment: .center, spacing: 14) {
-                Image(systemName: "person.crop.circle.fill")
+                Image(systemName: authViewModel.hasPortableAccount ? "person.crop.circle.fill" : "iphone")
                     .font(.system(size: RTSize.profileIcon))
                     .foregroundStyle(Color.rightTrainActionInk)
 
                 VStack(alignment: .leading, spacing: 4) {
-                    Text(user.displayNameOrFallback)
+                    Text(authViewModel.hasPortableAccount ? user.displayNameOrFallback : "This device")
                         .font(.headline)
-                    Text(user.maskedEmail)
+                    Text(authViewModel.hasPortableAccount ? "Logged in with a passkey" : "No account logged in")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
                 }
@@ -104,8 +109,8 @@ struct SettingsProfileView: View {
             } else {
                 SettingsValueRow(
                     title: "Account",
-                    systemImage: "iphone",
-                    value: "Device-only"
+                    systemImage: authViewModel.hasPortableAccount ? "checkmark.seal" : "person.crop.circle.badge.questionmark",
+                    value: authViewModel.hasPortableAccount ? "Logged in" : "Not logged in"
                 )
             }
         } header: {
@@ -324,7 +329,7 @@ struct SettingsProfileView: View {
         Group {
             Section {
                 if authViewModel.portableAccount != nil {
-                    Label("Signed in", systemImage: "checkmark.seal")
+                    Label("Logged in", systemImage: "checkmark.seal")
                         .foregroundStyle(Color.rightTrainActionInk)
                     NavigationLink {
                         LinkedDevicesView()
@@ -345,7 +350,7 @@ struct SettingsProfileView: View {
                     NavigationLink {
                         AccountRestoreView()
                     } label: {
-                        Label("Restore Account", systemImage: "arrow.down.circle")
+                        Label("Log In", systemImage: "person.crop.circle.badge.checkmark")
                     }
                 }
 
@@ -357,22 +362,24 @@ struct SettingsProfileView: View {
             } header: {
                 settingsSectionHeader("Account", systemImage: "person.crop.circle.badge.checkmark")
             } footer: {
-                Text("Account creation is optional. Signed-out local use stays available, and accounts sync preferences without email or phone number lookup.")
+                Text(authViewModel.hasPortableAccount ? "Your account syncs preferences without email or phone number lookup." : "You can keep using this device without an account. Create or log in to an account to sync preferences.")
             }
             .listRowBackground(Color.rightTrainPaperCream)
 
-            Section {
-                Button(role: .destructive) {
-                    confirmation = .signOut
-                } label: {
-                    Label("Sign Out", systemImage: "rectangle.portrait.and.arrow.right")
+            if authViewModel.hasPortableAccount {
+                Section {
+                    Button(role: .destructive) {
+                        confirmation = .logOutAccount
+                    } label: {
+                        Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")
+                    }
+                } header: {
+                    settingsSectionHeader("Account", systemImage: "person.crop.circle.badge.minus")
+                } footer: {
+                    Text("Logs out of this account on this device.")
                 }
-            } header: {
-                settingsSectionHeader("Account", systemImage: "person.crop.circle.badge.minus")
-            } footer: {
-                Text("Signs you out on this device.")
+                .listRowBackground(Color.rightTrainPaperCream)
             }
-            .listRowBackground(Color.rightTrainPaperCream)
 
             Section {
                 if authViewModel.hasPortableAccount {
@@ -384,13 +391,16 @@ struct SettingsProfileView: View {
                 }
 
                 Button(role: .destructive) {
-                    confirmation = .deleteAccount
+                    confirmation = authViewModel.hasPortableAccount ? .deleteAccount : .clearDevice
                 } label: {
-                    Label("Delete Account", systemImage: "person.crop.circle.badge.xmark")
+                    Label(
+                        authViewModel.hasPortableAccount ? "Delete Account" : "Clear This Device",
+                        systemImage: authViewModel.hasPortableAccount ? "person.crop.circle.badge.xmark" : "iphone.slash"
+                    )
                 }
                 .foregroundStyle(Color.rightTrainDanger)
             } footer: {
-                Text("Permanently removes active profile, journey, and account preference data. Limited audit records may be retained where required.")
+                Text(authViewModel.hasPortableAccount ? "Permanently removes active profile, journey, and account preference data. Limited audit records may be retained where required." : "Clears this device's saved RightTrain data and local setup.")
                     .foregroundStyle(Color.rightTrainDanger)
             }
             .listRowBackground(Color.rightTrainPaperCream)
@@ -418,9 +428,14 @@ struct SettingsProfileView: View {
     @ViewBuilder
     private var confirmationButtons: some View {
         switch confirmation {
-        case .signOut:
-            Button("Sign Out", role: .destructive) {
+        case .logOutAccount:
+            Button("Log Out", role: .destructive) {
                 Task { await authViewModel.signOut() }
+            }
+            Button("Cancel", role: .cancel) {}
+        case .clearDevice:
+            Button("Clear This Device", role: .destructive) {
+                Task { await authViewModel.deleteAccount() }
             }
             Button("Cancel", role: .cancel) {}
         case .deleteAccount:

@@ -219,7 +219,7 @@ final class AuthViewModel {
                 )
             )
             try await installPortableSession(auth)
-            accountStatusMessage = "Account preferences were restored on this device."
+            accountStatusMessage = "Logged in on this device."
             didRestore = true
             BetaDiagnostics.record("portable_account_restored")
         }

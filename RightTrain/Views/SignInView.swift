@@ -51,7 +51,7 @@ struct SignInView: View {
 
                     // Simulator notice (only shows when App Attest unavailable)
                     if !authViewModel.isDeviceAttestationSupported {
-                        Text("RightTrain needs a real iPhone or iPad to set up an account. App Attest is not available on the simulator.")
+                        Text("RightTrain needs a real iPhone or iPad to set up this device. App Attest is not available on the simulator.")
                             .font(.footnote)
                             .foregroundStyle(Color.rightTrainInk.opacity(0.55))
                             .padding(.horizontal, RTSpacing.pageHorizontal)
@@ -84,7 +84,7 @@ struct SignInView: View {
                 .disabled(!authViewModel.isDeviceAttestationSupported)
                 .opacity(authViewModel.isDeviceAttestationSupported ? 1 : 0.4)
 
-                Text("By continuing you agree to the privacy notice. You can wipe this device's account from Settings.")
+                Text("By continuing you agree to the privacy notice. You can clear this device from Settings.")
                     .font(.system(size: 11, weight: .regular))
                     .foregroundStyle(Color.rightTrainInk.opacity(0.35))
                     .multilineTextAlignment(.center)

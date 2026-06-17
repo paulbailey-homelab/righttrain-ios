@@ -3,7 +3,7 @@ import Foundation
 extension User {
     var displayNameOrFallback: String {
         guard let name = displayName?.trimmingCharacters(in: .whitespacesAndNewlines), !name.isEmpty else {
-            return "Signed in"
+            return "Account"
         }
         return name
     }
