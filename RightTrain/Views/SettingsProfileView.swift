@@ -19,11 +19,11 @@ private enum SettingsConfirmation {
     var message: String {
         switch self {
         case .logOutAccount:
-            return "Your synced preferences stay in your account. You can log in again with your passkey."
+            return "Your synced preferences stay in your account."
         case .clearDevice:
-            return "This removes this device's saved journeys, pins, routines, and local RightTrain setup. It does not delete a passkey account."
+            return "This removes saved RightTrain data from this device."
         case .deleteAccount:
-            return "This permanently deletes your account and all saved journeys. It cannot be undone."
+            return "This permanently deletes your account data. It cannot be undone."
         }
     }
 }
@@ -43,18 +43,16 @@ struct SettingsProfileView: View {
     var body: some View {
         Form {
             if let user = authViewModel.user {
-                profileSection(user)
-                entitlementSection(user)
+                accountSection
                 planSection(user)
+            } else {
+                accountSection
             }
 
-            notificationSection
-            liveActivitySection
-            feedbackSection
-
+            alertsSection
+            supportSection
             aboutSection
-
-            accountSection
+            dangerZoneSection
         }
         .safeAreaPadding(.bottom, RTSpacing.bottomSafeArea)
         .scrollContentBackground(.hidden)
@@ -77,57 +75,60 @@ struct SettingsProfileView: View {
         .environment(\.colorScheme, .light)
     }
 
-    @ViewBuilder
-    private func profileSection(_ user: User) -> some View {
+    private var accountSection: some View {
         Section {
-            HStack(alignment: .center, spacing: 14) {
-                Image(systemName: authViewModel.hasPortableAccount ? "person.crop.circle.fill" : "iphone")
-                    .font(.system(size: RTSize.profileIcon))
-                    .foregroundStyle(Color.rightTrainActionInk)
+            accountStatusRow
 
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(authViewModel.hasPortableAccount ? user.displayNameOrFallback : "This device")
-                        .font(.headline)
-                    Text(authViewModel.hasPortableAccount ? "Logged in with a passkey" : "No account logged in")
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
+            if authViewModel.hasPortableAccount {
+                NavigationLink {
+                    LinkedDevicesView()
+                } label: {
+                    Label("Manage Devices", systemImage: "iphone.gen3")
+                }
+
+                NavigationLink {
+                    AccountPrivacyControlsView()
+                } label: {
+                    Label("Export Data", systemImage: "square.and.arrow.down")
+                }
+            } else {
+                NavigationLink {
+                    AccountCreationView()
+                } label: {
+                    Label("Create Account", systemImage: "key.badge.plus")
+                }
+
+                NavigationLink {
+                    AccountRestoreView()
+                } label: {
+                    Label("Log In", systemImage: "person.crop.circle.badge.checkmark")
                 }
             }
-            .padding(.vertical, 4)
-
-            if let email = user.email, !email.isEmpty {
-                SettingsValueRow(
-                    title: "Email Status",
-                    systemImage: user.emailVerified ? "checkmark.seal" : "exclamationmark.triangle",
-                    value: user.emailVerified ? "Verified" : "Unverified"
-                )
-                SettingsValueRow(
-                    title: "Email Type",
-                    systemImage: user.isPrivateEmail ? "envelope.badge" : "envelope",
-                    value: user.isPrivateEmail ? "Private relay" : "Direct email"
-                )
-            } else {
-                SettingsValueRow(
-                    title: "Account",
-                    systemImage: authViewModel.hasPortableAccount ? "checkmark.seal" : "person.crop.circle.badge.questionmark",
-                    value: authViewModel.hasPortableAccount ? "Logged in" : "Not logged in"
-                )
-            }
         } header: {
-            settingsSectionHeader("Profile", systemImage: "person.crop.circle")
+            settingsSectionHeader("Account", systemImage: "person.crop.circle")
+        } footer: {
+            Text(authViewModel.hasPortableAccount ? "Manage the devices and data linked to your account." : "Create or log in to an account to sync preferences on another device.")
         }
         .listRowBackground(Color.rightTrainPaperCream)
     }
 
-    @ViewBuilder
-    private func entitlementSection(_ user: User) -> some View {
-        Section {
-            entitlementCard(user)
-                .listRowBackground(Color.clear)
-                .listRowInsets(EdgeInsets())
-        } header: {
-            settingsSectionHeader("Your Plan", systemImage: "speedometer")
+    private var accountStatusRow: some View {
+        HStack(alignment: .center, spacing: 14) {
+            Image(systemName: authViewModel.hasPortableAccount ? "person.crop.circle.fill" : "iphone")
+                .font(.system(size: RTSize.profileIcon))
+                .foregroundStyle(Color.rightTrainActionInk)
+                .accessibilityHidden(true)
+
+            VStack(alignment: .leading, spacing: 4) {
+                Text(authViewModel.hasPortableAccount ? "Account" : "This device")
+                    .font(.headline)
+                Text(authViewModel.hasPortableAccount ? "Logged in with passkey" : "No account")
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+            }
         }
+        .padding(.vertical, 4)
+        .accessibilityElement(children: .combine)
     }
 
     /// Entitlement usage card using the same neutral surface as the rest of Settings.
@@ -191,23 +192,9 @@ struct SettingsProfileView: View {
     @ViewBuilder
     private func planSection(_ user: User) -> some View {
         Section {
-            if let paid = user.entitlements.paidSubscription {
-                SettingsValueRow(title: "Plan", systemImage: "crown", value: "Pro")
-                SettingsValueRow(
-                    title: "Renewal",
-                    systemImage: paid.willRenew ? "arrow.triangle.2.circlepath" : "calendar.badge.exclamationmark",
-                    value: paid.willRenew ? "Renews automatically" : "Ends after current period"
-                )
-                if let expiresAt = paid.expiresAt {
-                    SettingsValueRow(
-                        title: "Valid Until",
-                        systemImage: "calendar",
-                        value: expiresAt.formatted(date: .abbreviated, time: .shortened)
-                    )
-                }
-            } else {
-                SettingsValueRow(title: "Plan", systemImage: "testtube.2", value: "Free Beta")
-            }
+            entitlementCard(user)
+                .listRowBackground(Color.clear)
+                .listRowInsets(EdgeInsets())
 
             ForEach(subscriptionViewModel.products) { product in
                 Button {
@@ -243,20 +230,12 @@ struct SettingsProfileView: View {
         .listRowBackground(Color.rightTrainPaperCream)
     }
 
-    private var notificationSection: some View {
+    private var alertsSection: some View {
         Section {
             NotificationPermissionView()
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.rightTrainPaperCream)
-        } header: {
-            settingsSectionHeader("Notifications", systemImage: "bell")
-        } footer: {
-            Text("RightTrain only needs alerts for action-needed changes: platform moves, cancellations, delays, interchange risk, and better options.")
-        }
-    }
 
-    private var liveActivitySection: some View {
-        Section {
             Button {
                 liveActivityPreviewFeedbackTrigger += 1
                 Task { await activeWindowViewModel.previewLiveActivity() }
@@ -271,15 +250,15 @@ struct SettingsProfileView: View {
             }
             .accessibilityHint("Starts a short local Live Activity preview.")
         } header: {
-            settingsSectionHeader("Live Activity", systemImage: "rectangle.on.rectangle")
+            settingsSectionHeader("Alerts", systemImage: "bell")
         } footer: {
-            Text("See the same route, status, platform, and next-action language used on the Lock Screen and Dynamic Island.")
+            Text("Alerts cover action-needed journey changes. Live Activity preview runs for 30 seconds.")
         }
         .listRowBackground(Color.rightTrainPaperCream)
         .sensoryFeedback(.success, trigger: liveActivityPreviewFeedbackTrigger)
     }
 
-    private var feedbackSection: some View {
+    private var supportSection: some View {
         Section {
             Link(destination: supportURL) {
                 HStack {
@@ -301,7 +280,7 @@ struct SettingsProfileView: View {
                 }
             }
         } header: {
-            settingsSectionHeader("Feedback", systemImage: "bubble.left.and.bubble.right")
+            settingsSectionHeader("Support", systemImage: "bubble.left.and.bubble.right")
         } footer: {
             Text("Include the route, train time, platform, and what RightTrain showed so support can compare it with the live feed.")
         }
@@ -325,86 +304,35 @@ struct SettingsProfileView: View {
         .listRowBackground(Color.rightTrainPaperCream)
     }
 
-    private var accountSection: some View {
-        Group {
-            Section {
-                if authViewModel.portableAccount != nil {
-                    Label("Logged in", systemImage: "checkmark.seal")
-                        .foregroundStyle(Color.rightTrainActionInk)
-                    NavigationLink {
-                        LinkedDevicesView()
-                    } label: {
-                        Label("Manage Devices", systemImage: "iphone.gen3")
-                    }
-                    NavigationLink {
-                        AccountPrivacyControlsView()
-                    } label: {
-                        Label("Export or Delete", systemImage: "hand.raised")
-                    }
-                } else {
-                    NavigationLink {
-                        AccountCreationView()
-                    } label: {
-                        Label("Create Account", systemImage: "key.badge.plus")
-                    }
-                    NavigationLink {
-                        AccountRestoreView()
-                    } label: {
-                        Label("Log In", systemImage: "person.crop.circle.badge.checkmark")
-                    }
-                }
-
-                if let message = authViewModel.accountStatusMessage {
-                    Label(message, systemImage: "checkmark.seal")
-                        .font(.footnote)
-                        .foregroundStyle(Color.rightTrainActionInk)
-                }
-            } header: {
-                settingsSectionHeader("Account", systemImage: "person.crop.circle.badge.checkmark")
-            } footer: {
-                Text(authViewModel.hasPortableAccount ? "Your account syncs preferences without email or phone number lookup." : "You can keep using this device without an account. Create or log in to an account to sync preferences.")
-            }
-            .listRowBackground(Color.rightTrainPaperCream)
-
+    private var dangerZoneSection: some View {
+        Section {
             if authViewModel.hasPortableAccount {
-                Section {
-                    Button(role: .destructive) {
-                        confirmation = .logOutAccount
-                    } label: {
-                        Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")
-                    }
-                } header: {
-                    settingsSectionHeader("Account", systemImage: "person.crop.circle.badge.minus")
-                } footer: {
-                    Text("Logs out of this account on this device.")
-                }
-                .listRowBackground(Color.rightTrainPaperCream)
-            }
-
-            Section {
-                if authViewModel.hasPortableAccount {
-                    NavigationLink {
-                        AccountPrivacyControlsView()
-                    } label: {
-                        Label("Export or Delete Account", systemImage: "hand.raised")
-                    }
+                Button(role: .destructive) {
+                    confirmation = .logOutAccount
+                } label: {
+                    Label("Log Out", systemImage: "rectangle.portrait.and.arrow.right")
                 }
 
                 Button(role: .destructive) {
-                    confirmation = authViewModel.hasPortableAccount ? .deleteAccount : .clearDevice
+                    confirmation = .deleteAccount
                 } label: {
-                    Label(
-                        authViewModel.hasPortableAccount ? "Delete Account" : "Clear This Device",
-                        systemImage: authViewModel.hasPortableAccount ? "person.crop.circle.badge.xmark" : "iphone.slash"
-                    )
+                    Label("Delete Account", systemImage: "person.crop.circle.badge.xmark")
                 }
-                .foregroundStyle(Color.rightTrainDanger)
-            } footer: {
-                Text(authViewModel.hasPortableAccount ? "Permanently removes active profile, journey, and account preference data. Limited audit records may be retained where required." : "Clears this device's saved RightTrain data and local setup.")
-                    .foregroundStyle(Color.rightTrainDanger)
+            } else {
+                Button(role: .destructive) {
+                    confirmation = .clearDevice
+                } label: {
+                    Label("Clear This Device", systemImage: "iphone.slash")
+                }
             }
-            .listRowBackground(Color.rightTrainPaperCream)
+        } header: {
+            settingsSectionHeader("Danger Zone", systemImage: "exclamationmark.triangle")
+        } footer: {
+            Text(authViewModel.hasPortableAccount ? "Log out of this device or permanently delete the account." : "Clears saved RightTrain data from this device.")
+                .foregroundStyle(Color.rightTrainDanger)
         }
+        .listRowBackground(Color.rightTrainPaperCream)
+        .foregroundStyle(Color.rightTrainDanger)
     }
 
     private var activeWindowCount: Int {

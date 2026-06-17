@@ -2,8 +2,6 @@ import SwiftUI
 
 struct AccountPrivacyControlsView: View {
     @Environment(AuthViewModel.self) private var authViewModel
-    @Environment(\.dismiss) private var dismiss
-    @State private var showDeleteConfirmation = false
 
     var body: some View {
         Form {
@@ -23,39 +21,12 @@ struct AccountPrivacyControlsView: View {
             if let export = authViewModel.accountExport {
                 exportSummary(export)
             }
-
-            Section {
-                Button(role: .destructive) {
-                    showDeleteConfirmation = true
-                } label: {
-                    Label("Delete Account", systemImage: "person.crop.circle.badge.xmark")
-                }
-                .foregroundStyle(Color.rightTrainDanger)
-            } header: {
-                Label("Deletion", systemImage: "trash")
-            } footer: {
-                Text("Deletion removes synced preferences from account surfaces, revokes account sessions, and may retain a minimal audit record for a limited period.")
-                    .foregroundStyle(Color.rightTrainDanger)
-            }
-            .listRowBackground(Color.rightTrainPaperCream)
         }
-        .navigationTitle("Privacy Controls")
+        .navigationTitle("Export Data")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
         .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
         .lightSurfaceForeground()
-        .confirmationDialog("Delete account?", isPresented: $showDeleteConfirmation, titleVisibility: .visible) {
-            Button("Delete Account", role: .destructive) {
-                Task {
-                    if await authViewModel.deleteAccount() {
-                        dismiss()
-                    }
-                }
-            }
-            Button("Cancel", role: .cancel) {}
-        } message: {
-            Text("This permanently removes synced account preferences and signs out linked devices.")
-        }
         .environment(\.colorScheme, .light)
     }
 
