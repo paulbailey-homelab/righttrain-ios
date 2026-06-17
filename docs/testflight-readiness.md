@@ -61,12 +61,12 @@ Before adding external testers:
 
 ## Optional Account Preferences Smoke Test
 
-Run this checklist before enabling portable accounts for external testers:
+Run this checklist before enabling accounts for external testers:
 
-1. Start from a device-only install with home/work CRS defaults, at least one saved commute routine, and notification preferences.
-2. Open Settings and confirm account creation is presented as optional, with device-only use still available.
+1. Start from signed-out local use with home/work CRS defaults, at least one saved commute routine, and notification preferences.
+2. Open Settings and confirm account creation is presented as optional, with signed-out local use still available.
 3. Confirm account creation copy explains synced preference categories, purpose, retention, export, deletion, and that direct identifiers are not required.
-4. Create a portable account without entering a legal name, email address, phone number, postal address, contact list, or user-entered device name.
+4. Create an account without entering a legal name, email address, phone number, postal address, contact list, or user-entered device name.
 5. Save the shown-once recovery code outside the app, then verify the app does not show it again after leaving the confirmation screen.
 6. Install the same TestFlight build on a second iPhone and restore the account without using the first device's App Attest key ID.
 7. Confirm the second device receives station defaults, saved routines, and safe notification preferences.
@@ -85,23 +85,23 @@ Use this copy in App Store Connect for beta review and tester onboarding.
 - Feedback email: `support@righttrain.app`
 - Support URL: `https://righttrain.app/support`
 - Privacy policy URL: `https://righttrain.app/privacy`
-- Test account: not required. The app creates an App Attest-backed device session on first launch. Optional portable accounts may be created in Settings to sync commuter preferences across devices.
-- Review notes: "The app is a controlled rail-alert beta. It creates an App Attest-backed device session and asks for notification permission to test the core push-alert flow. Portable accounts are optional and store synced commuter preferences without requiring a name, email address, phone number, postal address, contact list, or user-entered device name. The free beta entitlement allows one active monitored journey window."
+- Test account: not required. The app creates an App Attest-backed signed-out local session on first launch. Optional accounts may be created in Settings to sync commuter preferences across devices.
+- Review notes: "The app is a controlled rail-alert beta. It creates an App Attest-backed signed-out local session and asks for notification permission to test the core push-alert flow. Accounts are optional and store synced commuter preferences without requiring a name, email address, phone number, postal address, contact list, or user-entered device name. The free beta entitlement allows one active monitored journey window."
 
 Privacy summary for TestFlight review:
 
-- Account data: app user identifier, App Attest identity metadata, session metadata, optional portable account credential public-key metadata, one-time recovery-code verifier, linked-device coarse metadata, and optional recovery/support contact data only when separately provided.
+- Account data: app user identifier, App Attest identity metadata, session metadata, optional account credential public-key metadata, one-time recovery-code verifier, linked-device coarse metadata, and optional recovery/support contact data only when separately provided.
 - User content: selected origin, destination, departure window, saved station defaults, saved commute routines, account preference toggles, active journey watch, and feedback sent through support.
 - Device data: APNs alert token, Live Activity token, app version, build number, bundle identifier, device model, OS version, and APNs environment.
 - Diagnostics: Apple crash reports, system logs emitted through `os.Logger`, and operational backend logs.
 - Tracking: no cross-app tracking or advertising identifiers.
 
-Portable account privacy commitments for beta review:
+Account privacy commitments for beta review:
 
-- Direct identifiers are not required for portable account creation.
+- Direct identifiers are not required for account creation.
 - Synced preferences are treated as personal data because saved stations and routines can reveal travel patterns.
 - Raw APNs tokens, raw App Attest key IDs, credential private material, payment data, raw location history, and raw journey history are excluded from account preference export.
-- Export and deletion controls are available from Settings for signed-in portable accounts.
+- Export and deletion controls are available from Settings for signed-in accounts.
 
 ## Incident Runbook
 

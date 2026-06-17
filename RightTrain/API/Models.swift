@@ -51,9 +51,42 @@ struct RegisterAccountResponse: Decodable, Equatable {
 
 struct PrivacyAccount: Codable, Identifiable, Equatable {
     var id: String
-    var mode: String
+    var state: String
     var createdAt: Date
     var updatedAt: Date
+
+    init(id: String, state: String, createdAt: Date, updatedAt: Date) {
+        self.id = id
+        self.state = state
+        self.createdAt = createdAt
+        self.updatedAt = updatedAt
+    }
+
+    private enum CodingKeys: String, CodingKey {
+        case id
+        case state
+        case legacyMode = "mode"
+        case createdAt
+        case updatedAt
+    }
+
+    init(from decoder: Decoder) throws {
+        let container = try decoder.container(keyedBy: CodingKeys.self)
+        id = try container.decode(String.self, forKey: .id)
+        state = try container.decodeIfPresent(String.self, forKey: .state)
+            ?? container.decodeIfPresent(String.self, forKey: .legacyMode)
+            ?? "active"
+        createdAt = try container.decode(Date.self, forKey: .createdAt)
+        updatedAt = try container.decode(Date.self, forKey: .updatedAt)
+    }
+
+    func encode(to encoder: Encoder) throws {
+        var container = encoder.container(keyedBy: CodingKeys.self)
+        try container.encode(id, forKey: .id)
+        try container.encode(state, forKey: .state)
+        try container.encode(createdAt, forKey: .createdAt)
+        try container.encode(updatedAt, forKey: .updatedAt)
+    }
 }
 
 struct AccountAssertionOptionsRequest: Encodable, Equatable {

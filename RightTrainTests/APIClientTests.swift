@@ -238,7 +238,7 @@ final class APIClientTests: XCTestCase {
             {
               "account": {
                 "id": "account-1",
-                "mode": "portable",
+                "state": "active",
                 "createdAt": "2026-06-16T12:00:00Z",
                 "updatedAt": "2026-06-16T12:00:00Z"
               },
@@ -273,7 +273,7 @@ final class APIClientTests: XCTestCase {
         )
 
         XCTAssertEqual(options.credentialOptions.relyingPartyId, "righttrain.app")
-        XCTAssertEqual(response.account.mode, "portable")
+        XCTAssertEqual(response.account.state, "active")
         XCTAssertEqual(response.recoveryCode, "RECOVERY-CODE")
         let requests = StubURLProtocol.recordedRequests
         XCTAssertEqual(requests[0].url?.path, "/v1/auth/account/registration-options")
@@ -432,7 +432,7 @@ final class APIClientTests: XCTestCase {
             .success(statusCode: 200, body: Data("""
             {
               "generatedAt": "2026-06-16T12:00:00Z",
-              "account": {"id": "account-1", "mode": "portable", "createdAt": "2026-06-16T12:00:00Z", "updatedAt": "2026-06-16T12:00:00Z"},
+              "account": {"id": "account-1", "state": "active", "createdAt": "2026-06-16T12:00:00Z", "updatedAt": "2026-06-16T12:00:00Z"},
               "preferenceSet": {
                 "version": 1,
                 "updatedAt": "2026-06-16T12:00:00Z",

@@ -747,7 +747,7 @@ struct PreviewAPIClient: APIClienting {
     private var previewPrivacyAccount: PrivacyAccount {
         PrivacyAccount(
             id: PreviewFixtures.user.id,
-            mode: "portable",
+            state: "active",
             createdAt: PreviewFixtures.baseDate,
             updatedAt: PreviewFixtures.baseDate
         )

@@ -323,40 +323,18 @@ struct SettingsProfileView: View {
     private var accountSection: some View {
         Group {
             Section {
-                if let portableAccount = authViewModel.portableAccount {
-                    SettingsValueRow(
-                        title: "Account Mode",
-                        systemImage: "key",
-                        value: portableAccount.account.mode.capitalized
-                    )
-                    SettingsValueRow(
-                        title: "Preference Version",
-                        systemImage: "number",
-                        value: "\(portableAccount.lastSyncedPreferenceVersion)"
-                    )
-                    if let lastSyncedAt = portableAccount.lastSyncedAt {
-                        SettingsValueRow(
-                            title: "Last Synced",
-                            systemImage: "clock",
-                            value: lastSyncedAt.formatted(date: .abbreviated, time: .shortened)
-                        )
-                    }
-                    if let preferenceSet = authViewModel.accountPreferenceSet {
-                        SettingsValueRow(
-                            title: "Synced Categories",
-                            systemImage: "checklist",
-                            value: preferenceCategorySummary(preferenceSet)
-                        )
-                    }
+                if authViewModel.portableAccount != nil {
+                    Label("Signed in", systemImage: "checkmark.seal")
+                        .foregroundStyle(Color.rightTrainActionInk)
                     NavigationLink {
                         LinkedDevicesView()
                     } label: {
-                        Label("Linked Devices", systemImage: "iphone.gen3")
+                        Label("Manage Devices", systemImage: "iphone.gen3")
                     }
                     NavigationLink {
                         AccountPrivacyControlsView()
                     } label: {
-                        Label("Privacy Controls", systemImage: "hand.raised")
+                        Label("Export or Delete", systemImage: "hand.raised")
                     }
                 } else {
                     NavigationLink {
@@ -377,9 +355,9 @@ struct SettingsProfileView: View {
                         .foregroundStyle(Color.rightTrainActionInk)
                 }
             } header: {
-                settingsSectionHeader("Portable Account", systemImage: "person.crop.circle.badge.checkmark")
+                settingsSectionHeader("Account", systemImage: "person.crop.circle.badge.checkmark")
             } footer: {
-                Text("Account creation is optional. Device-only use stays available, and portable accounts sync preferences without email or phone number lookup.")
+                Text("Account creation is optional. Signed-out local use stays available, and accounts sync preferences without email or phone number lookup.")
             }
             .listRowBackground(Color.rightTrainPaperCream)
 
@@ -477,19 +455,6 @@ struct SettingsProfileView: View {
             .font(.caption.weight(.semibold))
     }
 
-    private func preferenceCategorySummary(_ preferenceSet: AccountPreferenceSet) -> String {
-        var categories = ["stations"]
-        if !preferenceSet.commuteRoutines.isEmpty {
-            categories.append("routines")
-        }
-        if preferenceSet.notificationPreferences.routineNotificationsEnabled != nil {
-            categories.append("notifications")
-        }
-        if !preferenceSet.productPreferences.isEmpty {
-            categories.append("products")
-        }
-        return categories.joined(separator: ", ")
-    }
 }
 
 private struct SettingsValueRow: View {

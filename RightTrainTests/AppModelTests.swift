@@ -449,11 +449,11 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(credentialService.createCredentialOptions.count, 1)
         XCTAssertEqual(apiClient.registerAccountRequests.last?.accessToken, "device-token")
         XCTAssertTrue(apiClient.registerAccountRequests.last?.input.migrateCurrentDevicePreferences == true)
-        XCTAssertEqual(model.authViewModel.portableAccount?.account.mode, "portable")
+        XCTAssertEqual(model.authViewModel.portableAccount?.account.state, "active")
         XCTAssertEqual(model.authViewModel.portableAccount?.lastSyncedPreferenceVersion, 1)
         XCTAssertEqual(model.authViewModel.oneTimeRecoveryCode, "shown-once-to-user")
         XCTAssertEqual(model.authViewModel.accountStatusMessage, "Account preferences are ready to use on another device.")
-        XCTAssertEqual(sessionStore.session?.portableAccount?.account.mode, "portable")
+        XCTAssertEqual(sessionStore.session?.portableAccount?.account.state, "active")
         XCTAssertFalse(String(describing: sessionStore.session).contains("shown-once-to-user"))
 
         model.authViewModel.acknowledgeRecoveryCode()

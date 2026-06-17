@@ -959,9 +959,9 @@ enum TestFactory {
 
     static func privacyAccount(
         id: String = "4b4f16d9-6ff7-4755-9b64-890e3c205404",
-        mode: String = "portable"
+        state: String = "active"
     ) -> PrivacyAccount {
-        PrivacyAccount(id: id, mode: mode, createdAt: now, updatedAt: now)
+        PrivacyAccount(id: id, state: state, createdAt: now, updatedAt: now)
     }
 
     static func accountCredentialOptions() -> AccountRegistrationOptionsResponse {

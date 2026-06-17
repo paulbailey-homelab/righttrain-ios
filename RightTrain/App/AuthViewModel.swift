@@ -388,7 +388,7 @@ final class AuthViewModel {
         let metadata = PortableAccountSessionMetadata(
             account: PrivacyAccount(
                 id: auth.user.id,
-                mode: "portable",
+                state: "active",
                 createdAt: auth.user.createdAt,
                 updatedAt: auth.user.updatedAt
             ),
