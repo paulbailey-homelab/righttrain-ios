@@ -2,23 +2,37 @@ import SwiftUI
 
 struct AccountPrivacyControlsView: View {
     @Environment(AuthViewModel.self) private var authViewModel
+    @State private var isGeneratingExport = false
+    @State private var exportStatusText: String?
 
     var body: some View {
         Form {
             Section {
                 Button {
-                    Task { await authViewModel.exportPortableAccountData() }
+                    generateExport()
                 } label: {
-                    Label("Generate Export", systemImage: "square.and.arrow.down")
+                    HStack {
+                        Label(authViewModel.accountExport == nil ? "Generate Export" : "Regenerate Export", systemImage: "square.and.arrow.down")
+                        Spacer()
+                        if isGeneratingExport {
+                            ProgressView()
+                                .controlSize(.small)
+                        } else if authViewModel.accountExport != nil {
+                            Image(systemName: "checkmark.circle.fill")
+                                .foregroundStyle(Color.rightTrainActionInk)
+                        }
+                    }
                 }
+                .disabled(isGeneratingExport)
             } header: {
                 Label("Export", systemImage: "doc.text")
             } footer: {
-                Text("The export contains account preferences, linked-device categories, and retained-record explanations. It excludes access tokens, raw device identifiers, notification tokens, and credential material.")
+                Text(exportStatusText ?? "The export contains account preferences, linked-device categories, and retained-record explanations. It excludes access tokens, raw device identifiers, notification tokens, and credential material.")
             }
             .listRowBackground(Color.rightTrainPaperCream)
 
             if let export = authViewModel.accountExport {
+                exportActions(export)
                 exportSummary(export)
             }
         }
@@ -28,6 +42,50 @@ struct AccountPrivacyControlsView: View {
         .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
         .lightSurfaceForeground()
         .environment(\.colorScheme, .light)
+    }
+
+    private func generateExport() {
+        guard !isGeneratingExport else { return }
+        isGeneratingExport = true
+        exportStatusText = nil
+        Task {
+            let didExport = await authViewModel.exportPortableAccountData()
+            await MainActor.run {
+                isGeneratingExport = false
+                exportStatusText = didExport ? "Export generated. You can now share or preview the JSON export." : nil
+            }
+        }
+    }
+
+    private func exportActions(_ export: AccountExportResponse) -> some View {
+        Section {
+            if let exportJSON = exportJSONString(for: export) {
+                ShareLink(
+                    item: exportJSON,
+                    subject: Text("RightTrain account export"),
+                    message: Text("RightTrain account preference export generated \(export.generatedAt.formatted(date: .abbreviated, time: .shortened)).")
+                ) {
+                    Label("Share JSON Export", systemImage: "square.and.arrow.up")
+                }
+
+                DisclosureGroup {
+                    Text(exportJSON)
+                        .font(.system(.caption, design: .monospaced))
+                        .textSelection(.enabled)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                } label: {
+                    Label("Preview JSON", systemImage: "doc.text.magnifyingglass")
+                }
+            } else {
+                Label("Export generated, but the JSON preview could not be prepared.", systemImage: "exclamationmark.triangle")
+                    .foregroundStyle(Color.rightTrainDanger)
+            }
+        } header: {
+            Label("Ready", systemImage: "checkmark.circle")
+        } footer: {
+            Text("Share or save this JSON export for your records.")
+        }
+        .listRowBackground(Color.rightTrainPaperCream)
     }
 
     private func exportSummary(_ export: AccountExportResponse) -> some View {
@@ -79,5 +137,18 @@ struct AccountPrivacyControlsView: View {
                 .listRowBackground(Color.rightTrainPaperCream)
             }
         }
+    }
+
+    private func exportJSONString(for export: AccountExportResponse) -> String? {
+        let encoder = JSONEncoder()
+        encoder.outputFormatting = [.prettyPrinted, .sortedKeys, .withoutEscapingSlashes]
+        encoder.dateEncodingStrategy = .custom { date, encoder in
+            var container = encoder.singleValueContainer()
+            try container.encode(DateFormatting.apiDateTime.string(from: date))
+        }
+        guard let data = try? encoder.encode(export) else {
+            return nil
+        }
+        return String(data: data, encoding: .utf8)
     }
 }

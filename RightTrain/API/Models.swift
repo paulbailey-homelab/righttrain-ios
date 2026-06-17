@@ -197,7 +197,7 @@ struct LinkedDevice: Codable, Identifiable, Equatable {
     var state: String
 }
 
-struct AccountExportResponse: Decodable, Equatable {
+struct AccountExportResponse: Codable, Equatable {
     var generatedAt: Date
     var account: PrivacyAccount
     var preferenceSet: AccountPreferenceSet

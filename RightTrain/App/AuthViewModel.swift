@@ -304,15 +304,20 @@ final class AuthViewModel {
         }
     }
 
-    func exportPortableAccountData() async {
+    @discardableResult
+    func exportPortableAccountData() async -> Bool {
         guard let accessToken else {
             operationState.alertState = .auth("Sign in to export account data.")
-            return
+            return false
         }
+        var didExport = false
         await operationState.withLoading {
+            accountExport = nil
             accountExport = try await apiClient.exportAccountPreferences(accessToken: accessToken)
             accountStatusMessage = "Account export generated."
+            didExport = true
         }
+        return didExport
     }
 
     func acknowledgeRecoveryCode() {
