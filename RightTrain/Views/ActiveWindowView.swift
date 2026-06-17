@@ -35,6 +35,12 @@ struct ActiveWindowView: View {
         let heroCountdown = ActiveWindowPresentation.countdown(for: presentation.heroRecommendation, now: now)
 
         VStack(alignment: .leading, spacing: 0) {
+            statusPillRow(
+                presentation: presentation,
+                surface: surface
+            )
+            .padding(.bottom, RTSpacing.compact)
+
             LiveGlancePanel(
                 content: ActiveWindowPresentation.liveGlanceContent(
                     for: presentation.heroRecommendation,
@@ -88,8 +94,7 @@ struct ActiveWindowView: View {
 
     private func statusPillRow(
         presentation: ActiveWindowPresentation,
-        surface: RTSurface,
-        heroCountdown: ActiveWindowPresentation.CountdownDisplay
+        surface: RTSurface
     ) -> some View {
         HStack(alignment: .center, spacing: 0) {
             RTStatusPill(
@@ -375,6 +380,7 @@ struct ActiveOnTrainJourneyView: View {
     @Environment(JourneyDetailViewModel.self) private var journeyDetailViewModel
     @Environment(ActiveWindowViewModel.self) private var activeWindowViewModel
     @State private var isClearingPinned = false
+    @State private var isConfirmingUnpin = false
 
     var window: WindowSubscription
     var recommendation: DirectWindowRecommendation
@@ -415,6 +421,14 @@ struct ActiveOnTrainJourneyView: View {
             guard liveDetailRefreshKey.hasPrefix("live|") else { return }
             await refreshSelectedJourneyDetail()
         }
+        .alert("Unpin this journey?", isPresented: $isConfirmingUnpin) {
+            Button("Unpin Journey", role: .destructive) {
+                clearPinnedTrain()
+            }
+            Button("Keep Pin", role: .cancel) {}
+        } message: {
+            Text("This removes the current Journey Pin from RightTrain.")
+        }
     }
 
     private var summarySection: some View {
@@ -429,12 +443,12 @@ struct ActiveOnTrainJourneyView: View {
                 updatedAt: journey.realtimeUpdatedAt.flatMap(DateFormatting.date(from:)),
                 now: Date(),
                 primaryAction: PinnedHeaderPrimaryAction(
-                    title: JourneyFormatting.isArrived(journey) ? "Unpin" : "Change train",
+                    title: "Unpin",
                     systemImage: "pin.slash",
                     role: .destructive,
-                    accessibilityHint: "Removes this Journey Pin so you can choose another train.",
+                    accessibilityHint: "Removes this Journey Pin.",
                     isDisabled: isClearingPinned,
-                    action: clearPinnedTrain
+                    action: requestUnpinConfirmation
                 )
             ) {
                 EmptyView()
@@ -680,6 +694,11 @@ struct ActiveOnTrainJourneyView: View {
                 isClearingPinned = false
             }
         }
+    }
+
+    private func requestUnpinConfirmation() {
+        guard !isClearingPinned else { return }
+        isConfirmingUnpin = true
     }
 }
 
