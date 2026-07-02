@@ -938,10 +938,18 @@ final class ActiveWindowViewModel {
             throw ActiveWindowViewModelError.missingAccessToken
         }
         if let activeWindowID {
-            try await apiClient.deleteWindowSubscription(id: activeWindowID, accessToken: accessToken)
+            try await apiClient.deleteWindowSubscription(
+                id: activeWindowID,
+                accessToken: accessToken,
+                idempotencyKey: UUID().uuidString
+            )
         }
         if let activeItineraryID {
-            try await apiClient.deleteItinerarySubscription(id: activeItineraryID, accessToken: accessToken)
+            try await apiClient.deleteItinerarySubscription(
+                id: activeItineraryID,
+                accessToken: accessToken,
+                idempotencyKey: UUID().uuidString
+            )
         }
         clearState()
         await liveActivityCoordinator.endAll(tokenRegistration: liveActivityTokenRegistrationContext())

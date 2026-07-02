@@ -154,47 +154,11 @@ protocol APIClienting {
     func resetPooledConnections() async
 }
 
-extension APIClienting {
-    func pinItineraryFirstLeg(id: String, input: PinItineraryFirstLegRequest, accessToken: String) async throws -> ItinerarySubscription {
-        try await pinItineraryFirstLeg(id: id, input: input, accessToken: accessToken, idempotencyKey: nil)
-    }
-
-    func clearItineraryPinnedFirstLeg(id: String, accessToken: String) async throws -> ItinerarySubscription {
-        try await clearItineraryPinnedFirstLeg(id: id, accessToken: accessToken, idempotencyKey: nil)
-    }
-
-    func reportItineraryOriginArrival(id: String, accessToken: String) async throws -> ItinerarySubscription {
-        try await reportItineraryOriginArrival(id: id, accessToken: accessToken, idempotencyKey: nil)
-    }
-
-    func reportItineraryInterchangeArrival(id: String, atCrs: String, legIndex: Int, accessToken: String) async throws -> ItinerarySubscription {
-        try await reportItineraryInterchangeArrival(id: id, atCrs: atCrs, legIndex: legIndex, accessToken: accessToken, idempotencyKey: nil)
-    }
-
-    func boardItineraryLeg(id: String, legIndex: Int, pinFirstLeg: Bool, accessToken: String) async throws -> ItinerarySubscription {
-        try await boardItineraryLeg(id: id, legIndex: legIndex, pinFirstLeg: pinFirstLeg, accessToken: accessToken, idempotencyKey: nil)
-    }
-
-    func replanItineraryFromCurrentStation(id: String, fromCrs: String, accessToken: String) async throws -> ItinerarySubscription {
-        try await replanItineraryFromCurrentStation(id: id, fromCrs: fromCrs, accessToken: accessToken, idempotencyKey: nil)
-    }
-
-    func pinWindowSubscriptionTrain(id: String, serviceID: Int, accessToken: String) async throws -> WindowSubscription {
-        try await pinWindowSubscriptionTrain(id: id, serviceID: serviceID, accessToken: accessToken, idempotencyKey: nil)
-    }
-
-    func clearWindowSubscriptionPinnedTrain(id: String, accessToken: String) async throws -> WindowSubscription {
-        try await clearWindowSubscriptionPinnedTrain(id: id, accessToken: accessToken, idempotencyKey: nil)
-    }
-
-    func deleteWindowSubscription(id: String, accessToken: String) async throws {
-        try await deleteWindowSubscription(id: id, accessToken: accessToken, idempotencyKey: nil)
-    }
-
-    func deleteItinerarySubscription(id: String, accessToken: String) async throws {
-        try await deleteItinerarySubscription(id: id, accessToken: accessToken, idempotencyKey: nil)
-    }
-}
+// Note: there are deliberately no idempotencyKey-defaulting convenience
+// overloads for mutation endpoints. Every mutating call site must supply a key
+// (the queued-mutation id, or a fresh UUID for one-shot calls) so transient
+// transport failures are safely retryable and the backend's idempotency
+// middleware can deduplicate replays.
 
 struct APIClient {
     var baseURL: URL
@@ -216,6 +180,14 @@ struct APIClient {
     /// Number of times a retryable request is re-issued after a transient
     /// transport error before the failure is surfaced.
     static let maxTransportRetries = 1
+
+    /// Delay before transport retry attempt `attempt` (1-based): exponential
+    /// from 500ms with ±20% jitter so simultaneous clients don't retry in
+    /// lockstep against a recovering backend.
+    static func transportRetryDelay(attempt: Int, jitter: Double = Double.random(in: 0.8...1.2)) -> Duration {
+        let base = 0.5 * pow(2, Double(max(attempt, 1) - 1))
+        return .seconds(base * min(max(jitter, 0.8), 1.2))
+    }
 
     /// GET/HEAD are inherently idempotent and always safe to retry. Other verbs
     /// are only retried when the caller supplied an Idempotency-Key, so a retry
@@ -1037,6 +1009,7 @@ struct APIClient {
 
         let canRetry = APIClient.isRetryableRequest(method: method, idempotencyKey: idempotencyKey)
         var attemptsRemaining = canRetry ? APIClient.maxTransportRetries : 0
+        var attempt = 0
 
         while true {
             do {
@@ -1059,6 +1032,8 @@ struct APIClient {
                 // connection and usually succeeds immediately.
                 if attemptsRemaining > 0, APIClient.isRetryableTransportError(error) {
                     attemptsRemaining -= 1
+                    attempt += 1
+                    try? await Task.sleep(for: APIClient.transportRetryDelay(attempt: attempt))
                     continue
                 }
                 throw APIError.transport(error.localizedDescription)
