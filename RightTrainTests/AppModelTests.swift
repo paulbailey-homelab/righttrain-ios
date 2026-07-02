@@ -297,8 +297,13 @@ final class AppModelTests: XCTestCase {
         reloaded.markAttempt(id: "queued-pin")
         reloaded.markDeferred(id: "queued-pin", message: "offline")
 
-        XCTAssertTrue(reloaded.duePendingMutations(now: Date().addingTimeInterval(4)).isEmpty)
-        XCTAssertEqual(reloaded.duePendingMutations(now: Date().addingTimeInterval(6)).map(\.id), ["queued-pin"])
+        // First-attempt backoff is 5s with deterministic ±20% jitter, so the
+        // due time lands somewhere in [4.0, 6.0] seconds after the attempt.
+        let delay = reloaded.retryDelay(for: reloaded.mutations[0])
+        XCTAssertGreaterThanOrEqual(delay, 4.0)
+        XCTAssertLessThanOrEqual(delay, 6.0)
+        XCTAssertTrue(reloaded.duePendingMutations(now: Date().addingTimeInterval(3.9)).isEmpty)
+        XCTAssertEqual(reloaded.duePendingMutations(now: Date().addingTimeInterval(6.1)).map(\.id), ["queued-pin"])
     }
 
     @MainActor
@@ -329,6 +334,65 @@ final class AppModelTests: XCTestCase {
 
         XCTAssertEqual(reloaded.mutations.map(\.id), ["fresh-pin"])
         XCTAssertFalse(reloaded.needsAttention)
+        XCTAssertEqual(reloaded.pendingCount, 1)
+    }
+
+    @MainActor
+    func testJourneyMutationQueueSurfacesExpiredMutationsAsFailedBeforeHardPurge() {
+        let suiteName = "righttrain.tests.queue.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        let queue = JourneyMutationQueue(defaults: defaults)
+        var agedPin = JourneyMutation(
+            id: "aged-pin",
+            kind: .windowPinTrain,
+            windowID: "window-1",
+            serviceID: 222
+        )
+        // Older than maxMutationAge (24h) but younger than hardPurgeAge (48h):
+        // must surface as a visible failure, not vanish.
+        agedPin.createdAt = Date().addingTimeInterval(-30 * 60 * 60)
+        queue.enqueue(agedPin)
+
+        queue.purgeExpired()
+
+        XCTAssertEqual(queue.mutations.map(\.id), ["aged-pin"])
+        XCTAssertTrue(queue.needsAttention)
+        XCTAssertEqual(queue.failedCount, 1)
+        XCTAssertEqual(queue.mutations.first?.lastError, JourneyMutationQueue.expiredErrorMessage)
+        // Expired failures are dismiss-only; retry would replay a stale action.
+        XCTAssertEqual(queue.retryableFailedCount, 0)
+        queue.retryFailed()
+        XCTAssertEqual(queue.failedCount, 1)
+    }
+
+    @MainActor
+    func testJourneyMutationQueueRetryFailedRestoresPendingForServerRejections() {
+        let suiteName = "righttrain.tests.queue.\(UUID().uuidString)"
+        let defaults = UserDefaults(suiteName: suiteName)!
+        defer {
+            defaults.removePersistentDomain(forName: suiteName)
+        }
+        let queue = JourneyMutationQueue(defaults: defaults)
+        queue.enqueue(JourneyMutation(
+            id: "rejected-pin",
+            kind: .windowPinTrain,
+            windowID: "window-1",
+            serviceID: 222
+        ))
+        queue.markFailed(id: "rejected-pin", message: "conflict")
+
+        XCTAssertEqual(queue.retryableFailedCount, 1)
+
+        queue.retryFailed()
+
+        XCTAssertEqual(queue.pendingCount, 1)
+        XCTAssertEqual(queue.failedCount, 0)
+        XCTAssertNil(queue.mutations.first?.lastError)
+
+        let reloaded = JourneyMutationQueue(defaults: defaults)
         XCTAssertEqual(reloaded.pendingCount, 1)
     }
 

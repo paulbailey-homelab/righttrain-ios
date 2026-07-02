@@ -70,6 +70,13 @@ final class JourneyMutationQueue {
     private(set) var isSyncing = false
     private static let storageKey = "righttrain.ios.journeyMutationQueue"
     static let maxMutationAge: TimeInterval = 24 * 60 * 60
+    /// After this age expired-and-surfaced mutations are removed outright so
+    /// the queue can't grow without bound.
+    static let hardPurgeAge: TimeInterval = 2 * maxMutationAge
+    /// Sentinel `lastError` marking a mutation that aged out before it could
+    /// sync. Kept distinct from server-rejection messages so the UI can offer
+    /// retry only where a retry makes sense.
+    static let expiredErrorMessage = "expired before syncing"
 
     @ObservationIgnored private let defaults: UserDefaults
     @ObservationIgnored private let encoder = JSONEncoder()
@@ -174,13 +181,61 @@ final class JourneyMutationQueue {
         save()
     }
 
+    /// Ages the queue: mutations older than `maxMutationAge` become visible
+    /// failures (instead of vanishing silently), and ones past `hardPurgeAge`
+    /// are removed so the queue stays bounded.
     func purgeExpired(now: Date = Date()) {
-        let expired = mutations.filter { now.timeIntervalSince($0.createdAt) > Self.maxMutationAge }
-        guard !expired.isEmpty else {
+        var changed = false
+        var newlyExpired = 0
+
+        mutations.removeAll { mutation in
+            guard now.timeIntervalSince(mutation.createdAt) > Self.hardPurgeAge else {
+                return false
+            }
+            changed = true
+            return true
+        }
+
+        for index in mutations.indices where now.timeIntervalSince(mutations[index].createdAt) > Self.maxMutationAge {
+            guard mutations[index].status != .failed || mutations[index].lastError != Self.expiredErrorMessage else {
+                continue
+            }
+            mutations[index].status = .failed
+            mutations[index].lastError = Self.expiredErrorMessage
+            changed = true
+            newlyExpired += 1
+        }
+
+        guard changed else {
             return
         }
-        mutations.removeAll { mutation in
-            expired.contains { $0.id == mutation.id }
+        save()
+        if newlyExpired > 0 {
+            BetaDiagnostics.record(
+                "journey_mutations_expired",
+                details: "count=\(newlyExpired)",
+                severity: .warning
+            )
+        }
+    }
+
+    /// Failed mutations that a retry could still plausibly apply — everything
+    /// failed except the ones that aged out.
+    var retryableFailedCount: Int {
+        mutations.filter { $0.status == .failed && $0.lastError != Self.expiredErrorMessage }.count
+    }
+
+    /// Returns retryable failed mutations to pending so the next flush
+    /// re-attempts them. Expired failures stay failed; they are dismiss-only.
+    func retryFailed() {
+        var changed = false
+        for index in mutations.indices where mutations[index].status == .failed && mutations[index].lastError != Self.expiredErrorMessage {
+            mutations[index].status = .pending
+            mutations[index].lastError = nil
+            changed = true
+        }
+        guard changed else {
+            return
         }
         save()
     }
@@ -210,11 +265,28 @@ final class JourneyMutationQueue {
         defaults.set(data, forKey: Self.storageKey)
     }
 
-    private func retryDelay(for mutation: JourneyMutation) -> TimeInterval {
+    func retryDelay(for mutation: JourneyMutation) -> TimeInterval {
         guard mutation.attempts > 0 else {
             return 0
         }
         let exponent = min(mutation.attempts - 1, 7)
-        return min(pow(2, Double(exponent)) * 5, 300)
+        let base = min(pow(2, Double(exponent)) * 5, 300)
+        // ±20% jitter spreads retries across devices so a backend recovery
+        // doesn't get a synchronized thundering herd. Derived from the mutation
+        // identity (not Bool.random) so duePendingMutations() sees a stable due
+        // time on every call within an attempt.
+        let jitter = 0.8 + 0.4 * Self.jitterFraction(id: mutation.id, attempts: mutation.attempts)
+        return base * jitter
+    }
+
+    /// Deterministic value in [0, 1] from an FNV-1a hash of the mutation
+    /// identity and attempt count. Stable across processes, unlike hashValue.
+    private static func jitterFraction(id: String, attempts: Int) -> Double {
+        var hash: UInt64 = 0xcbf29ce484222325
+        for byte in "\(id):\(attempts)".utf8 {
+            hash ^= UInt64(byte)
+            hash = hash &* 0x100000001b3
+        }
+        return Double(hash % 1000) / 999
     }
 }

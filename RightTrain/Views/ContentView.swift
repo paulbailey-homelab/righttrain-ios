@@ -113,6 +113,14 @@ private struct ConnectivityStatusBanner: View {
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .accessibilityElement(children: .combine)
+                if let retry = content.retryAction {
+                    Button("Retry") {
+                        retry()
+                    }
+                    .font(.footnote.weight(.semibold))
+                    .buttonStyle(.plain)
+                    .accessibilityLabel("Retry failed changes")
+                }
                 if let dismiss = content.dismissAction {
                     Button {
                         dismiss()
@@ -133,13 +141,22 @@ private struct ConnectivityStatusBanner: View {
 
     private var content: ConnectivityBannerContent? {
         if journeyMutationQueue.needsAttention {
+            let retryableCount = journeyMutationQueue.retryableFailedCount
+            let expiredCount = journeyMutationQueue.failedCount - retryableCount
+            let detail = expiredCount > 0 && retryableCount == 0
+                ? "\(changeText(expiredCount)) expired before syncing."
+                : "\(changeText(journeyMutationQueue.failedCount)) couldn't be saved."
             return ConnectivityBannerContent(
                 title: "Changes didn't save",
-                detail: "\(changeText(journeyMutationQueue.failedCount)) couldn't be saved.",
+                detail: detail,
                 systemImage: "exclamationmark.triangle.fill",
                 foreground: .white,
                 background: Color.rightTrainDanger,
-                dismissAction: { journeyMutationQueue.clearFailed() }
+                dismissAction: { journeyMutationQueue.clearFailed() },
+                retryAction: retryableCount > 0 ? {
+                    journeyMutationQueue.retryFailed()
+                    Task { await activeWindowViewModel.flushQueuedMutations() }
+                } : nil
             )
         }
         if journeyMutationQueue.isSyncing {
@@ -202,6 +219,7 @@ private struct ConnectivityBannerContent {
     var foreground: Color
     var background: Color
     var dismissAction: (() -> Void)?
+    var retryAction: (() -> Void)?
 }
 
 private struct SignedOutView: View {
