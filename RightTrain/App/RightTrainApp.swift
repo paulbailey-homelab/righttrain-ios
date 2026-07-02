@@ -95,12 +95,29 @@ struct RightTrainApp: App {
 }
 
 enum BetaDiagnostics {
+    enum Severity: String {
+        case info
+        case warning
+        case error
+    }
+
+    struct Event {
+        let timestamp: Date
+        let severity: Severity
+        let name: String
+        let details: String?
+    }
+
     private static let previousCrashKey = "righttrain.ios.betaDiagnostics.previousCrash"
     private static let logger = Logger(
         subsystem: Bundle.main.bundleIdentifier ?? "com.righttrain.ios",
         category: "beta"
     )
     private static var didConfigure = false
+
+    private static let maxBufferedEvents = 200
+    private static let bufferLock = NSLock()
+    private static var bufferedEvents: [Event] = []
 
     static func configure(bundle: Bundle = .main, apiBaseURL: URL = AppConfig.apiBaseURL) {
         guard !didConfigure else {
@@ -121,11 +138,53 @@ enum BetaDiagnostics {
         NSSetUncaughtExceptionHandler(handleUncaughtBetaException)
     }
 
-    static func record(_ event: String, details: String? = nil) {
+    static func record(_ event: String, details: String? = nil, severity: Severity = .info) {
+        buffer(Event(timestamp: Date(), severity: severity, name: event, details: details))
+        let message: String
         if let details, !details.isEmpty {
-            logger.notice("Beta event \(event, privacy: .public): \(details, privacy: .public)")
+            message = "Beta event \(event): \(details)"
         } else {
-            logger.notice("Beta event \(event, privacy: .public)")
+            message = "Beta event \(event)"
+        }
+        switch severity {
+        case .info:
+            logger.notice("\(message, privacy: .public)")
+        case .warning:
+            logger.warning("\(message, privacy: .public)")
+        case .error:
+            logger.error("\(message, privacy: .public)")
+        }
+    }
+
+    /// Recent events, newest last. Powers the diagnostics export in Settings so
+    /// beta testers can share what the app observed without console access.
+    static func recentEvents() -> [Event] {
+        bufferLock.lock()
+        defer { bufferLock.unlock() }
+        return bufferedEvents
+    }
+
+    static func exportText(bundle: Bundle = .main) -> String {
+        let version = bundle.object(forInfoDictionaryKey: "CFBundleShortVersionString") as? String ?? "unknown"
+        let build = bundle.object(forInfoDictionaryKey: "CFBundleVersion") as? String ?? "unknown"
+        let formatter = ISO8601DateFormatter()
+        var lines = ["RightTrain diagnostics — version \(version) (\(build))"]
+        for event in recentEvents() {
+            var line = "\(formatter.string(from: event.timestamp)) [\(event.severity.rawValue)] \(event.name)"
+            if let details = event.details, !details.isEmpty {
+                line += ": \(details)"
+            }
+            lines.append(line)
+        }
+        return lines.joined(separator: "\n")
+    }
+
+    private static func buffer(_ event: Event) {
+        bufferLock.lock()
+        defer { bufferLock.unlock() }
+        bufferedEvents.append(event)
+        if bufferedEvents.count > maxBufferedEvents {
+            bufferedEvents.removeFirst(bufferedEvents.count - maxBufferedEvents)
         }
     }
 

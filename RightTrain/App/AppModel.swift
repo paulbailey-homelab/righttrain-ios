@@ -211,9 +211,23 @@ final class AppCoordinator {
         pushNotificationResponseObserverTask?.cancel()
     }
 
+    /// How long the startup splash may block the UI. Bootstrap network calls
+    /// (connectivity probe, session refresh) can take multiple 20s request
+    /// timeouts back to back when the backend is unreachable; past this point
+    /// the app renders whatever state it has and bootstrap finishes behind it.
+    static let bootstrapSplashTimeout: Duration = .seconds(5)
+
     func bootstrap() async {
         isBootstrapping = true
         defer { isBootstrapping = false }
+
+        let splashWatchdog = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: Self.bootstrapSplashTimeout)
+            guard let self, !Task.isCancelled, self.isBootstrapping else { return }
+            self.isBootstrapping = false
+            BetaDiagnostics.record("bootstrap_splash_timeout", severity: .warning)
+        }
+        defer { splashWatchdog.cancel() }
 
         await notificationViewModel.refreshStatus()
         await connectivityService.refreshBackendStatus(apiClient: apiClient)

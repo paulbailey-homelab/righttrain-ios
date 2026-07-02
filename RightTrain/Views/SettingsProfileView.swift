@@ -279,6 +279,16 @@ struct SettingsProfileView: View {
                         .foregroundStyle(.secondary)
                 }
             }
+
+            ShareLink(item: BetaDiagnostics.exportText()) {
+                HStack {
+                    Label("Share Diagnostics", systemImage: "waveform.path.ecg")
+                    Spacer()
+                    Text("Recent events")
+                        .font(.caption)
+                        .foregroundStyle(.secondary)
+                }
+            }
         } header: {
             settingsSectionHeader("Support", systemImage: "bubble.left.and.bubble.right")
         } footer: {
