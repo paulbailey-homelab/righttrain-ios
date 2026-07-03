@@ -37,24 +37,36 @@ final class SystemPushNotificationCoordinator: PushNotificationCoordinating {
             return
         }
 
-        do {
-            try await context.apiClient.registerAPNsAlertToken(
-                clientDeviceID: context.clientDeviceID,
-                input: RegisterAPNsAlertTokenRequest(
-                    token: token,
-                    environment: context.environment,
-                    clientDeviceId: context.clientDeviceID,
-                    appBundleId: context.appBundleID,
-                    appVersion: context.appVersion,
-                    buildNumber: context.buildNumber,
-                    deviceModel: context.deviceModel,
-                    osVersion: context.osVersion
-                ),
-                accessToken: context.accessToken
-            )
-            UserDefaults.standard.set(fingerprint, forKey: Self.lastRegisteredFingerprintKey)
-        } catch {
-            print("RightTrain APNs alert-token registration failed: \(error.localizedDescription)")
+        // A dropped registration means action-needed alerts silently never
+        // arrive, so retry transient failures and leave a diagnostics trail
+        // (previously this printed to the console and gave up).
+        var delaySeconds = 0.5
+        for attempt in 1...3 {
+            do {
+                try await context.apiClient.registerAPNsAlertToken(
+                    clientDeviceID: context.clientDeviceID,
+                    input: RegisterAPNsAlertTokenRequest(
+                        token: token,
+                        environment: context.environment,
+                        clientDeviceId: context.clientDeviceID,
+                        appBundleId: context.appBundleID,
+                        appVersion: context.appVersion,
+                        buildNumber: context.buildNumber,
+                        deviceModel: context.deviceModel,
+                        osVersion: context.osVersion
+                    ),
+                    accessToken: context.accessToken
+                )
+                UserDefaults.standard.set(fingerprint, forKey: Self.lastRegisteredFingerprintKey)
+                return
+            } catch {
+                if attempt == 3 {
+                    BetaDiagnostics.record("apns_alert_token_registration_failed", details: error.localizedDescription, severity: .error)
+                    return
+                }
+                try? await Task.sleep(for: .seconds(delaySeconds * Double.random(in: 0.8...1.2)))
+                delaySeconds *= 2
+            }
         }
     }
 
@@ -66,7 +78,7 @@ final class SystemPushNotificationCoordinator: PushNotificationCoordinating {
                 accessToken: context.accessToken
             )
         } catch {
-            print("RightTrain APNs alert-token deletion failed: \(error.localizedDescription)")
+            BetaDiagnostics.record("apns_alert_token_deletion_failed", details: error.localizedDescription, severity: .warning)
         }
         clearLocalState()
     }

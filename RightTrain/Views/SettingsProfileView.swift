@@ -1,3 +1,4 @@
+import ActivityKit
 import SwiftUI
 
 private enum SettingsConfirmation {
@@ -235,6 +236,20 @@ struct SettingsProfileView: View {
             NotificationPermissionView()
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.rightTrainPaperCream)
+
+            if !ActivityAuthorizationInfo().areActivitiesEnabled {
+                Link(destination: URL(string: UIApplication.openSettingsURLString)!) {
+                    HStack {
+                        Label("Live Activities are off", systemImage: "exclamationmark.circle")
+                            .foregroundStyle(Color.rightTrainDanger)
+                        Spacer()
+                        Text("Turn on in Settings")
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                    }
+                }
+                .accessibilityHint("Opens iOS Settings so you can allow Live Activities for RightTrain.")
+            }
 
             Button {
                 liveActivityPreviewFeedbackTrigger += 1

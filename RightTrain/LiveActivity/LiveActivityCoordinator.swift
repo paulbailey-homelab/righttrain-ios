@@ -42,6 +42,38 @@ struct LiveActivityTokenRegistrationContext {
 final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
     private static let previewWindowSubscriptionID = "righttrain-live-activity-preview"
     private static let previewItinerarySubscriptionID = "righttrain-live-activity-preview-itinerary"
+    private static var didRecordActivitiesDisabled = false
+
+    /// Records once per launch that iOS has Live Activities disabled for the
+    /// app. Without this, sync() silently ends every activity and the pinned
+    /// journey just disappears from the lock screen with no trace.
+    private static func recordActivitiesDisabledOnce() {
+        guard !didRecordActivitiesDisabled else {
+            return
+        }
+        didRecordActivitiesDisabled = true
+        BetaDiagnostics.record("live_activities_disabled_by_ios", severity: .warning)
+    }
+
+    /// Token registrations were fire-and-forget with print()-only failures: a
+    /// single transient error meant the Live Activity never received a push
+    /// update. Retry briefly with jitter, then leave a diagnostics trail.
+    private static func withRegistrationRetry(_ event: String, operation: () async throws -> Void) async {
+        var delaySeconds = 0.5
+        for attempt in 1...3 {
+            do {
+                try await operation()
+                return
+            } catch {
+                if attempt == 3 {
+                    BetaDiagnostics.record(event, details: error.localizedDescription, severity: .error)
+                    return
+                }
+                try? await Task.sleep(for: .seconds(delaySeconds * Double.random(in: 0.8...1.2)))
+                delaySeconds *= 2
+            }
+        }
+    }
     private var pushTokenObservers: [Activity<RightTrainLiveActivityAttributes>.ID: Task<Void, Never>] = [:]
     private var pushToStartTokenObserver: Task<Void, Never>?
     private var pushToStartObserverKey: String?
@@ -52,6 +84,7 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
 
     func sync(window: WindowSubscription?, pinnedTrainServiceID: Int?, tokenRegistration: LiveActivityTokenRegistrationContext?) async {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            Self.recordActivitiesDisabledOnce()
             await unregisterRemoteStart(tokenRegistration: tokenRegistration)
             await endAll(tokenRegistration: tokenRegistration)
             return
@@ -108,6 +141,7 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
 
     func sync(itinerary: ItinerarySubscription?, tokenRegistration: LiveActivityTokenRegistrationContext?) async {
         guard ActivityAuthorizationInfo().areActivitiesEnabled else {
+            Self.recordActivitiesDisabledOnce()
             await unregisterRemoteStart(tokenRegistration: tokenRegistration)
             await endAll(tokenRegistration: tokenRegistration)
             return
@@ -218,7 +252,7 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
             }
             return true
         } catch {
-            print("RightTrain Live Activity preview failed: \(error.localizedDescription)")
+            BetaDiagnostics.record("live_activity_preview_failed", details: error.localizedDescription, severity: .warning)
             return false
         }
 #endif
@@ -253,7 +287,7 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
             }
             return true
         } catch {
-            print("RightTrain Live Activity preview failed: \(error.localizedDescription)")
+            BetaDiagnostics.record("live_activity_preview_failed", details: error.localizedDescription, severity: .warning)
             return false
         }
     }
@@ -333,7 +367,7 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
                 )
                 observePushTokenUpdates(for: activity, tokenRegistration: tokenRegistration)
             } catch {
-                print("RightTrain Live Activity request failed: \(error.localizedDescription)")
+                BetaDiagnostics.record("live_activity_request_failed", details: error.localizedDescription, severity: .error)
             }
         }
     }
@@ -446,7 +480,7 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
                 )
                 observePushTokenUpdates(for: activity, tokenRegistration: tokenRegistration)
             } catch {
-                print("RightTrain itinerary Live Activity request failed: \(error.localizedDescription)")
+                BetaDiagnostics.record("live_activity_itinerary_request_failed", details: error.localizedDescription, severity: .error)
             }
         }
     }
@@ -752,7 +786,7 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
         activity: Activity<RightTrainLiveActivityAttributes>,
         tokenRegistration: LiveActivityTokenRegistrationContext
     ) async {
-        do {
+        await withRegistrationRetry("live_activity_token_registration_failed") {
             let request = RegisterLiveActivityTokenRequest(
                 token: token,
                 environment: tokenRegistration.environment,
@@ -785,8 +819,6 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
                     accessToken: tokenRegistration.accessToken
                 )
             }
-        } catch {
-            print("RightTrain Live Activity token registration failed: \(error.localizedDescription)")
         }
     }
 
@@ -801,7 +833,7 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
         _ token: String,
         tokenRegistration: LiveActivityTokenRegistrationContext
     ) async {
-        do {
+        await withRegistrationRetry("live_activity_push_to_start_registration_failed") {
             try await tokenRegistration.apiClient.registerLiveActivityPushToStartToken(
                 clientDeviceID: tokenRegistration.clientDeviceID,
                 input: RegisterLiveActivityTokenRequest(
@@ -840,8 +872,6 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
                 ),
                 accessToken: tokenRegistration.accessToken
             )
-        } catch {
-            print("RightTrain Live Activity push-to-start token registration failed: \(error.localizedDescription)")
         }
     }
 
@@ -874,7 +904,7 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
                 )
             }
         } catch {
-            print("RightTrain Live Activity token deletion failed: \(error.localizedDescription)")
+            BetaDiagnostics.record("live_activity_token_deletion_failed", details: error.localizedDescription, severity: .warning)
         }
     }
 
@@ -899,7 +929,7 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
                 accessToken: tokenRegistration.accessToken
             )
         } catch {
-            print("RightTrain Live Activity push-to-start token deletion failed: \(error.localizedDescription)")
+            BetaDiagnostics.record("live_activity_push_to_start_deletion_failed", details: error.localizedDescription, severity: .warning)
         }
     }
 
