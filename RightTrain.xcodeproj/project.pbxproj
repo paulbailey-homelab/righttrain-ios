@@ -17,6 +17,10 @@
 		7B000000000000000000010F /* DeviceIdentityService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000010E /* DeviceIdentityService.swift */; };
 		7B0000000000000000000501 /* AccountCredentialService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000500 /* AccountCredentialService.swift */; };
 		7B0000000000000000000111 /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000110 /* ContentView.swift */; };
+		7B00000000000000000A0111 /* ConnectivityBanner.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B00000000000000000A0110 /* ConnectivityBanner.swift */; };
+		7B00000000000000000A0113 /* SharedJourneyView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B00000000000000000A0112 /* SharedJourneyView.swift */; };
+		7B00000000000000000A0115 /* ActiveTabView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B00000000000000000A0114 /* ActiveTabView.swift */; };
+		7B00000000000000000A0117 /* NotificationDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B00000000000000000A0116 /* NotificationDetailView.swift */; };
 		7B0000000000000000000113 /* SignInView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000112 /* SignInView.swift */; };
 		7B0000000000000000000503 /* AccountCreationView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000502 /* AccountCreationView.swift */; };
 		7B0000000000000000000505 /* AccountRestoreView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000504 /* AccountRestoreView.swift */; };
@@ -135,6 +139,10 @@
 		7B000000000000000000010E /* DeviceIdentityService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DeviceIdentityService.swift; sourceTree = "<group>"; };
 		7B0000000000000000000500 /* AccountCredentialService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountCredentialService.swift; sourceTree = "<group>"; };
 		7B0000000000000000000110 /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		7B00000000000000000A0110 /* ConnectivityBanner.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ConnectivityBanner.swift; sourceTree = "<group>"; };
+		7B00000000000000000A0112 /* SharedJourneyView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SharedJourneyView.swift; sourceTree = "<group>"; };
+		7B00000000000000000A0114 /* ActiveTabView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveTabView.swift; sourceTree = "<group>"; };
+		7B00000000000000000A0116 /* NotificationDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationDetailView.swift; sourceTree = "<group>"; };
 		7B0000000000000000000112 /* SignInView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SignInView.swift; sourceTree = "<group>"; };
 		7B0000000000000000000502 /* AccountCreationView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountCreationView.swift; sourceTree = "<group>"; };
 		7B0000000000000000000504 /* AccountRestoreView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AccountRestoreView.swift; sourceTree = "<group>"; };
@@ -342,6 +350,10 @@
 			isa = PBXGroup;
 			children = (
 				7B0000000000000000000110 /* ContentView.swift */,
+				7B00000000000000000A0110 /* ConnectivityBanner.swift */,
+				7B00000000000000000A0112 /* SharedJourneyView.swift */,
+				7B00000000000000000A0114 /* ActiveTabView.swift */,
+				7B00000000000000000A0116 /* NotificationDetailView.swift */,
 				7B0000000000000000000166 /* StartupSplashView.swift */,
 				7B000000000000000000016A /* HeaderView.swift */,
 				7B000000000000000000016E /* BetaOnboardingView.swift */,
@@ -587,6 +599,10 @@
 				7B000000000000000000010F /* DeviceIdentityService.swift in Sources */,
 				7B0000000000000000000501 /* AccountCredentialService.swift in Sources */,
 					7B0000000000000000000111 /* ContentView.swift in Sources */,
+					7B00000000000000000A0111 /* ConnectivityBanner.swift in Sources */,
+					7B00000000000000000A0113 /* SharedJourneyView.swift in Sources */,
+					7B00000000000000000A0115 /* ActiveTabView.swift in Sources */,
+					7B00000000000000000A0117 /* NotificationDetailView.swift in Sources */,
 					7B0000000000000000000113 /* SignInView.swift in Sources */,
 					7B0000000000000000000503 /* AccountCreationView.swift in Sources */,
 					7B0000000000000000000505 /* AccountRestoreView.swift in Sources */,
