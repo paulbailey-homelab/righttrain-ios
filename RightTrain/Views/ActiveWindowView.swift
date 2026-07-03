@@ -41,16 +41,25 @@ struct ActiveWindowView: View {
             )
             .padding(.bottom, RTSpacing.compact)
 
-            LiveGlancePanel(
-                content: ActiveWindowPresentation.liveGlanceContent(
-                    for: presentation.heroRecommendation,
-                    routeTitle: presentation.routeTitle,
-                    needProfile: .oneOffDirectTrip,
-                    now: now,
-                    isOffline: shouldPresentOfflineGlance(for: presentation.heroRecommendation)
-                )
+            // The hero block below is the single source for route, timing,
+            // platform, and next action. While it is visible the old summary
+            // card would repeat all of it, so it collapses to a slim context
+            // strip (CRS route + freshness); the full panel only renders when
+            // there is no hero.
+            let glance = ActiveWindowPresentation.liveGlanceContent(
+                for: presentation.heroRecommendation,
+                routeTitle: presentation.routeTitle,
+                needProfile: .oneOffDirectTrip,
+                now: now,
+                isOffline: shouldPresentOfflineGlance(for: presentation.heroRecommendation)
             )
-            .padding(.bottom, RTSpacing.sectionGap)
+            if presentation.shouldShowHero(now: now) {
+                heroContextStrip(glance: glance, surface: surface)
+                    .padding(.bottom, RTSpacing.sectionGap)
+            } else {
+                LiveGlancePanel(content: glance)
+                    .padding(.bottom, RTSpacing.sectionGap)
+            }
 
             // ── Hero block ────────────────────────────────────────────────
             if presentation.shouldShowHero(now: now) {
@@ -90,6 +99,27 @@ struct ActiveWindowView: View {
                 }
             }
         }
+    }
+
+    /// Slim replacement for the summary card while the hero owns the detail:
+    /// keeps CRS context and data freshness in the first screenful without
+    /// repeating route, timing, platform, and next action.
+    private func heroContextStrip(
+        glance: ActiveWindowPresentation.LiveGlanceContent,
+        surface: RTSurface
+    ) -> some View {
+        HStack(alignment: .firstTextBaseline, spacing: RTSpacing.small) {
+            if let routeContextText = glance.routeContextText {
+                Text(routeContextText)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(surface.dim)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+            }
+            Spacer(minLength: RTSpacing.small)
+            LiveFreshnessText(text: glance.freshnessText)
+        }
+        .accessibilityElement(children: .combine)
     }
 
     private func statusPillRow(

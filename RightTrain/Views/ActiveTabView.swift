@@ -57,10 +57,14 @@ struct ActiveTabView: View {
                 }
             }
             .safeAreaInset(edge: .bottom, spacing: 0) {
+                // Full-width opaque strip: scroll content must never show
+                // through around the chip (it used to float on a chip-width
+                // translucent patch, visually colliding with cards).
                 BetaOnboardingView()
                     .padding(.horizontal, RTSpacing.pageHorizontal)
-                    .padding(.bottom, RTSpacing.small)
-                    .background(activeSurface.bg.opacity(0.96))
+                    .padding(.vertical, RTSpacing.small)
+                    .frame(maxWidth: .infinity)
+                    .background(activeSurface.bg)
             }
             .scrollDismissesKeyboard(.interactively)
             .refreshable {

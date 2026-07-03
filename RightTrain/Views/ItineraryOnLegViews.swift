@@ -157,6 +157,22 @@ struct ItineraryOnLegView: View {
         .padding(12)
         .background(Color.rightTrainBackground, in: RoundedRectangle(cornerRadius: RTRadius.chip))
         .lightSurfaceForeground()
+        // Interchange risk must reach VoiceOver as text — the pill colour
+        // alone is not a status signal.
+        .accessibilityElement(children: .combine)
+        .accessibilityLabel(connectionAccessibilityLabel(connection))
+    }
+
+    private func connectionAccessibilityLabel(_ connection: ItineraryConnection) -> String {
+        var parts = [
+            "Connection: \(riskBadge(connection))",
+            riskText(connection),
+            ItineraryFormatting.connectionTransferText(connection)
+        ]
+        if let advice = ItineraryFormatting.connectionAdviceText(connection) {
+            parts.append(advice)
+        }
+        return parts.joined(separator: ", ")
     }
 
     private func connectionTitle(_ connection: ItineraryConnection) -> some View {

@@ -78,6 +78,8 @@ struct SignInView: View {
                 .buttonStyle(.rtPrimary)
                 .disabled(!authViewModel.isDeviceAttestationSupported)
                 .opacity(authViewModel.isDeviceAttestationSupported ? 1 : 0.4)
+                .accessibilityLabel("Continue with this device")
+                .accessibilityHint("Sets this device up anonymously with a private key. No email or password is needed.")
 
                 Text("By continuing you agree to the privacy notice. You can clear this device from Settings.")
                     .font(.system(size: 11, weight: .regular))

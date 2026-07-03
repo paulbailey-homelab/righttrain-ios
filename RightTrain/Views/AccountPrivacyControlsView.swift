@@ -24,6 +24,8 @@ struct AccountPrivacyControlsView: View {
                     }
                 }
                 .disabled(isGeneratingExport)
+                .accessibilityHint("Builds a JSON export of your account preferences and linked-device categories.")
+                .accessibilityValue(isGeneratingExport ? "Generating" : "")
             } header: {
                 Label("Export", systemImage: "doc.text")
             } footer: {

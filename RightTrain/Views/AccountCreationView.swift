@@ -26,6 +26,7 @@ struct AccountCreationView: View {
                     Label("Create Account", systemImage: "key.badge.plus")
                 }
                 .disabled(!authViewModel.isSignedIn || !authViewModel.isAccountCredentialSupported)
+                .accessibilityHint("Creates a passkey-backed account and shows a one-time recovery code.")
             } footer: {
                 if !authViewModel.isAccountCredentialSupported {
                     Text("Account credentials are not available on this device.")
@@ -39,12 +40,16 @@ struct AccountCreationView: View {
                         .font(.system(.title3, design: .monospaced).weight(.semibold))
                         .textSelection(.enabled)
                         .frame(maxWidth: .infinity, alignment: .leading)
+                        .accessibilityLabel("Recovery code")
+                        .accessibilityValue(recoveryCode)
+                        .accessibilityHint("Save this now. It will not be shown again.")
 
                     Button {
                         authViewModel.acknowledgeRecoveryCode()
                     } label: {
                         Label("I Saved This Code", systemImage: "checkmark.circle")
                     }
+                    .accessibilityHint("Hides the recovery code permanently.")
                 } header: {
                     Label("Recovery Code", systemImage: "lock.rotation")
                 } footer: {

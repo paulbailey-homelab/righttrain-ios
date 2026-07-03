@@ -17,25 +17,28 @@ struct JourneyDetailView: View {
     var body: some View {
         Group {
             if let detail {
-                TimelineView(.periodic(from: .now, by: 15)) { context in
-                    let surface = detailSurface(detail)
-                    ScrollView(.vertical) {
-                        VStack(alignment: .leading, spacing: RTSpacing.sectionGap) {
-                            AppHeader(surface: surface)
-                                .padding(.bottom, RTSpacing.small)
-                            summarySection(detail, surface: surface)
+                let surface = detailSurface(detail)
+                ScrollView(.vertical) {
+                    VStack(alignment: .leading, spacing: RTSpacing.sectionGap) {
+                        AppHeader(surface: surface)
+                            .padding(.bottom, RTSpacing.small)
+                        summarySection(detail, surface: surface)
+                        // Only the calling-points timeline needs a clock; keeping
+                        // the TimelineView this narrow stops the 15s tick from
+                        // re-rendering the whole scroll view.
+                        TimelineView(.periodic(from: .now, by: 15)) { context in
                             callingPointsSection(detail, surface: surface, now: context.date)
                         }
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                        .padding(.horizontal, RTSpacing.pageHorizontal)
-                        .padding(.vertical, RTSpacing.cardPadding + 2)
                     }
-                    .scrollBounceBehavior(.always, axes: .vertical)
-                    .scrollIndicators(.visible)
-                    .statusSurface(surface)
-                    .toolbarBackground(surface.bg, for: .navigationBar)
-                    .toolbarBackground(.visible, for: .navigationBar)
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                    .padding(.horizontal, RTSpacing.pageHorizontal)
+                    .padding(.vertical, RTSpacing.cardPadding + 2)
                 }
+                .scrollBounceBehavior(.always, axes: .vertical)
+                .scrollIndicators(.visible)
+                .statusSurface(surface)
+                .toolbarBackground(surface.bg, for: .navigationBar)
+                .toolbarBackground(.visible, for: .navigationBar)
             } else if didAttemptInitialLoad {
                 EmptyStateView(
                     title: "Journey unavailable",
