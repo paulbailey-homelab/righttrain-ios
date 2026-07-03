@@ -150,7 +150,6 @@ private struct MainTabView: View {
         .tint(Color.rightTrainActionInk)
         .toolbarBackground(Color.rightTrainPaperCream, for: .tabBar)
         .toolbarBackground(.visible, for: .tabBar)
-        .toolbarColorScheme(.light, for: .tabBar)
     }
 }
 
@@ -187,7 +186,6 @@ private struct PlanTabView: View {
                 .safeAreaPadding(.bottom, RTSpacing.bottomSafeArea)
                 .scrollDismissesKeyboard(.interactively)
                 .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
-                .toolbarColorScheme(.light, for: .navigationBar)
                 .navigationTitle("Plan")
                 .navigationBarTitleDisplayMode(.large)
                 .navigationDestination(for: PlanRoute.self) { route in
@@ -222,7 +220,6 @@ private struct PlanTabView: View {
             }
         }
 #endif
-        .environment(\.colorScheme, .light)
     }
 
     @ViewBuilder
@@ -315,7 +312,6 @@ private struct PlanSearchResultsView: View {
         }
         .safeAreaPadding(.bottom, RTSpacing.bottomSafeArea)
         .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
-        .toolbarColorScheme(.light, for: .navigationBar)
         .navigationTitle("Search Results")
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Replace current Pin?", isPresented: replaceConfirmationPresented, titleVisibility: .visible) {

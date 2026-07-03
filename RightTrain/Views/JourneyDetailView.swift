@@ -35,7 +35,6 @@ struct JourneyDetailView: View {
                     .statusSurface(surface)
                     .toolbarBackground(surface.bg, for: .navigationBar)
                     .toolbarBackground(.visible, for: .navigationBar)
-                    .toolbarColorScheme(.light, for: .navigationBar)
                 }
             } else if didAttemptInitialLoad {
                 EmptyStateView(
@@ -56,7 +55,6 @@ struct JourneyDetailView: View {
         }
         .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
         .lightSurfaceForeground()
-        .toolbarColorScheme(.light, for: .navigationBar)
         .navigationTitle("")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: identity) {
@@ -66,8 +64,6 @@ struct JourneyDetailView: View {
             guard liveDetailRefreshKey.hasPrefix("live|") else { return }
             await refreshSelectedJourneyDetail()
         }
-        .environment(\.colorScheme, .light)
-        .preferredColorScheme(.light)
     }
 
     private func refreshDetailPeriodically() async {
@@ -253,7 +249,7 @@ struct JourneyDetailView: View {
     }
 
     private func callingPointsSection(_ detail: JourneyDetail, surface: RTSurface, now: Date) -> some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: RTSpacing.listItem) {
             Text("Stations")
                 .font(.headline)
                 .foregroundStyle(surface.ink)
@@ -502,13 +498,13 @@ struct JourneyTimelineMarker: View {
             return .rightTrainBlue
         }
         if isPassed {
-            return .secondary.opacity(0.55)
+            return .secondary.opacity(RTOpacity.secondary)
         }
         return .rightTrainPaperCream
     }
 
     private var markerStroke: Color {
-        isPassed ? .secondary.opacity(0.55) : .rightTrainInkFaint
+        isPassed ? .secondary.opacity(RTOpacity.secondary) : .rightTrainInkFaint
     }
 }
 
@@ -526,16 +522,16 @@ struct JourneyStopTimeView: View {
         HStack(spacing: 8) {
             Text(timing.label)
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.rightTrainInk.opacity(0.66))
+                .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)
 
             if timing.delayed, let scheduled = timing.scheduled {
                 Text(scheduled)
                     .font(.caption)
-                    .foregroundStyle(Color.rightTrainInk.opacity(0.66))
+                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
                     .monospacedDigit()
-                    .strikethrough(true, color: Color.rightTrainInk.opacity(0.66))
+                    .strikethrough(true, color: Color.rightTrainInk.opacity(RTOpacity.dim))
                     .lineLimit(1)
                     .fixedSize(horizontal: true, vertical: false)
             }

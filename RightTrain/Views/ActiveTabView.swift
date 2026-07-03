@@ -70,8 +70,6 @@ struct ActiveTabView: View {
             .animation(.easeInOut(duration: 0.4), value: activeSurface)
             .toolbarBackground(Color.rightTrainPaperCream, for: .tabBar)
             .toolbarBackground(.visible, for: .tabBar)
-            .toolbarColorScheme(.light, for: .tabBar)
-            .toolbarColorScheme(.light, for: .navigationBar)
             .navigationBarHidden(activeSurface.isStatus)
             .navigationTitle("Pinned")
             .navigationBarTitleDisplayMode(.large)
@@ -88,7 +86,6 @@ struct ActiveTabView: View {
                 handlePendingRoute(appCoordinator.pendingRoute)
             }
         }
-        .environment(\.colorScheme, .light)
     }
 
     @ViewBuilder
@@ -321,7 +318,7 @@ private struct NoActiveJourneyView: View {
                     Spacer(minLength: RTSpacing.small)
                     Label("Manual setup", systemImage: "slider.horizontal.3")
                         .font(.caption.weight(.medium))
-                        .foregroundStyle(Color.rightTrainInk.opacity(0.62))
+                        .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
                         .lineLimit(1)
                 }
 
@@ -368,13 +365,13 @@ private struct NoActiveJourneyView: View {
             Image(systemName: systemImage)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Color.rightTrainActionInk)
-                .frame(width: 24)
+                .frame(width: RTSize.iconMedium)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.rightTrainInk.opacity(0.60))
+                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
                 Text(value)
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(Color.rightTrainInk)

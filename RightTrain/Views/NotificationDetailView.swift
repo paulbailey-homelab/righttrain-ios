@@ -116,7 +116,6 @@ private struct NotificationDetailContentView: View {
             .lightSurfaceForeground()
         }
         .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
-        .toolbarColorScheme(.light, for: .navigationBar)
         .navigationTitle("Notification")
         .navigationBarTitleDisplayMode(.inline)
     }

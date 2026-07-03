@@ -9,7 +9,7 @@ struct NotificationPermissionView: View {
         VStack(alignment: .leading, spacing: 14) {
             SectionHeader(title: "Action-needed alerts", subtitle: subtitle)
 
-            HStack(spacing: 10) {
+            HStack(spacing: RTSpacing.listItem) {
                 Label(statusTitle, systemImage: statusIcon)
                     .font(.subheadline.weight(.semibold))
                 Spacer()

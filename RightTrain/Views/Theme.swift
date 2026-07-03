@@ -5,6 +5,13 @@ import SwiftUI
 // Redesign contract: live journey surfaces must prioritize status, route, next
 // action, timing/platform, and freshness. These tokens provide shared emphasis
 // without making colour the only status signal.
+//
+// Appearance stance: the app is deliberately light-only. The cream/paper
+// editorial identity has no dark counterpart, so Info.plist sets
+// UIUserInterfaceStyle = Light — do NOT reintroduce per-view
+// `.environment(\.colorScheme, .light)` overrides. The Live Activity widget
+// renders on the lock screen where dark appearance still applies; it manages
+// its own fixed colours independently of this stance.
 
 extension Color {
     // On-time surface
@@ -64,11 +71,11 @@ enum RTSurface: Equatable {
     }
 
     var dim: Color {
-        .rightTrainInk.opacity(0.62)
+        .rightTrainInk.opacity(RTOpacity.dim)
     }
 
     var faint: Color {
-        .rightTrainInk.opacity(0.22)
+        .rightTrainInk.opacity(RTOpacity.faint)
     }
 
     var accent: Color {
@@ -105,10 +112,27 @@ extension View {
     func lightSurfaceForeground() -> some View {
         self.foregroundStyle(
             Color.rightTrainInk,
-            Color.rightTrainInk.opacity(0.66),
-            Color.rightTrainInk.opacity(0.44)
+            Color.rightTrainInk.opacity(RTOpacity.dim),
+            Color.rightTrainInk.opacity(RTOpacity.tertiary)
         )
     }
+}
+
+// MARK: - Opacity tokens
+
+/// The only ink-opacity steps the app uses. Pick the nearest step instead of
+/// inventing a new literal — 36 distinct alphas crept in before these existed.
+enum RTOpacity {
+    /// Emphasised secondary content (eyebrow headers over status colour).
+    static let emphasized: Double = 0.72
+    /// Standard secondary text on cream surfaces.
+    static let dim: Double = 0.62
+    /// Supporting text a step quieter than dim (metric labels, captions).
+    static let secondary: Double = 0.55
+    /// Tertiary hints and de-emphasised glyphs.
+    static let tertiary: Double = 0.44
+    /// Hairlines, borders, disabled states.
+    static let faint: Double = 0.22
 }
 
 // MARK: - Radius tokens
@@ -116,6 +140,7 @@ extension View {
 enum RTRadius {
     static let chip: CGFloat     = 8
     static let card: CGFloat     = 12
+    static let button: CGFloat   = 14
     static let heroCard: CGFloat = 18
     static let live: CGFloat     = 22
 }
@@ -141,6 +166,18 @@ enum RTSpacing {
 enum RTSize {
     static let profileIcon: CGFloat = 40
     static let iconButton: CGFloat  = 34
+    /// Minimum comfortable hit area per HIG.
+    static let tapTarget: CGFloat = 44
+    /// Compact square action button (e.g. pin toggle).
+    static let buttonCompact: CGFloat = 52
+    /// Full-width primary button height.
+    static let buttonHeight: CGFloat = 56
+    /// Minimum height for dense list rows.
+    static let rowMinHeight: CGFloat = 42
+    static let iconSmall: CGFloat = 22
+    static let iconMedium: CGFloat = 24
+    static let glyphColumn: CGFloat = 13
+    static let avatarSmall: CGFloat = 32
 }
 
 // MARK: - Font tokens

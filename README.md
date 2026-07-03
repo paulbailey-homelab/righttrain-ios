@@ -44,6 +44,12 @@ journey is active, active guidance first once monitoring exists, and
 action-needed-only push/Live Activity interruptions. The screenshot evidence
 checklist lives at `design/review-screenshots/ios-redesign-checklist.md`.
 
+The app is deliberately light-only: the cream/paper editorial identity has no
+dark counterpart, so `Info.plist` sets `UIUserInterfaceStyle = Light` and
+views must not add per-view colour-scheme overrides. The Live Activity widget
+extension is exempt — it renders on the lock screen, where dark appearance
+still applies, and manages its own fixed colours.
+
 ## Local Build
 
 ```sh

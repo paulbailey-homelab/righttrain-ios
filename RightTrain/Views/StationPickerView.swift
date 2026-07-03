@@ -246,7 +246,7 @@ struct StationPickerEntryLabel: View {
                     .foregroundStyle(.secondary)
                 Text(station?.displayName ?? placeholder)
                     .font(.body.weight(.semibold))
-                    .foregroundStyle(station == nil ? Color.rightTrainInk.opacity(0.58) : Color.rightTrainInk)
+                    .foregroundStyle(station == nil ? Color.rightTrainInk.opacity(RTOpacity.secondary) : Color.rightTrainInk)
                     .lineLimit(1)
                     .minimumScaleFactor(0.82)
             }
@@ -331,7 +331,7 @@ private struct StationPickerStationRow: View {
                         }
                     }
                     .font(.caption)
-                    .foregroundStyle(Color.rightTrainInk.opacity(0.60))
+                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
                 }
                 Spacer(minLength: RTSpacing.small)
                 CRSBadge(crs: station.crs)

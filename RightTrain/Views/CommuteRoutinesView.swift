@@ -15,14 +15,12 @@ struct CommuteRoutinesView: View {
         NavigationStack {
             commuteContent
         }
-        .environment(\.colorScheme, .light)
     }
 
     private var commuteContent: some View {
         scrollContent
             .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
             .lightSurfaceForeground()
-            .toolbarColorScheme(.light, for: .navigationBar)
             .navigationTitle("Commutes")
             .navigationBarTitleDisplayMode(.large)
             .toolbar { addToolbarItem }
@@ -89,7 +87,7 @@ struct CommuteRoutinesView: View {
             Text("HOME & WORK")
                 .font(RTFont.eyebrow)
                 .tracking(2)
-                .foregroundStyle(Color.rightTrainInk.opacity(0.55))
+                .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
 
             VStack(spacing: RTSpacing.listItem) {
                 NavigationLink {
@@ -143,7 +141,7 @@ struct CommuteRoutinesView: View {
             Text("SAVED · \(viewModel.routines.count) OF \(authViewModel.user?.entitlements.commuteRoutineLimit ?? 2)")
                 .font(RTFont.eyebrow)
                 .tracking(2)
-                .foregroundStyle(Color.rightTrainInk.opacity(0.55))
+                .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
 
             if viewModel.routines.isEmpty {
                 EmptyStateView(
@@ -554,7 +552,7 @@ private struct RoutineEditorView: View {
                 } label: {
                     Text(day.label)
                         .font(.caption.weight(.semibold))
-                        .frame(width: 32, height: 32)
+                        .frame(width: RTSize.avatarSmall, height: RTSize.avatarSmall)
                         .background(activeWeekdays.contains(day.value) ? Color.rightTrainActionInk : Color.rightTrainBackground, in: Circle())
                         .foregroundStyle(activeWeekdays.contains(day.value) ? Color.white : Color.primary)
                 }

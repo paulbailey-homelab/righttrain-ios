@@ -12,7 +12,7 @@ struct ItineraryOnLegView: View {
 
     var body: some View {
         ActiveItineraryCard(
-            borderColor: approachingInterchange ? Color.rightTrainAmber.opacity(0.55) : Color.rightTrainInkFaint,
+            borderColor: approachingInterchange ? Color.rightTrainAmber.opacity(RTOpacity.secondary) : Color.rightTrainInkFaint,
             borderWidth: approachingInterchange ? 2 : 1
         ) {
             ActiveItineraryHeader(presentation: presentation, recoveryFromCrs: presentation.recoveryFromCrs)
@@ -58,7 +58,7 @@ struct ItineraryOnLegView: View {
             "Get off at the interchange"
         }
 
-        return HStack(alignment: .center, spacing: 10) {
+        return HStack(alignment: .center, spacing: RTSpacing.listItem) {
             Image(systemName: "figure.walk.diamond.fill")
                 .font(.title3)
                 .foregroundStyle(Color.rightTrainAmber)
@@ -343,11 +343,11 @@ struct ItineraryOnFinalLegView: View {
         let arrival = ItineraryFormatting.timeText(leg.expectedArrival ?? leg.scheduledArrival)
         let platform = nonEmptyPlatform(leg.destinationRealtime?.platform) ?? nonEmptyPlatform(leg.destinationPlatform)
 
-        return HStack(alignment: .top, spacing: 10) {
+        return HStack(alignment: .top, spacing: RTSpacing.listItem) {
             Image(systemName: "figure.walk")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Color.rightTrainActionInk)
-                .frame(width: 22)
+                .frame(width: RTSize.iconSmall)
 
             VStack(alignment: .leading, spacing: 4) {
                 Text(finalLegNextStepTitle(destination: destination, platform: platform))

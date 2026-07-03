@@ -65,6 +65,5 @@ struct AccountCreationView: View {
         .scrollContentBackground(.hidden)
         .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
         .lightSurfaceForeground()
-        .environment(\.colorScheme, .light)
     }
 }

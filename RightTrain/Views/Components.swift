@@ -114,7 +114,7 @@ struct LiveGlancePanel: View {
             if let routeContextText = content.routeContextText {
                 Text(routeContextText)
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.rightTrainInk.opacity(0.62))
+                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
                     .lineLimit(1)
                     .minimumScaleFactor(0.85)
             }
@@ -159,7 +159,7 @@ struct LiveFreshnessText: View {
             .font(.caption.weight(.medium))
             .lineLimit(1)
             .minimumScaleFactor(0.82)
-            .foregroundStyle(Color.rightTrainInk.opacity(0.62))
+            .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
             .accessibilityLabel(text)
     }
 }
@@ -201,7 +201,7 @@ struct StatusPill: View {
             case .red:
                 return .rightTrainDanger
             case .neutral:
-                return .rightTrainInk.opacity(0.66)
+                return .rightTrainInk.opacity(RTOpacity.dim)
             }
         }
     }
@@ -349,7 +349,7 @@ struct PinnedObjectHeader<ActionContent: View>: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: RTSpacing.listItem) {
                 VStack(alignment: .leading, spacing: 5) {
                     Text(title)
                         .font(.headline)
@@ -382,7 +382,7 @@ struct PinnedObjectHeader<ActionContent: View>: View {
                         } label: {
                             Image(systemName: "ellipsis.circle")
                                 .font(.subheadline.weight(.semibold))
-                                .frame(width: 44, height: 44)
+                                .frame(width: RTSize.tapTarget, height: RTSize.tapTarget)
                         }
                         .buttonStyle(.bordered)
                         .buttonBorderShape(.circle)
@@ -427,7 +427,7 @@ struct PinnedObjectHeader<ActionContent: View>: View {
         .background(Color.primary.opacity(0.10), in: Capsule())
         .overlay {
             Capsule()
-                .stroke(Color.primary.opacity(0.22), lineWidth: 1)
+                .stroke(Color.primary.opacity(RTOpacity.faint), lineWidth: 1)
         }
         .disabled(primaryAction.isDisabled)
         .accessibilityHint(primaryAction.accessibilityHint ?? "")
@@ -450,7 +450,7 @@ struct DisruptionLine: View {
                 .foregroundStyle(tone.color)
             Text(message)
                 .font(.footnote.weight(.medium))
-                .foregroundStyle(Color.rightTrainInk.opacity(0.72))
+                .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.emphasized))
                 .fixedSize(horizontal: false, vertical: true)
         }
     }

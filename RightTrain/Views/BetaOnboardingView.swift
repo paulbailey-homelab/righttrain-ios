@@ -67,7 +67,7 @@ struct BetaOnboardingView: View {
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
 
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: RTSpacing.listItem) {
                 BetaGuidanceRow(
                     title: "Action-needed alerts",
                     systemImage: "bell.badge",
@@ -123,7 +123,7 @@ private struct BetaGuidanceRow: View {
     var message: String
 
     var body: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: RTSpacing.listItem) {
             Image(systemName: systemImage)
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(Color.rightTrainActionInk)

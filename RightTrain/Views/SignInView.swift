@@ -40,7 +40,7 @@ struct SignInView: View {
 
                     Text("Set up a route or routine, then let RightTrain watch the timing, platform, disruption, and next action. Alerts are for action-needed changes, not reassurance noise.")
                         .font(.system(size: 15, weight: .regular))
-                        .foregroundStyle(Color.rightTrainInk.opacity(0.55))
+                        .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
                         .fixedSize(horizontal: false, vertical: true)
                         .padding(.horizontal, RTSpacing.pageHorizontal)
                         .padding(.bottom, RTSpacing.sectionGap)
@@ -53,7 +53,7 @@ struct SignInView: View {
                     if !authViewModel.isDeviceAttestationSupported {
                         Text("RightTrain needs a real iPhone or iPad to set up this device. App Attest is not available on the simulator.")
                             .font(.footnote)
-                            .foregroundStyle(Color.rightTrainInk.opacity(0.55))
+                            .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
                             .padding(.horizontal, RTSpacing.pageHorizontal)
                             .padding(.bottom, RTSpacing.compact)
                     }
@@ -76,11 +76,11 @@ struct SignInView: View {
                     }
                     .font(.system(size: 16, weight: .semibold))
                     .frame(maxWidth: .infinity)
-                    .frame(height: 56)
+                    .frame(height: RTSize.buttonHeight)
                 }
                 .buttonStyle(.plain)
                 .foregroundStyle(Color.rightTrainSurfaceCream)
-                .background(Color.rightTrainInk, in: RoundedRectangle(cornerRadius: 14))
+                .background(Color.rightTrainInk, in: RoundedRectangle(cornerRadius: RTRadius.button))
                 .disabled(!authViewModel.isDeviceAttestationSupported)
                 .opacity(authViewModel.isDeviceAttestationSupported ? 1 : 0.4)
 
@@ -118,7 +118,7 @@ struct SignInView: View {
                     .foregroundStyle(Color.rightTrainInk)
                 Text("Your device gets a private key for journeys, routines, and live alerts. No email, phone number, or password is needed.")
                     .font(.system(size: 12, weight: .regular))
-                    .foregroundStyle(Color.rightTrainInk.opacity(0.55))
+                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }

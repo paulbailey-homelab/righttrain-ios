@@ -145,7 +145,7 @@ struct CancelledTrainsSection: View {
                             togglePinned: {},
                             accessibilityLabel: trainAccessibilityLabel(recommendation)
                         )
-                        .opacity(0.72)
+                        .opacity(RTOpacity.emphasized)
 
                         if index < cancelled.count - 1 {
                             SoftDivider()
@@ -355,7 +355,7 @@ private struct UpcomingTrainRow: View {
             rowTrailingControls(statusDisplay: rowStatus)
                 .layoutPriority(1)
         }
-        .frame(minHeight: 42)
+        .frame(minHeight: RTSize.rowMinHeight)
         .padding(.vertical, 5)
     }
 
@@ -404,7 +404,7 @@ private struct UpcomingTrainRow: View {
                 Image(systemName: "arrow.right")
                     .font(.caption2.weight(.semibold))
                     .foregroundStyle(.tertiary)
-                    .frame(width: 13)
+                    .frame(width: RTSize.glyphColumn)
                     .accessibilityHidden(true)
                 CompactTrainTime(display: JourneyFormatting.arrivalDisplay(journey))
             }
@@ -472,7 +472,7 @@ private extension View {
 private struct SoftDivider: View {
     var body: some View {
         Rectangle()
-            .fill(Color.rightTrainBorder.opacity(0.55))
+            .fill(Color.rightTrainBorder.opacity(RTOpacity.secondary))
             .frame(height: 0.5)
     }
 }

@@ -269,7 +269,7 @@ struct ActiveItineraryView: View {
     @ViewBuilder
     private func selectedJourneySection(now: Date) -> some View {
         if !presentation.journeyOptions.isEmpty {
-            LazyVStack(alignment: .leading, spacing: 10) {
+            LazyVStack(alignment: .leading, spacing: RTSpacing.listItem) {
                 ForEach(presentation.journeyOptions) { option in
                     let isSelected = option.id == presentation.selectedItinerary?.id
                     ActiveItineraryOptionCard(
@@ -345,7 +345,7 @@ struct ActiveItineraryView: View {
             }
             return "You're at the station"
         }()
-        return HStack(alignment: .center, spacing: 10) {
+        return HStack(alignment: .center, spacing: RTSpacing.listItem) {
             Image(systemName: "figure.walk.diamond.fill")
                 .foregroundStyle(Color.rightTrainActionInk)
             VStack(alignment: .leading, spacing: 3) {
@@ -440,7 +440,7 @@ private struct ActiveItineraryPlanHeroCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: RTSpacing.listItem) {
                 Text(countdownText)
                     .font(.title3.weight(.bold))
                     .foregroundStyle(countdownTone.color)
@@ -544,11 +544,11 @@ private struct ActiveItineraryConnectionRow: View {
     var connection: ItineraryConnection
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
+        HStack(alignment: .center, spacing: RTSpacing.listItem) {
             Image(systemName: "arrow.triangle.branch")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(ItineraryFormatting.connectionTone(connection).color)
-                .frame(width: 22)
+                .frame(width: RTSize.iconSmall)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text("\(ItineraryFormatting.connectionTitleText(connection)) · \(ItineraryFormatting.connectionTransferText(connection))")
@@ -575,11 +575,11 @@ private struct ActiveItineraryLegRow: View {
     var isLastLeg: Bool
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
+        HStack(alignment: .center, spacing: RTSpacing.listItem) {
             Image(systemName: leg.cancelled ? "xmark.octagon.fill" : "tram.fill")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(leg.cancelled ? Color.rightTrainDanger : Color.rightTrainActionInk)
-                .frame(width: 22)
+                .frame(width: RTSize.iconSmall)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(ItineraryFormatting.legRouteText(leg))

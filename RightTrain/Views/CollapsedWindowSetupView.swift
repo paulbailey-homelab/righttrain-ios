@@ -6,7 +6,7 @@ struct CollapsedWindowSetupView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
             ViewThatFits(in: .horizontal) {
-                HStack(alignment: .firstTextBaseline, spacing: 10) {
+                HStack(alignment: .firstTextBaseline, spacing: RTSpacing.listItem) {
                     collapsedTitle
                     Spacer(minLength: 8)
                     collapsedStatus

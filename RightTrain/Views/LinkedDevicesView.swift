@@ -47,14 +47,13 @@ struct LinkedDevicesView: View {
         } message: {
             Text("That device will need to log in again before it can read or change synced preferences.")
         }
-        .environment(\.colorScheme, .light)
     }
 
     private func linkedDeviceRow(_ device: LinkedDevice) -> some View {
         HStack(alignment: .top, spacing: 12) {
             Image(systemName: device.deviceClass.localizedCaseInsensitiveContains("pad") ? "ipad" : "iphone")
                 .foregroundStyle(Color.rightTrainActionInk)
-                .frame(width: 24)
+                .frame(width: RTSize.iconMedium)
                 .accessibilityHidden(true)
 
             VStack(alignment: .leading, spacing: 4) {

@@ -45,7 +45,7 @@ struct RecommendationResultsView: View {
                     VStack(alignment: .leading, spacing: RTSpacing.compact) {
                         Text("Other direct trains")
                             .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.rightTrainInk.opacity(0.55))
+                            .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
 
                         VStack(alignment: .leading, spacing: 0) {
                             ForEach(Array(others.enumerated()), id: \.element.id) { index, rec in
@@ -76,7 +76,7 @@ struct RecommendationResultsView: View {
 
                 // If top is nil (all trains at same rank), fall back to showing all
                 if top == nil {
-                    LazyVStack(alignment: .leading, spacing: 10) {
+                    LazyVStack(alignment: .leading, spacing: RTSpacing.listItem) {
                         ForEach(recommendations) { rec in
                             SearchDirectJourneyCard(
                                 recommendation: rec,
@@ -95,9 +95,9 @@ struct RecommendationResultsView: View {
         VStack(alignment: .leading, spacing: 6) {
             Text("\(recommendationCount) direct \(recommendationCount == 1 ? "train" : "trains") · \(summary.windowText)")
                 .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.rightTrainInk.opacity(0.55))
+                .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
 
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: RTSpacing.listItem) {
                 Text(summary.routeTitle)
                     .font(.system(size: 22, weight: .bold))
                     .fixedSize(horizontal: false, vertical: true)
@@ -176,7 +176,7 @@ struct ItineraryResultsView: View {
                     .font(.caption.weight(.semibold))
                     .foregroundStyle(.secondary)
 
-                LazyVStack(alignment: .leading, spacing: 10) {
+                LazyVStack(alignment: .leading, spacing: RTSpacing.listItem) {
                     ForEach(itineraries) { itinerary in
                         SearchItineraryJourneyCard(
                             itinerary: itinerary,
@@ -245,7 +245,7 @@ private struct SearchDirectJourneyCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: RTSpacing.listItem) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("\(JourneyFormatting.departureText(journey)) → \(JourneyFormatting.arrivalText(journey))")
                         .font(emphasized ? .title3.weight(.semibold) : .headline)
@@ -285,7 +285,7 @@ private struct SearchDirectJourneyCard: View {
             if let reasonText {
                 Text(reasonText)
                     .font(.caption)
-                    .foregroundStyle(Color.rightTrainInk.opacity(0.62))
+                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -410,7 +410,7 @@ private struct SearchItineraryJourneyCard: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: RTSpacing.listItem) {
                 VStack(alignment: .leading, spacing: 3) {
                     Text("\(ItineraryFormatting.departureText(itinerary)) → \(ItineraryFormatting.arrivalText(itinerary))")
                         .font(emphasized ? .title3.weight(.semibold) : .headline)
@@ -448,7 +448,7 @@ private struct SearchItineraryJourneyCard: View {
             if let reasonText {
                 Text(reasonText)
                     .font(.caption)
-                    .foregroundStyle(Color.rightTrainInk.opacity(0.62))
+                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
@@ -554,7 +554,7 @@ private struct PinIconButton: View {
         } label: {
             Image(systemName: systemImage)
                 .font(.subheadline.weight(.semibold))
-                .frame(width: 44, height: 44)
+                .frame(width: RTSize.tapTarget, height: RTSize.tapTarget)
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.rightTrainActionInk)
@@ -652,14 +652,14 @@ struct ItineraryRecommendationRow: View {
 
     @ViewBuilder
     private var metrics: some View {
-        LazyVGrid(columns: metricColumns, alignment: .leading, spacing: 10) {
+        LazyVGrid(columns: metricColumns, alignment: .leading, spacing: RTSpacing.listItem) {
             metricViews
         }
     }
 
     private var metricColumns: [GridItem] {
         let minimumWidth: CGFloat = dynamicTypeSize.prefersExpandedLayout ? 220 : 82
-        return [GridItem(.adaptive(minimum: minimumWidth), spacing: 10, alignment: .leading)]
+        return [GridItem(.adaptive(minimum: minimumWidth), spacing: RTSpacing.listItem, alignment: .leading)]
     }
 
     @ViewBuilder
@@ -735,11 +735,11 @@ private struct ItineraryLegRow: View {
     var leg: ItineraryLeg
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
+        HStack(alignment: .center, spacing: RTSpacing.listItem) {
             Image(systemName: leg.cancelled ? "xmark.octagon.fill" : "tram.fill")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(leg.cancelled ? Color.rightTrainDanger : Color.rightTrainActionInk)
-                .frame(width: 22)
+                .frame(width: RTSize.iconSmall)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text(ItineraryFormatting.legRouteText(leg))
@@ -766,11 +766,11 @@ private struct ItineraryConnectionRow: View {
     var connection: ItineraryConnection
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
+        HStack(alignment: .center, spacing: RTSpacing.listItem) {
             Image(systemName: "arrow.triangle.branch")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(ItineraryFormatting.connectionTone(connection).color)
-                .frame(width: 22)
+                .frame(width: RTSize.iconSmall)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(ItineraryFormatting.connectionText(connection))
@@ -896,7 +896,7 @@ struct RecommendationRow: View {
     @ViewBuilder
     private func metrics(journey: JourneyResult) -> some View {
         if dynamicTypeSize.prefersExpandedLayout {
-            VStack(alignment: .leading, spacing: 10) {
+            VStack(alignment: .leading, spacing: RTSpacing.listItem) {
                 metricViews(journey: journey)
             }
         } else {
@@ -929,11 +929,11 @@ private struct DirectJourneyStrip: View {
     var journey: JourneyResult
 
     var body: some View {
-        HStack(alignment: .center, spacing: 10) {
+        HStack(alignment: .center, spacing: RTSpacing.listItem) {
             Image(systemName: journey.cancelled ? "xmark.octagon.fill" : "tram.fill")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(journey.cancelled ? Color.rightTrainDanger : Color.rightTrainActionInk)
-                .frame(width: 22)
+                .frame(width: RTSize.iconSmall)
 
             VStack(alignment: .leading, spacing: 3) {
                 Text("Direct service")

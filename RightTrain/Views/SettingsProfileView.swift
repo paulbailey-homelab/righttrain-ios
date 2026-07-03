@@ -59,7 +59,6 @@ struct SettingsProfileView: View {
         .scrollContentBackground(.hidden)
         .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
         .lightSurfaceForeground()
-        .toolbarColorScheme(.light, for: .navigationBar)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.inline)
         .task {
@@ -73,7 +72,6 @@ struct SettingsProfileView: View {
         } message: {
             Text(confirmation?.message ?? "")
         }
-        .environment(\.colorScheme, .light)
     }
 
     private var accountSection: some View {
@@ -145,7 +143,7 @@ struct SettingsProfileView: View {
                 Text(isPro ? "PRO · ACTIVE" : "FREE BETA")
                     .font(RTFont.eyebrow)
                     .tracking(2)
-                    .foregroundStyle(Color.rightTrainActionInk.opacity(0.72))
+                    .foregroundStyle(Color.rightTrainActionInk.opacity(RTOpacity.emphasized))
 
                 Spacer()
 
@@ -177,7 +175,7 @@ struct SettingsProfileView: View {
             // Feature caption
             Text("Multi-leg journeys · connection risk alerts · window monitoring")
                 .font(.system(size: 11, weight: .regular))
-                .foregroundStyle(Color.rightTrainInk.opacity(0.58))
+                .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(RTSpacing.cardPadding)

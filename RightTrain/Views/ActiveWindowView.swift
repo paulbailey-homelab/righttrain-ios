@@ -198,11 +198,11 @@ struct ActiveWindowView: View {
         let journey = presentation.heroRecommendation.journey
 
         return VStack(alignment: .leading, spacing: RTSpacing.compact) {
-            HStack(alignment: .top, spacing: 10) {
+            HStack(alignment: .top, spacing: RTSpacing.listItem) {
                 Image(systemName: countdown.isDeparted ? "tram.fill" : "figure.walk")
                     .font(.subheadline.weight(.semibold))
                     .foregroundStyle(surface.accent)
-                    .frame(width: 22)
+                    .frame(width: RTSize.iconSmall)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(pinnedNextStepTitle(journey: journey, countdown: countdown))
@@ -212,7 +212,7 @@ struct ActiveWindowView: View {
 
                     Text(pinnedNextStepMessage(countdown: countdown))
                         .font(.caption)
-                        .foregroundStyle(Color.rightTrainInk.opacity(0.66))
+                        .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
                         .fixedSize(horizontal: false, vertical: true)
                 }
             }
@@ -527,7 +527,7 @@ struct ActiveOnTrainJourneyView: View {
             entries: entries
         )
 
-        return VStack(alignment: .leading, spacing: 10) {
+        return VStack(alignment: .leading, spacing: RTSpacing.listItem) {
             Text("Stations")
                 .font(.headline)
 
@@ -557,11 +557,11 @@ struct ActiveOnTrainJourneyView: View {
     }
 
     private var loadingStationsSection: some View {
-        VStack(alignment: .leading, spacing: 10) {
+        VStack(alignment: .leading, spacing: RTSpacing.listItem) {
             Text("Stations")
                 .font(.headline)
 
-            HStack(spacing: 10) {
+            HStack(spacing: RTSpacing.listItem) {
                 ProgressView()
                     .controlSize(.small)
                 Text("Loading stations")

@@ -103,11 +103,11 @@ struct PlatformSquareChip: View {
                         .lineLimit(1)
                         .minimumScaleFactor(0.55)
                 }
-                .frame(width: 52, height: 52)
-                .background(Color.secondary.opacity(0.10), in: RoundedRectangle(cornerRadius: 7))
+                .frame(width: RTSize.buttonCompact, height: RTSize.buttonCompact)
+                .background(Color.secondary.opacity(0.10), in: RoundedRectangle(cornerRadius: RTRadius.chip))
                 .overlay {
-                    RoundedRectangle(cornerRadius: 7)
-                        .stroke(Color.secondary.opacity(0.22), lineWidth: 1)
+                    RoundedRectangle(cornerRadius: RTRadius.chip)
+                        .stroke(Color.secondary.opacity(RTOpacity.faint), lineWidth: 1)
                 }
             case .compact:
                 Text(compactDisplayValue)
@@ -120,7 +120,7 @@ struct PlatformSquareChip: View {
                     .background(Color.secondary.opacity(0.10), in: Capsule())
                     .overlay {
                         Capsule()
-                            .stroke(Color.secondary.opacity(0.22), lineWidth: 1)
+                            .stroke(Color.secondary.opacity(RTOpacity.faint), lineWidth: 1)
                     }
             }
         }

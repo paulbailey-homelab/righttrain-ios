@@ -166,7 +166,7 @@ struct HeroTrainCard: View {
     }
 
     private var preDepartureHeroRow: some View {
-        HStack(alignment: .top, spacing: 10) {
+        HStack(alignment: .top, spacing: RTSpacing.listItem) {
             HeroCountdownText(countdown: countdown)
                 .frame(maxWidth: .infinity, alignment: .leading)
 

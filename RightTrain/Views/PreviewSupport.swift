@@ -1153,8 +1153,8 @@ struct PreviewFeedbackReviewScreen: View {
                                 .font(.system(size: 16, weight: .semibold))
                                 .foregroundStyle(Color.rightTrainSurfaceCream)
                                 .frame(maxWidth: .infinity)
-                                .frame(height: 56)
-                                .background(Color.rightTrainActionInk, in: RoundedRectangle(cornerRadius: 14))
+                                .frame(height: RTSize.buttonHeight)
+                                .background(Color.rightTrainActionInk, in: RoundedRectangle(cornerRadius: RTRadius.button))
                         }
                         .buttonStyle(.plain)
                     }

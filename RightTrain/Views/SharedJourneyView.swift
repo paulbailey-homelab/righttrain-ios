@@ -15,7 +15,6 @@ struct SharedJourneyStandaloneView: View {
                     }
                 }
         }
-        .environment(\.colorScheme, .light)
     }
 }
 
@@ -134,7 +133,7 @@ struct SharedJourneyView: View {
                         .fixedSize(horizontal: false, vertical: true)
                     Text(presentation.routeContext)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.rightTrainInk.opacity(0.62))
+                        .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
                         .fixedSize(horizontal: false, vertical: true)
                 }
 
@@ -164,7 +163,7 @@ struct SharedJourneyView: View {
                     .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
                     .overlay {
                         RoundedRectangle(cornerRadius: RTRadius.card)
-                            .stroke(presentation.statusTone.color.opacity(0.22), lineWidth: 1)
+                            .stroke(presentation.statusTone.color.opacity(RTOpacity.faint), lineWidth: 1)
                     }
                 }
 
@@ -238,8 +237,8 @@ struct SharedJourneyView: View {
                         .font(.system(size: 16, weight: .semibold))
                         .foregroundStyle(Color.rightTrainSurfaceCream)
                         .frame(maxWidth: .infinity)
-                        .frame(height: 56)
-                        .background(Color.rightTrainActionInk, in: RoundedRectangle(cornerRadius: 14))
+                        .frame(height: RTSize.buttonHeight)
+                        .background(Color.rightTrainActionInk, in: RoundedRectangle(cornerRadius: RTRadius.button))
                 }
                 .buttonStyle(.plain)
             }

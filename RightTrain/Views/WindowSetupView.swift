@@ -86,7 +86,7 @@ struct WindowSetupView: View {
                 Spacer()
                 Label("Manual setup", systemImage: "slider.horizontal.3")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.rightTrainInk.opacity(0.62))
+                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
             }
 
             Text(intent.detailText)
@@ -160,7 +160,7 @@ struct WindowSetupView: View {
         }
         .buttonStyle(.plain)
         .foregroundStyle(Color.rightTrainSurfaceCream)
-        .background(Color.rightTrainInk, in: RoundedRectangle(cornerRadius: 14))
+        .background(Color.rightTrainInk, in: RoundedRectangle(cornerRadius: RTRadius.button))
         .accessibilityHint("Searches journeys in the selected departure range.")
     }
 
@@ -293,7 +293,7 @@ private struct RouteModePicker: View {
             if !isEnabled(.anyRoute) {
                 Text("Routes with changes are not available yet.")
                     .font(.caption2)
-                    .foregroundStyle(Color.rightTrainInk.opacity(0.58))
+                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
@@ -369,7 +369,7 @@ struct StationSearchField: View {
                                         .foregroundStyle(.primary)
                                     Text(station.crs.uppercased())
                                         .font(.caption.weight(.semibold))
-                                        .foregroundStyle(Color.rightTrainInk.opacity(0.58))
+                                        .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
                                 }
                                 Spacer()
                             }
