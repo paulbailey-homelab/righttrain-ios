@@ -727,6 +727,8 @@ final class ActiveWindowViewModel {
     @ObservationIgnored private let connectivityService: ConnectivityService
     @ObservationIgnored private var activeWindowStreamLastEventID: String?
     @ObservationIgnored private var activeItineraryStreamLastEventID: String?
+    @ObservationIgnored private var streamRefreshInFlight = false
+    @ObservationIgnored private var streamRefreshFollowUpNeeded = false
     @ObservationIgnored private var onboardArrivalClearTask: Task<Void, Never>?
     @ObservationIgnored private var pendingOriginEntryWindowID: String?
     @ObservationIgnored var didClearActiveWindowState: (() -> Void)?
@@ -1482,6 +1484,8 @@ final class ActiveWindowViewModel {
         pinnedLiveActivityServiceID = nil
         handledDepartedPromptKeys = []
         activeJourneyCache.clear()
+        activeJourneyCache.clearWindowStreamCursors()
+        activeJourneyCache.clearItineraryStreamCursors()
         didClearActiveWindowState?()
     }
 
@@ -1663,6 +1667,16 @@ final class ActiveWindowViewModel {
             }
             return
         }
+        // A refresh can race an unsynced pin: the fetch reflects server state
+        // from before the queued mutation lands. Keep the local intent on top.
+        switch mutationQueue.pendingWindowPinOverride(windowID: updatedSubscription.id) {
+        case .pin(let serviceID):
+            updatedSubscription.pinnedTrainServiceId = serviceID
+        case .clear:
+            updatedSubscription.pinnedTrainServiceId = nil
+        case nil:
+            break
+        }
         if updatedSubscription.isActive {
             if previousWindow?.id == updatedSubscription.id,
                previousWindow?.phase == "at_origin" {
@@ -1756,11 +1770,21 @@ final class ActiveWindowViewModel {
     }
 
     private func applyActiveItinerary(_ subscription: ItinerarySubscription) async {
+        var subscription = subscription
         if mutationQueue.hasPendingDelete(itineraryID: subscription.id) {
             if activeItineraryID == subscription.id || activeItinerary?.id == subscription.id {
                 clearItineraryState()
             }
             return
+        }
+        // Keep an unsynced first-leg pin (or clear) on top of fetched state so
+        // a racing refresh can't undo the user's action before the queue syncs.
+        if let override = mutationQueue.pendingItineraryFirstLegPinOverride(itineraryID: subscription.id) {
+            if let pin = override {
+                subscription.pinnedFirstLeg = pinnedFirstLeg(from: pin, itinerary: subscription)
+            } else {
+                subscription.pinnedFirstLeg = nil
+            }
         }
         if subscription.isActive {
             let isNew = activeItineraryID != subscription.id
@@ -1934,25 +1958,26 @@ final class ActiveWindowViewModel {
                 let stream = apiClient.streamWindowSubscriptionEvents(
                     windowSubscriptionID: windowID,
                     accessToken: accessToken,
-                    lastEventID: activeWindowStreamLastEventID
+                    lastEventID: activeWindowStreamLastEventID ?? activeJourneyCache.streamCursor(forWindow: windowID)
                 )
                 for try await event in stream {
                     guard !Task.isCancelled else {
                         return
                     }
                     connectivityService.recordSuccessfulBackendContact()
+                    backoff.reset()
                     await flushQueuedMutations()
                     guard activeWindowID == windowID, accessTokenProvider() == accessToken else {
                         return
                     }
                     if let eventID = event.id, !eventID.isEmpty {
                         activeWindowStreamLastEventID = eventID
+                        activeJourneyCache.saveStreamCursor(eventID, forWindow: windowID)
                     }
                     guard shouldRefreshActiveWindow(for: event, windowID: windowID) else {
                         continue
                     }
-                    await performActiveWindowRefresh(showLoading: false, showAlertOnFailure: false)
-                    backoff.reset()
+                    scheduleCoalescedStreamRefresh()
                 }
 
                 let delay = backoff.nextDelay()
@@ -1986,25 +2011,26 @@ final class ActiveWindowViewModel {
                 let stream = apiClient.streamItinerarySubscriptionEvents(
                     itinerarySubscriptionID: itineraryID,
                     accessToken: accessToken,
-                    lastEventID: activeItineraryStreamLastEventID
+                    lastEventID: activeItineraryStreamLastEventID ?? activeJourneyCache.streamCursor(forItinerary: itineraryID)
                 )
                 for try await event in stream {
                     guard !Task.isCancelled else {
                         return
                     }
                     connectivityService.recordSuccessfulBackendContact()
+                    backoff.reset()
                     await flushQueuedMutations()
                     guard activeItineraryID == itineraryID, accessTokenProvider() == accessToken else {
                         return
                     }
                     if let eventID = event.id, !eventID.isEmpty {
                         activeItineraryStreamLastEventID = eventID
+                        activeJourneyCache.saveStreamCursor(eventID, forItinerary: itineraryID)
                     }
                     guard shouldRefreshActiveItinerary(for: event, itineraryID: itineraryID) else {
                         continue
                     }
-                    await performActiveWindowRefresh(showLoading: false, showAlertOnFailure: false)
-                    backoff.reset()
+                    scheduleCoalescedStreamRefresh()
                 }
 
                 let delay = backoff.nextDelay()
@@ -2023,6 +2049,25 @@ final class ActiveWindowViewModel {
                     return
                 }
             }
+        }
+    }
+
+    /// Runs at most one stream-driven refresh at a time. A burst of stream
+    /// events while a refresh is in flight collapses into a single follow-up
+    /// refresh instead of one fetch per event.
+    private func scheduleCoalescedStreamRefresh() {
+        guard !streamRefreshInFlight else {
+            streamRefreshFollowUpNeeded = true
+            return
+        }
+        streamRefreshInFlight = true
+        Task { @MainActor [weak self] in
+            guard let self else { return }
+            defer { self.streamRefreshInFlight = false }
+            repeat {
+                self.streamRefreshFollowUpNeeded = false
+                await self.performActiveWindowRefresh(showLoading: false, showAlertOnFailure: false)
+            } while self.streamRefreshFollowUpNeeded
         }
     }
 
@@ -2263,6 +2308,7 @@ final class ActiveWindowViewModel {
         activeWindow = nil
         activeWindowID = nil
         activeWindowStreamLastEventID = nil
+        activeJourneyCache.clearWindowStreamCursors()
         pinnedLiveActivityServiceID = nil
         handledDepartedPromptKeys = []
         pendingOriginEntryWindowID = nil
@@ -2282,6 +2328,7 @@ final class ActiveWindowViewModel {
         activeItinerary = nil
         activeItineraryID = nil
         activeItineraryStreamLastEventID = nil
+        activeJourneyCache.clearItineraryStreamCursors()
         // Only stop monitoring if no active window is also using the
         // monitor; the window path manages its own teardown.
         if activeWindow == nil {

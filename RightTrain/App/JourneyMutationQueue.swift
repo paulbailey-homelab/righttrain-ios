@@ -104,6 +104,46 @@ final class JourneyMutationQueue {
         failedCount > 0
     }
 
+    /// Local pin intent that has not reached the server yet. Refreshes apply
+    /// this over fetched state so an optimistic pin can't be clobbered by a
+    /// fetch that raced ahead of the mutation.
+    enum PendingPinOverride: Equatable {
+        case pin(serviceID: Int)
+        case clear
+    }
+
+    func pendingWindowPinOverride(windowID: String) -> PendingPinOverride? {
+        let candidates = mutations.filter { mutation in
+            mutation.status == .pending &&
+                mutation.windowID == windowID &&
+                (mutation.kind == .windowPinTrain || mutation.kind == .windowClearPinnedTrain)
+        }
+        guard let latest = candidates.max(by: { $0.createdAt < $1.createdAt }) else {
+            return nil
+        }
+        if latest.kind == .windowPinTrain, let serviceID = latest.serviceID {
+            return .pin(serviceID: serviceID)
+        }
+        return .clear
+    }
+
+    /// Latest unsynced first-leg pin intent for the itinerary, if any:
+    /// `.some(request)` for a pending pin, `.some(nil)` for a pending clear.
+    func pendingItineraryFirstLegPinOverride(itineraryID: String) -> PinItineraryFirstLegRequest?? {
+        let candidates = mutations.filter { mutation in
+            mutation.status == .pending &&
+                mutation.itineraryID == itineraryID &&
+                (mutation.kind == .itineraryPinFirstLeg || mutation.kind == .itineraryClearPinnedFirstLeg)
+        }
+        guard let latest = candidates.max(by: { $0.createdAt < $1.createdAt }) else {
+            return nil
+        }
+        if latest.kind == .itineraryPinFirstLeg, let pin = latest.firstLegPin {
+            return .some(pin)
+        }
+        return .some(nil)
+    }
+
     func hasPendingDelete(windowID: String) -> Bool {
         mutations.contains { mutation in
             mutation.status == .pending &&
