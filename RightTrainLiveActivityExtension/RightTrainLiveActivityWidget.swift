@@ -8,38 +8,6 @@ import WidgetKit
 @testable import RightTrain
 #endif
 
-/// Widget-local mirror of the iOS `ItineraryPhase` enum. Defined here
-/// rather than in the shared module because the widget extension target
-/// doesn't currently link `Models.swift`. Translates legacy strings
-/// ("window", "pinned_first_leg") to the canonical lifecycle values so
-/// in-flight Live Activities continue rendering correctly after an
-/// upgrade.
-enum LiveActivityItineraryPhase: String {
-    case planning
-    case atOrigin = "at_origin"
-    case onLeg = "on_leg"
-    case approachingInterchange = "approaching_interchange"
-    case onFinalLeg = "on_final_leg"
-
-    static func from(rawValue: String?) -> LiveActivityItineraryPhase {
-        guard let value = rawValue?.trimmingCharacters(in: .whitespaces), !value.isEmpty else {
-            return .planning
-        }
-        switch value {
-        case "window":
-            return .planning
-        case "pinned_first_leg":
-            return .atOrigin
-        default:
-            return LiveActivityItineraryPhase(rawValue: value) ?? .planning
-        }
-    }
-
-    var isOnboard: Bool {
-        self == .onLeg || self == .approachingInterchange || self == .onFinalLeg
-    }
-}
-
 #if !RIGHTTRAIN_LAYOUT_TESTS
 @main
 struct RightTrainLiveActivityExtensionBundle: WidgetBundle {
@@ -139,7 +107,7 @@ struct RightTrainLiveActivityWidget: Widget {
         // On approaching_interchange, the user cares most about the
         // ONWARD platform at the interchange. Surface it in the island.
         if context.attributes.activityKind == .leg,
-           LiveActivityItineraryPhase.from(rawValue: context.state.phase) == .approachingInterchange,
+           ItineraryPhase.from(rawValue: context.state.phase) == .approachingInterchange,
            let platform = displayPlatform(context.state.interchange?.onwardPlatform) {
             return (label: "Onward", value: platform)
         }
@@ -160,7 +128,7 @@ struct RightTrainLiveActivityWidget: Widget {
             return (label: "Arr", value: platform, accessibilityPrefix: "Arrival platform")
         }
         if context.attributes.activityKind == .leg,
-           LiveActivityItineraryPhase.from(rawValue: context.state.phase) == .approachingInterchange,
+           ItineraryPhase.from(rawValue: context.state.phase) == .approachingInterchange,
            let platform = displayPlatform(context.state.interchange?.onwardPlatform) {
             return (label: "Onw", value: platform, accessibilityPrefix: "Onward platform")
         }
@@ -197,7 +165,7 @@ struct RightTrainLiveActivityWidget: Widget {
         if context.attributes.activityKind == .leg {
             // Highlight the change in amber/red so the Lock Screen and
             // Dynamic Island look distinct when the user needs to act.
-            switch LiveActivityItineraryPhase.from(rawValue: context.state.phase) {
+            switch ItineraryPhase.from(rawValue: context.state.phase) {
             case .approachingInterchange:
                 if context.state.interchange?.riskStatus == "missed" {
                     return RightTrainLiveActivityAttributes.StatusKind.cancelled.tint
@@ -1310,7 +1278,7 @@ private struct ItineraryTimelineContent: View {
     }
 
     var body: some View {
-        let phase = LiveActivityItineraryPhase.from(rawValue: state.phase)
+        let phase = ItineraryPhase.from(rawValue: state.phase)
         let onboardLegIndex = phase.isOnboard ? state.currentLegIndex : nil
         VStack(spacing: 0) {
             ForEach(visibleTrains.indices, id: \.self) { index in
@@ -1952,7 +1920,7 @@ private struct IslandTitle: View {
         if activityKind == .leg, let train = state.activeItineraryTrain {
             // On a leg, the headline is the destination of the leg the
             // user is currently on (interchange for non-final legs).
-            let phase = LiveActivityItineraryPhase.from(rawValue: state.phase)
+            let phase = ItineraryPhase.from(rawValue: state.phase)
             if phase == .approachingInterchange, let interchange = state.interchange {
                 return "Get off at \(interchange.name)"
             }
@@ -1963,7 +1931,7 @@ private struct IslandTitle: View {
 
     private var subtitle: String? {
         if activityKind == .leg {
-            if LiveActivityItineraryPhase.from(rawValue: state.phase) == .approachingInterchange,
+            if ItineraryPhase.from(rawValue: state.phase) == .approachingInterchange,
                let interchange = state.interchange {
                 return approachingSubtitle(interchange)
             }
@@ -3723,8 +3691,8 @@ private extension RightTrainLiveActivityAttributes.ContentState {
             ?? trains.last
     }
 
-    var resolvedPhase: LiveActivityItineraryPhase {
-        LiveActivityItineraryPhase.from(rawValue: phase)
+    var resolvedPhase: ItineraryPhase {
+        ItineraryPhase.from(rawValue: phase)
     }
 
     var compactItinerarySummaryText: String {
@@ -3801,7 +3769,7 @@ private extension RightTrainLiveActivityAttributes.ContentState {
     }
 
     func disruptionSummaryText(for train: RightTrainLiveActivityAttributes.ContentState.Train) -> String? {
-        let resolved = LiveActivityItineraryPhase.from(rawValue: phase)
+        let resolved = ItineraryPhase.from(rawValue: phase)
         if resolved == .atOrigin,
            let value = nonEmpty(nextUpdateText) {
             return value

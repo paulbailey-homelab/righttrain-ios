@@ -163,3 +163,32 @@ struct RightTrainLiveActivityAttributes: ActivityAttributes {
     var destinationCrs: String
     var startedAtText: String
 }
+
+/// Canonical lifecycle for an active multi-leg journey. Mirrors the
+/// `itinerary_subscriptions.phase` enum on the backend; the legacy
+/// strings "window" and "pinned_first_leg" are tolerated on read.
+enum ItineraryPhase: String, Codable, Equatable {
+    case planning
+    case atOrigin = "at_origin"
+    case onLeg = "on_leg"
+    case approachingInterchange = "approaching_interchange"
+    case onFinalLeg = "on_final_leg"
+
+    static func from(rawValue: String?) -> ItineraryPhase {
+        guard let value = rawValue?.trimmingCharacters(in: .whitespaces), !value.isEmpty else {
+            return .planning
+        }
+        switch value {
+        case "window":
+            return .planning
+        case "pinned_first_leg":
+            return .atOrigin
+        default:
+            return ItineraryPhase(rawValue: value) ?? .planning
+        }
+    }
+
+    var isOnboard: Bool {
+        self == .onLeg || self == .approachingInterchange || self == .onFinalLeg
+    }
+}
