@@ -104,7 +104,7 @@ final class AppCoordinator {
             liveActivityCoordinator: liveActivityCoordinator,
             stationProximityMonitor: stationProximityMonitor,
             registrationContextFactory: registrationContextFactory,
-            accessTokenProvider: { authViewModel.accessToken },
+            accessTokenProvider: { authViewModel.usableAccessToken },
             notificationFeedbackGenerator: notificationFeedbackGenerator,
             applicationStateProvider: applicationStateProvider,
             activeJourneyCache: activeJourneyCache,
@@ -120,19 +120,19 @@ final class AppCoordinator {
             pushNotificationCoordinator: pushNotificationCoordinator,
             operationState: operationState,
             registrationContextFactory: registrationContextFactory,
-            accessTokenProvider: { authViewModel.accessToken }
+            accessTokenProvider: { authViewModel.usableAccessToken }
         )
         let commuteRoutinesViewModel = CommuteRoutinesViewModel(
             apiClient: apiClient,
             operationState: operationState,
-            accessTokenProvider: { authViewModel.accessToken },
+            accessTokenProvider: { authViewModel.usableAccessToken },
             userUpdateHandler: { authViewModel.replaceCurrentUser($0) }
         )
         let subscriptionViewModel = SubscriptionViewModel(
             apiClient: apiClient,
             storeKitService: storeKitSubscriptionService,
             operationState: operationState,
-            accessTokenProvider: { authViewModel.accessToken },
+            accessTokenProvider: { authViewModel.usableAccessToken },
             userProvider: { authViewModel.user },
             userUpdateHandler: { authViewModel.replaceCurrentUser($0) }
         )
@@ -250,7 +250,7 @@ final class AppCoordinator {
     }
 
     func flushQueuedMutationsForBackground() async {
-        guard authViewModel.accessToken != nil else {
+        guard authViewModel.usableAccessToken != nil else {
             return
         }
         await refreshConnectivityAndFlushQueuedMutations()
@@ -381,7 +381,7 @@ final class AppCoordinator {
             windowSubscriptionID: windowID,
             notificationID: notificationID
         )
-        guard let accessToken = authViewModel.accessToken else {
+        guard let accessToken = authViewModel.usableAccessToken else {
             pendingRoute = .notificationDetail(fallbackIdentity)
             return
         }

@@ -397,6 +397,124 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
+    func testActiveJourneyCachePersistsAndPrunesStreamCursors() {
+        let defaults = makeIsolatedDefaults()
+        let cache = ActiveJourneyCache(defaults: defaults)
+
+        cache.saveStreamCursor("cursor-1", forWindow: "window-1")
+        XCTAssertEqual(ActiveJourneyCache(defaults: defaults).streamCursor(forWindow: "window-1"), "cursor-1")
+
+        // Saving for a different window prunes the stale entry.
+        cache.saveStreamCursor("cursor-2", forWindow: "window-2")
+        XCTAssertNil(cache.streamCursor(forWindow: "window-1"))
+        XCTAssertEqual(cache.streamCursor(forWindow: "window-2"), "cursor-2")
+
+        // Itinerary cursors live independently of window cursors.
+        cache.saveStreamCursor("it-cursor", forItinerary: "itinerary-1")
+        XCTAssertEqual(cache.streamCursor(forWindow: "window-2"), "cursor-2")
+
+        cache.clearWindowStreamCursors()
+        XCTAssertNil(cache.streamCursor(forWindow: "window-2"))
+        XCTAssertEqual(cache.streamCursor(forItinerary: "itinerary-1"), "it-cursor")
+
+        // clear() drops only the journey snapshot; cursors survive because
+        // clear() also runs during window↔itinerary transitions.
+        cache.clear()
+        XCTAssertEqual(cache.streamCursor(forItinerary: "itinerary-1"), "it-cursor")
+
+        cache.clearItineraryStreamCursors()
+        XCTAssertNil(cache.streamCursor(forItinerary: "itinerary-1"))
+    }
+
+    @MainActor
+    func testStreamReconnectResumesFromPersistedCursor() async {
+        let apiClient = FakeAPIClient()
+        let sessionStore = FakeSessionStore()
+        let window = TestFactory.window(id: "stream-window")
+        sessionStore.session = TestFactory.storedSession(accessToken: "stream-token")
+        apiClient.currentUserResult = .success(TestFactory.user())
+        apiClient.activeWindowResult = .success(window)
+        apiClient.windowResult = .success(window)
+        let defaults = makeIsolatedDefaults()
+        let cache = ActiveJourneyCache(defaults: defaults)
+        cache.saveStreamCursor("cursor-42", forWindow: "stream-window")
+        let model = makeModel(apiClient: apiClient, sessionStore: sessionStore, activeJourneyCache: cache)
+        await model.bootstrap()
+
+        XCTAssertEqual(model.activeWindow?.id, "stream-window")
+        // The bootstrap state transitions must not wipe the persisted cursor.
+        XCTAssertEqual(cache.streamCursor(forWindow: "stream-window"), "cursor-42")
+
+        let monitorTask = Task { await model.monitorActiveWindowForegroundUpdates() }
+        for _ in 0..<100 {
+            if !apiClient.streamWindowRequests.isEmpty {
+                break
+            }
+            try? await Task.sleep(for: .milliseconds(10))
+        }
+        monitorTask.cancel()
+        await monitorTask.value
+
+        XCTAssertEqual(apiClient.streamWindowRequests.first?.lastEventID, "cursor-42")
+    }
+
+    @MainActor
+    func testSessionExpiryMidRunInvalidatesSessionAndClearsState() async {
+        let apiClient = FakeAPIClient()
+        let sessionStore = FakeSessionStore()
+        sessionStore.session = TestFactory.storedSession(
+            accessToken: "short-token",
+            expiresAt: Date().addingTimeInterval(0.2)
+        )
+        apiClient.currentUserResult = .success(TestFactory.user())
+        apiClient.activeWindowResult = .success(TestFactory.window(id: "expiry-window"))
+        let model = makeModel(apiClient: apiClient, sessionStore: sessionStore)
+        await model.bootstrap()
+
+        XCTAssertTrue(model.isSignedIn)
+        // Token still stored but past its window: providers must stop using it.
+        try? await Task.sleep(for: .milliseconds(400))
+        XCTAssertNil(model.authViewModel.usableAccessToken)
+
+        // The expiry watchdog fires and runs the full invalidation cascade.
+        for _ in 0..<50 {
+            if !model.isSignedIn {
+                break
+            }
+            try? await Task.sleep(for: .milliseconds(20))
+        }
+        XCTAssertFalse(model.isSignedIn)
+        XCTAssertNil(sessionStore.session)
+    }
+
+    @MainActor
+    func testPendingPinKeepsOptimisticStateWhenRefreshReturnsStaleWindow() async {
+        let apiClient = FakeAPIClient()
+        let sessionStore = FakeSessionStore()
+        let recommendation = TestFactory.recommendation(rank: 1, serviceID: 222)
+        let window = TestFactory.window(
+            id: "pin-window",
+            selectedRecommendation: recommendation,
+            recommendations: [recommendation]
+        )
+        sessionStore.session = TestFactory.storedSession(accessToken: "pin-token")
+        apiClient.currentUserResult = .success(TestFactory.user())
+        apiClient.activeWindowResult = .success(window)
+        // Refresh returns the pre-pin server state; the pin call itself fails
+        // so the mutation stays queued.
+        apiClient.windowResult = .success(window)
+        let model = makeModel(apiClient: apiClient, sessionStore: sessionStore)
+        await model.bootstrap()
+
+        await model.activeWindowViewModel.pinTrain(serviceID: 222, windowID: "pin-window")
+        XCTAssertEqual(model.activeWindow?.pinnedTrainServiceId, 222)
+
+        await model.refreshActiveWindow(showLoading: false)
+
+        XCTAssertEqual(model.activeWindow?.pinnedTrainServiceId, 222)
+    }
+
+    @MainActor
     func testJourneyMutationQueueClearFailedKeepsPendingMutations() {
         let suiteName = "righttrain.tests.queue.\(UUID().uuidString)"
         let defaults = UserDefaults(suiteName: suiteName)!

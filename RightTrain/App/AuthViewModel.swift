@@ -23,7 +23,10 @@ final class AuthViewModel {
     @ObservationIgnored private let deviceIdentityService: any DeviceIdentityHandling
     @ObservationIgnored private let accountCredentialService: any AccountCredentialHandling
     @ObservationIgnored private let accountClientDeviceIDProvider: () -> String
-    @ObservationIgnored private var storedSession: StoredSession?
+    @ObservationIgnored private var storedSession: StoredSession? {
+        didSet { scheduleSessionExpiryHandling() }
+    }
+    @ObservationIgnored private var sessionExpiryTask: Task<Void, Never>?
 
     init(
         apiClient: any APIClienting,
@@ -47,6 +50,43 @@ final class AuthViewModel {
 
     var accessToken: String? {
         storedSession?.accessToken
+    }
+
+    /// The bearer token only while it is still within its validity window.
+    /// Use this for request providers so an expired session skips doomed
+    /// requests instead of collecting 401s; the expiry watchdog handles the
+    /// sign-in prompt.
+    var usableAccessToken: String? {
+        guard let storedSession, !storedSession.session.isExpired else {
+            return nil
+        }
+        return storedSession.accessToken
+    }
+
+    /// Invalidates the session the moment it expires while the app is
+    /// running. Without this, expiry between API calls would silently stop
+    /// all syncing with no sign-in prompt until the next 401.
+    private func scheduleSessionExpiryHandling() {
+        sessionExpiryTask?.cancel()
+        sessionExpiryTask = nil
+        guard let expiresAt = storedSession?.session.expiresAt else {
+            return
+        }
+        let interval = expiresAt.timeIntervalSinceNow
+        // Sessions already expired at assignment are the call site's problem
+        // (bootstrap clears them); don't invalidate re-entrantly from here.
+        guard interval > 0 else {
+            return
+        }
+        sessionExpiryTask = Task { @MainActor [weak self] in
+            try? await Task.sleep(for: .seconds(interval))
+            guard let self, !Task.isCancelled,
+                  let storedSession = self.storedSession,
+                  storedSession.session.isExpired else {
+                return
+            }
+            await self.invalidateCurrentSession(reason: "session_expired")
+        }
     }
 
     var isDeviceAttestationSupported: Bool {
