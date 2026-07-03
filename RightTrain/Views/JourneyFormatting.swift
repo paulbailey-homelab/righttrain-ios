@@ -13,6 +13,18 @@ enum JourneyFormatting {
         var reportIncomplete: Bool
     }
 
+    /// Visual route title: "Origin → Destination". Every on-screen route title
+    /// uses this one helper so direct and itinerary cards agree. Accessibility
+    /// labels should keep the "to" wording (`routeText`) — VoiceOver reads the
+    /// arrow glyph literally.
+    static func routeTitle(origin: String, destination: String) -> String {
+        "\(origin) → \(destination)"
+    }
+
+    static func routeTitle(_ journey: JourneyResult) -> String {
+        routeTitle(origin: originStationText(journey), destination: destinationStationText(journey))
+    }
+
     static func routeText(_ journey: JourneyResult) -> String {
         "\(originStationText(journey)) to \(destinationStationText(journey))"
     }

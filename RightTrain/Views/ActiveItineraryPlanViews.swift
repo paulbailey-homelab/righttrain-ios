@@ -27,7 +27,7 @@ struct ActiveItineraryPresentation {
 
     var routeTitle: String {
         if let selectedItinerary {
-            return ItineraryFormatting.routeText(selectedItinerary)
+            return ItineraryFormatting.routeTitle(selectedItinerary)
         }
         return "\(itinerary.originCrs) to \(itinerary.destinationCrs)"
     }

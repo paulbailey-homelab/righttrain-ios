@@ -127,13 +127,8 @@ struct CommuteRoutinesView: View {
                 }
             }
         }
-        .padding(RTSpacing.cardPadding)
-        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
+        .rtCard()
         .lightSurfaceForeground()
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(Color.rightTrainInkFaint, lineWidth: 1)
-        }
     }
 
     private var routinesSection: some View {

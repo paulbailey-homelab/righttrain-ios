@@ -133,7 +133,7 @@ struct ActiveWindowPresentation {
     }
 
     static func routeTitle(for journey: JourneyResult) -> String {
-        "\(JourneyFormatting.originStationText(journey)) → \(JourneyFormatting.destinationStationText(journey))"
+        JourneyFormatting.routeTitle(journey)
     }
 
     static func summaryText(for window: WindowSubscription, recommendationCount: Int) -> String {

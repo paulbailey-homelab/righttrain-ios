@@ -24,13 +24,8 @@ struct CollapsedWindowSetupView: View {
                 .lineLimit(nil)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(RTSpacing.cardPadding)
-        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
+        .rtCard()
         .lightSurfaceForeground()
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(Color.rightTrainInkFaint, lineWidth: 1)
-        }
         .accessibilityElement(children: .combine)
     }
 

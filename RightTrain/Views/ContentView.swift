@@ -413,7 +413,7 @@ private struct PlanSearchResultsView: View {
 
     private func searchSummary(kind: PinKind) -> SearchPinSummary {
         SearchPinSummary(
-            routeTitle: "\(viewModel.origin?.displayName ?? "Origin") → \(viewModel.destination?.displayName ?? "Destination")",
+            routeTitle: JourneyFormatting.routeTitle(origin: viewModel.origin?.displayName ?? "Origin", destination: viewModel.destination?.displayName ?? "Destination"),
             windowText: searchWindowText,
             kind: kind
         )

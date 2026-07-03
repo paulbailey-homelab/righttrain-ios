@@ -65,13 +65,8 @@ struct WindowSetupView: View {
             searchJourneysButton
                 .controlSize(.large)
         }
-        .padding(RTSpacing.cardPadding)
-        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
+        .rtCard()
         .lightSurfaceForeground()
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(Color.rightTrainInkFaint, lineWidth: 1)
-        }
         .tint(Color.rightTrainActionInk)
         .task {
             await viewModel.loadAppCapabilities()
@@ -154,13 +149,8 @@ struct WindowSetupView: View {
                 Text(viewModel.setupIntentContent.primaryActionText)
                 Image(systemName: "arrow.right")
             }
-            .font(.system(size: 16, weight: .semibold))
-            .frame(maxWidth: .infinity)
-            .frame(height: 52)
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(Color.rightTrainSurfaceCream)
-        .background(Color.rightTrainInk, in: RoundedRectangle(cornerRadius: RTRadius.button))
+        .buttonStyle(.rtPrimary)
         .accessibilityHint("Searches journeys in the selected departure range.")
     }
 

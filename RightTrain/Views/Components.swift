@@ -1,5 +1,80 @@
 import SwiftUI
 
+// MARK: - Card container
+
+/// The standard card wrapper: paper background, hairline border, card radius.
+/// Use this instead of hand-rolling padding + background + overlay so cards
+/// stay consistent (it replaced five slightly-different copies). A status
+/// surface tints the border; neutral keeps the standard hairline.
+struct RTCardModifier: ViewModifier {
+    var surface: RTSurface = .neutral
+    var padding: CGFloat = RTSpacing.cardPadding
+    var radius: CGFloat = RTRadius.card
+
+    func body(content: Content) -> some View {
+        content
+            .padding(padding)
+            .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: radius))
+            .overlay {
+                RoundedRectangle(cornerRadius: radius)
+                    .stroke(surface == .neutral ? Color.rightTrainBorder : surface.softBorder, lineWidth: 1)
+            }
+    }
+}
+
+extension View {
+    func rtCard(
+        _ surface: RTSurface = .neutral,
+        padding: CGFloat = RTSpacing.cardPadding,
+        radius: CGFloat = RTRadius.card
+    ) -> some View {
+        modifier(RTCardModifier(surface: surface, padding: padding, radius: radius))
+    }
+}
+
+// MARK: - Button hierarchy
+
+// The app's three button levels. Primary is the single most important action
+// on a screen; secondary sits beside or under it; anything quieter uses a
+// plain tinted text button. Don't hand-roll filled pills.
+
+/// Primary action: filled dark-green pill, full width.
+struct RTPrimaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 16, weight: .semibold))
+            .frame(maxWidth: .infinity)
+            .frame(height: RTSize.buttonHeight)
+            .foregroundStyle(Color.rightTrainSurfaceCream)
+            .background(Color.rightTrainSuccess, in: RoundedRectangle(cornerRadius: RTRadius.button))
+            .opacity(configuration.isPressed ? 0.85 : 1)
+    }
+}
+
+/// Secondary action: ink outline pill, full width.
+struct RTSecondaryButtonStyle: ButtonStyle {
+    func makeBody(configuration: Configuration) -> some View {
+        configuration.label
+            .font(.system(size: 16, weight: .semibold))
+            .frame(maxWidth: .infinity)
+            .frame(height: RTSize.buttonHeight)
+            .foregroundStyle(Color.rightTrainInk)
+            .overlay {
+                RoundedRectangle(cornerRadius: RTRadius.button)
+                    .stroke(Color.rightTrainInk.opacity(RTOpacity.faint), lineWidth: 1)
+            }
+            .opacity(configuration.isPressed ? 0.7 : 1)
+    }
+}
+
+extension ButtonStyle where Self == RTPrimaryButtonStyle {
+    static var rtPrimary: RTPrimaryButtonStyle { RTPrimaryButtonStyle() }
+}
+
+extension ButtonStyle where Self == RTSecondaryButtonStyle {
+    static var rtSecondary: RTSecondaryButtonStyle { RTSecondaryButtonStyle() }
+}
+
 // MARK: - Adaptive operator name
 
 /// Renders an operator name with graceful fallback: full name → 16-char short
@@ -182,6 +257,10 @@ struct NextActionCallout: View {
     }
 }
 
+/// Tone-based status chip for NEUTRAL (cream/paper) contexts: cards, lists,
+/// and headers. For content sitting on a coloured status surface
+/// (good/warn/bad backgrounds) use `RTStatusPill`, which derives its colours
+/// from the surface. These are the only two status pill styles.
 struct StatusPill: View {
     enum Tone: Equatable {
         case accent
@@ -223,8 +302,10 @@ struct StatusPill: View {
     }
 }
 
-/// Surface-aware live status pill — used on coloured status backgrounds (good/warn/bad).
-/// Shows a filled accent dot + uppercase eyebrow text on a soft-fill capsule.
+/// Surface-aware live status pill — used ONLY on coloured status backgrounds
+/// (good/warn/bad surfaces, e.g. the hero block). Shows a filled accent dot +
+/// uppercase eyebrow text on a soft-fill capsule. For neutral cream/paper
+/// contexts use `StatusPill` instead.
 struct RTStatusPill: View {
     var statusText: String
     var surface: RTSurface

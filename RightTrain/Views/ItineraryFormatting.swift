@@ -36,6 +36,19 @@ enum ItineraryFormatting {
         return "\(originStationText(first)) to \(destinationStationText(last))"
     }
 
+    /// Visual title variant — matches the direct-journey "Origin → Destination"
+    /// style. Use `routeText` for accessibility labels.
+    static func routeTitle(_ itinerary: ItineraryRecommendation) -> String {
+        guard let first = itinerary.legs.first,
+              let last = itinerary.legs.last else {
+            return JourneyFormatting.routeTitle(origin: itinerary.originCrs, destination: itinerary.destinationCrs)
+        }
+        return JourneyFormatting.routeTitle(
+            origin: originStationText(first),
+            destination: destinationStationText(last)
+        )
+    }
+
     static func departureText(_ itinerary: ItineraryRecommendation) -> String {
         timeText(itinerary.expectedDeparture)
     }

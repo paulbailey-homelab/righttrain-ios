@@ -74,13 +74,8 @@ struct SignInView: View {
                         Text("Continue with this device")
                         Image(systemName: "arrow.right")
                     }
-                    .font(.system(size: 16, weight: .semibold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: RTSize.buttonHeight)
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(Color.rightTrainSurfaceCream)
-                .background(Color.rightTrainInk, in: RoundedRectangle(cornerRadius: RTRadius.button))
+                .buttonStyle(.rtPrimary)
                 .disabled(!authViewModel.isDeviceAttestationSupported)
                 .opacity(authViewModel.isDeviceAttestationSupported ? 1 : 0.4)
 

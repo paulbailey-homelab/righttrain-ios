@@ -341,22 +341,12 @@ private struct NoActiveJourneyView: View {
 
             Button(action: planAction) {
                 Label(prompt.primaryActionText, systemImage: "arrow.right.circle.fill")
-                    .font(.system(size: 16, weight: .semibold))
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 52)
             }
-            .buttonStyle(.plain)
-            .foregroundStyle(Color.rightTrainSurfaceCream)
-            .background(Color.rightTrainInk, in: RoundedRectangle(cornerRadius: RTRadius.chip))
+            .buttonStyle(.rtPrimary)
             .accessibilityHint("Opens route and time setup.")
         }
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(RTSpacing.cardPadding)
-        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(Color.rightTrainBorder, lineWidth: 1)
-        }
+        .rtCard()
         .lightSurfaceForeground()
     }
 

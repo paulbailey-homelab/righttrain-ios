@@ -629,7 +629,7 @@ struct ItineraryRecommendationRow: View {
     private var titleBlock: some View {
         VStack(alignment: .leading, spacing: 4) {
             if showsRouteTitle {
-                Text(ItineraryFormatting.routeText(itinerary))
+                Text(ItineraryFormatting.routeTitle(itinerary))
                     .font(emphasized ? .title3.weight(.semibold) : .headline)
                     .fixedSize(horizontal: false, vertical: true)
                 Text("\(ItineraryFormatting.departureText(itinerary)) to \(ItineraryFormatting.arrivalText(itinerary))")

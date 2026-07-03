@@ -212,6 +212,9 @@ final class JourneyFormattingTests: XCTestCase {
         )
 
         XCTAssertEqual(JourneyFormatting.routeText(journey), "London Euston to Manchester Piccadilly")
+        // Visual titles use the arrow; accessibility text keeps "to".
+        XCTAssertEqual(JourneyFormatting.routeTitle(journey), "London Euston → Manchester Piccadilly")
+        XCTAssertEqual(JourneyFormatting.routeTitle(origin: "A", destination: "B"), "A → B")
         XCTAssertEqual(JourneyFormatting.compactRouteText(journey), "Euston to Man Piccadilly")
         XCTAssertEqual(JourneyFormatting.finalDestinationText(journey), "Manchester Piccadilly via Milton Keynes Central")
         XCTAssertEqual(JourneyFormatting.compactFinalDestinationText(journey), "Man Piccadilly")
