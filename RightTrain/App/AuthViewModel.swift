@@ -1,5 +1,24 @@
 import Foundation
 
+/// Why a session ended. Ends the user did not initiate through sign-out tear
+/// down Live Activities during state clearing; sign-out tears them down in
+/// `sessionWillSignOut`, while credentials still exist.
+enum SessionEndReason {
+    case expired
+    case signedOut
+    case accountDeleted
+}
+
+/// Single observer for session lifecycle transitions. Replaces five ad-hoc
+/// closures whose bodies had drifted into four near-identical copies — the
+/// compiler now guarantees every end path clears the same state.
+@MainActor
+protocol SessionLifecycleObserver: AnyObject {
+    func sessionDidAuthenticate() async
+    func sessionWillSignOut() async
+    func sessionDidEnd(reason: SessionEndReason) async
+}
+
 @MainActor
 @Observable
 final class AuthViewModel {
@@ -11,11 +30,7 @@ final class AuthViewModel {
     private(set) var oneTimeRecoveryCode: String?
     private(set) var accountStatusMessage: String?
 
-    @ObservationIgnored var afterSessionAuthenticated: (() async -> Void)?
-    @ObservationIgnored var clearExpiredSessionState: (() async -> Void)?
-    @ObservationIgnored var prepareSignOut: (() async -> Void)?
-    @ObservationIgnored var clearSignedOutState: (() async -> Void)?
-    @ObservationIgnored var clearDeletedAccountState: (() async -> Void)?
+    @ObservationIgnored weak var lifecycleObserver: (any SessionLifecycleObserver)?
 
     @ObservationIgnored private let apiClient: any APIClienting
     @ObservationIgnored private let sessionStore: SessionStoring
@@ -118,7 +133,7 @@ final class AuthViewModel {
             guard let session = try sessionStore.load(), let accessToken = session.accessToken, !session.session.isExpired else {
                 try? sessionStore.clear()
                 clearSession()
-                await clearExpiredSessionState?()
+                await lifecycleObserver?.sessionDidEnd(reason: .expired)
                 BetaDiagnostics.record("bootstrap_no_valid_session")
                 return
             }
@@ -140,7 +155,7 @@ final class AuthViewModel {
                 if refreshedSession.portableAccount != nil {
                     await refreshAccountStateSilently(accessToken: accessToken)
                 }
-                await afterSessionAuthenticated?()
+                await lifecycleObserver?.sessionDidAuthenticate()
                 BetaDiagnostics.record("bootstrap_restored_session")
             } catch let apiError as APIError where apiError.requiresSignIn {
                 await invalidateCurrentSession(reason: "bootstrap_session_invalid")
@@ -151,7 +166,7 @@ final class AuthViewModel {
         } catch {
             operationState.alertState = .network("The saved session could not be loaded. Sign in again to continue.")
             clearSession()
-            await clearExpiredSessionState?()
+            await lifecycleObserver?.sessionDidEnd(reason: .expired)
             BetaDiagnostics.record("bootstrap_session_load_failed", details: error.localizedDescription)
         }
     }
@@ -178,13 +193,13 @@ final class AuthViewModel {
             storedSession = stored
             user = auth.user
             operationState.alertState = nil
-            await afterSessionAuthenticated?()
+            await lifecycleObserver?.sessionDidAuthenticate()
             BetaDiagnostics.record("device_registration_succeeded")
         }
     }
 
     func signOut() async {
-        await prepareSignOut?()
+        await lifecycleObserver?.sessionWillSignOut()
         do {
             try sessionStore.clear()
         } catch {
@@ -192,7 +207,7 @@ final class AuthViewModel {
             BetaDiagnostics.record("sign_out_session_clear_failed", details: error.localizedDescription)
         }
         clearSession()
-        await clearSignedOutState?()
+        await lifecycleObserver?.sessionDidEnd(reason: .signedOut)
     }
 
     @discardableResult
@@ -387,7 +402,7 @@ final class AuthViewModel {
             try await apiClient.deleteCurrentUser(accessToken: accessToken)
             try? sessionStore.clear()
             clearSession()
-            await clearDeletedAccountState?()
+            await lifecycleObserver?.sessionDidEnd(reason: .accountDeleted)
             didDelete = true
         }
         return didDelete
@@ -407,7 +422,7 @@ final class AuthViewModel {
     func invalidateCurrentSession(reason: String = "session_invalidated") async {
         try? sessionStore.clear()
         clearSession()
-        await clearExpiredSessionState?()
+        await lifecycleObserver?.sessionDidEnd(reason: .expired)
         operationState.alertState = .auth(AppOperationState.expiredSessionMessage)
         BetaDiagnostics.record(reason)
     }
@@ -449,7 +464,7 @@ final class AuthViewModel {
         accountExport = nil
         oneTimeRecoveryCode = nil
         await refreshLinkedDevicesSilently(accessToken: accessToken)
-        await afterSessionAuthenticated?()
+        await lifecycleObserver?.sessionDidAuthenticate()
     }
 
     private func refreshAccountStateSilently(accessToken: String) async {

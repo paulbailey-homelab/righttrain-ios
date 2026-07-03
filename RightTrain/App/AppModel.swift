@@ -158,52 +158,7 @@ final class AppCoordinator {
         activeWindowViewModel.didClearActiveWindowState = { [weak windowSetupViewModel] in
             windowSetupViewModel?.clearState()
         }
-        authViewModel.afterSessionAuthenticated = { [weak activeWindowViewModel, weak notificationViewModel, weak commuteRoutinesViewModel, weak subscriptionViewModel, weak connectivityService, apiClient] in
-            activeWindowViewModel?.restoreCachedActiveJourneyIfPossible()
-            await connectivityService?.refreshBackendStatus(apiClient: apiClient)
-            await activeWindowViewModel?.flushQueuedMutations()
-            await activeWindowViewModel?.refreshActiveWindow()
-            await activeWindowViewModel?.prepareLiveActivityRemoteStartRegistration()
-            await commuteRoutinesViewModel?.refresh()
-            await subscriptionViewModel?.syncCurrentEntitlementsSilently()
-            subscriptionViewModel?.startTransactionObserver()
-            notificationViewModel?.requestRemoteNotificationsRegistrationIfAuthorized()
-            await notificationViewModel?.registerPendingAPNsTokenIfPossible()
-        }
-        authViewModel.clearExpiredSessionState = { [weak self, weak activeWindowViewModel, weak windowSetupViewModel, weak commuteRoutinesViewModel, weak journeyDetailViewModel, weak notificationViewModel, weak subscriptionViewModel, weak journeyMutationQueue] in
-            notificationViewModel?.clearLocalState()
-            journeyMutationQueue?.clear()
-            await activeWindowViewModel?.clearStateAndEndLiveActivities()
-            windowSetupViewModel?.clearState()
-            commuteRoutinesViewModel?.clearState()
-            subscriptionViewModel?.stopTransactionObserver()
-            journeyDetailViewModel?.dismiss()
-            self?.clearNavigationState()
-        }
-        authViewModel.prepareSignOut = { [weak activeWindowViewModel, weak notificationViewModel] in
-            await notificationViewModel?.unregisterIfPossible()
-            await activeWindowViewModel?.endAllLiveActivitiesWithTokenIfPossible()
-        }
-        authViewModel.clearSignedOutState = { [weak self, weak activeWindowViewModel, weak windowSetupViewModel, weak commuteRoutinesViewModel, weak journeyDetailViewModel, weak notificationViewModel, weak subscriptionViewModel, weak journeyMutationQueue] in
-            notificationViewModel?.clearLocalState()
-            journeyMutationQueue?.clear()
-            activeWindowViewModel?.clearState()
-            windowSetupViewModel?.clearState()
-            commuteRoutinesViewModel?.clearState()
-            subscriptionViewModel?.stopTransactionObserver()
-            journeyDetailViewModel?.dismiss()
-            self?.clearNavigationState()
-        }
-        authViewModel.clearDeletedAccountState = { [weak self, weak activeWindowViewModel, weak windowSetupViewModel, weak commuteRoutinesViewModel, weak journeyDetailViewModel, weak notificationViewModel, weak subscriptionViewModel, weak journeyMutationQueue] in
-            notificationViewModel?.clearLocalState()
-            journeyMutationQueue?.clear()
-            await activeWindowViewModel?.clearStateAndEndLiveActivities()
-            windowSetupViewModel?.clearState()
-            commuteRoutinesViewModel?.clearState()
-            subscriptionViewModel?.stopTransactionObserver()
-            journeyDetailViewModel?.dismiss()
-            self?.clearNavigationState()
-        }
+        authViewModel.lifecycleObserver = self
         observePushNotificationResponses()
     }
 
@@ -634,5 +589,48 @@ extension AppCoordinator {
 
     func refreshNotificationStatus() async {
         await notificationViewModel.refreshStatus()
+    }
+}
+
+// MARK: - Session lifecycle
+
+extension AppCoordinator: SessionLifecycleObserver {
+    func sessionDidAuthenticate() async {
+        activeWindowViewModel.restoreCachedActiveJourneyIfPossible()
+        await connectivityService.refreshBackendStatus(apiClient: apiClient)
+        await activeWindowViewModel.flushQueuedMutations()
+        await activeWindowViewModel.refreshActiveWindow()
+        await activeWindowViewModel.prepareLiveActivityRemoteStartRegistration()
+        await commuteRoutinesViewModel.refresh()
+        await subscriptionViewModel.syncCurrentEntitlementsSilently()
+        subscriptionViewModel.startTransactionObserver()
+        notificationViewModel.requestRemoteNotificationsRegistrationIfAuthorized()
+        await notificationViewModel.registerPendingAPNsTokenIfPossible()
+    }
+
+    /// Runs while the session credentials still exist, so remote teardown
+    /// (notification unregister, Live Activity token deletion) can authenticate.
+    func sessionWillSignOut() async {
+        await notificationViewModel.unregisterIfPossible()
+        await activeWindowViewModel.endAllLiveActivitiesWithTokenIfPossible()
+    }
+
+    /// The one place signed-in state is cleared, whatever ended the session.
+    /// Sign-out has already torn down Live Activities in sessionWillSignOut;
+    /// the other reasons still hold activities that must be ended here.
+    func sessionDidEnd(reason: SessionEndReason) async {
+        notificationViewModel.clearLocalState()
+        journeyMutationQueue.clear()
+        switch reason {
+        case .expired, .accountDeleted:
+            await activeWindowViewModel.clearStateAndEndLiveActivities()
+        case .signedOut:
+            activeWindowViewModel.clearState()
+        }
+        windowSetupViewModel.clearState()
+        commuteRoutinesViewModel.clearState()
+        subscriptionViewModel.stopTransactionObserver()
+        journeyDetailViewModel.dismiss()
+        clearNavigationState()
     }
 }
