@@ -3,6 +3,7 @@ import SwiftUI
 struct JourneyDetailView: View {
     @Environment(JourneyDetailViewModel.self) private var viewModel
     @Environment(ActiveWindowViewModel.self) private var activeWindowViewModel
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var identity: JourneyDetailIdentity
     @State private var didAttemptInitialLoad = false
 
@@ -20,8 +21,6 @@ struct JourneyDetailView: View {
                 let surface = detailSurface(detail)
                 ScrollView(.vertical) {
                     VStack(alignment: .leading, spacing: RTSpacing.sectionGap) {
-                        AppHeader(surface: surface)
-                            .padding(.bottom, RTSpacing.small)
                         summarySection(detail, surface: surface)
                         // Only the calling-points timeline needs a clock; keeping
                         // the TimelineView this narrow stops the 15s tick from
@@ -34,6 +33,7 @@ struct JourneyDetailView: View {
                     .padding(.horizontal, RTSpacing.pageHorizontal)
                     .padding(.vertical, RTSpacing.cardPadding + 2)
                 }
+                .safeAreaPadding(.bottom, RTSpacing.bottomSafeArea + RTSpacing.sectionGap)
                 .scrollBounceBehavior(.always, axes: .vertical)
                 .scrollIndicators(.visible)
                 .statusSurface(surface)
@@ -138,43 +138,7 @@ struct JourneyDetailView: View {
 
     private func summarySection(_ detail: JourneyDetail, surface: RTSurface) -> some View {
         VStack(alignment: .leading, spacing: RTSpacing.sectionGap) {
-            VStack(alignment: .leading, spacing: RTSpacing.compact) {
-                RTStatusPill(
-                    statusText: JourneyFormatting.displayStatusText(detail),
-                    surface: surface
-                )
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("TRAIN DETAILS")
-                        .font(RTFont.eyebrow)
-                        .tracking(2)
-                        .foregroundStyle(surface.dim)
-
-                    Text("\(detail.originName) to \(detail.destinationName)")
-                        .font(.title.weight(.bold))
-                        .foregroundStyle(surface.ink)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text("\(detail.originName) (\(detail.originCrs)) to \(detail.destinationName) (\(detail.destinationCrs))")
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(surface.dim)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-            }
-
-            detailGlanceSummary(detail, surface: surface)
-
-            HStack(spacing: 0) {
-                detailMetricCell(label: "Operator", value: JourneyFormatting.operatorDisplayText(detail), surface: surface)
-                if let coachCountText = JourneyFormatting.coachCountText(detail) {
-                    detailMetricCell(label: "Coaches", value: coachCountText, surface: surface)
-                }
-                detailMetricCell(label: "Stops", value: "\(detail.stops.count)", surface: surface, showsDivider: false)
-            }
-            .background(surface.softFill, in: RoundedRectangle(cornerRadius: RTRadius.card))
-            .overlay {
-                RoundedRectangle(cornerRadius: RTRadius.card)
-                    .stroke(surface.softBorder, lineWidth: 1)
-            }
+            journeyOverviewCard(detail, surface: surface)
 
             if let message = disruptionMessage(for: detail) {
                 disruptionBanner(message: message, cancelled: detail.cancelled, surface: surface)
@@ -183,55 +147,56 @@ struct JourneyDetailView: View {
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private func detailGlanceSummary(_ detail: JourneyDetail, surface: RTSurface) -> some View {
-        VStack(alignment: .leading, spacing: RTSpacing.compact) {
-            HStack(alignment: .top, spacing: RTSpacing.compact) {
-                MetricView(label: "Dep", value: detailDepartureText(detail))
-                MetricView(label: "Arr", value: detailArrivalText(detail))
+    private func journeyOverviewCard(_ detail: JourneyDetail, surface: RTSurface) -> some View {
+        VStack(alignment: .leading, spacing: RTSpacing.cardPadding) {
+            HStack(alignment: .center, spacing: RTSpacing.small) {
+                RTStatusPill(
+                    statusText: JourneyFormatting.displayStatusText(detail),
+                    surface: surface
+                )
+
+                Spacer(minLength: RTSpacing.small)
+
+                JourneyDetailFreshnessBadge(text: detailFreshnessText(detail), surface: surface)
             }
-            HStack(alignment: .top, spacing: RTSpacing.compact) {
-                MetricView(label: "Platform", value: detailPlatformText(detail))
-                MetricView(label: "Freshness", value: detailFreshnessText(detail))
+
+            VStack(alignment: .leading, spacing: 5) {
+                Text("JOURNEY DETAILS")
+                    .font(RTFont.eyebrow)
+                    .tracking(1.6)
+                    .foregroundStyle(surface.dim)
+
+                Text("\(detail.originName) to \(detail.destinationName)")
+                    .font(.title2.weight(.bold))
+                    .foregroundStyle(surface.ink)
+                    .lineLimit(3)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                Text(operatorSummaryText(detail))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(surface.dim)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
             }
+
+            JourneyDetailTimeStrip(
+                departure: detailDepartureText(detail),
+                arrival: detailArrivalText(detail),
+                platform: detailPlatformText(detail),
+                surface: surface,
+                prefersStackedLayout: dynamicTypeSize.prefersExpandedLayout
+            )
         }
-        .padding(RTSpacing.cardPadding)
-        .background(surface.softFill, in: RoundedRectangle(cornerRadius: RTRadius.card))
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(surface.softBorder, lineWidth: 1)
-        }
+        .rtCard(surface, padding: RTSpacing.cardPadding, radius: RTRadius.heroCard)
+        .accessibilityElement(children: .contain)
     }
 
-    private func detailMetricCell(
-        label: String,
-        value: String,
-        surface: RTSurface,
-        showsDivider: Bool = true
-    ) -> some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(label)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(surface.dim)
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
-
-            Text(value)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(surface.ink)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
+    private func operatorSummaryText(_ detail: JourneyDetail) -> String {
+        var parts = [JourneyFormatting.operatorDisplayText(detail)]
+        if let coachCountText = JourneyFormatting.coachCountText(detail) {
+            parts.append(coachCountText)
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, RTSpacing.compact)
-        .padding(.vertical, RTSpacing.compact)
-        .overlay(alignment: .trailing) {
-            if showsDivider {
-                Rectangle()
-                    .fill(surface.faint)
-                    .frame(width: 1)
-                    .padding(.vertical, RTSpacing.compact)
-            }
-        }
+        return parts.joined(separator: " · ")
     }
 
     private func disruptionBanner(message: String, cancelled: Bool, surface: RTSurface) -> some View {
@@ -253,7 +218,7 @@ struct JourneyDetailView: View {
 
     private func callingPointsSection(_ detail: JourneyDetail, surface: RTSurface, now: Date) -> some View {
         VStack(alignment: .leading, spacing: RTSpacing.listItem) {
-            Text("Stations")
+            Text("Calling points")
                 .font(.headline)
                 .foregroundStyle(surface.ink)
 
@@ -269,11 +234,20 @@ struct JourneyDetailView: View {
                         isFirst: index == detail.stops.startIndex,
                         isLast: index == detail.stops.index(before: detail.stops.endIndex)
                     )
-                        .padding(.vertical, 10)
+                        .padding(.vertical, 8)
                 }
             }
+            .background(alignment: .leading) {
+                Rectangle()
+                    .fill(Color.rightTrainInkFaint)
+                    .frame(width: 2)
+                    .padding(.leading, 11)
+                    .padding(.top, 16)
+                    .padding(.bottom, 44)
+                    .accessibilityHidden(true)
+            }
             .padding(.horizontal, RTSpacing.cardPadding)
-            .padding(.vertical, 6)
+            .padding(.vertical, RTSpacing.small)
             .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
             .lightSurfaceForeground()
             .overlay {
@@ -332,22 +306,23 @@ struct JourneyDetailView: View {
 
     private func detailPlatformText(_ detail: JourneyDetail) -> String {
         guard let stop = detail.stops.first else { return "Platform TBC" }
-        let platform = stop.realtime?.platform ?? stop.scheduledPlatform
+        let platform = (stop.realtime?.platform ?? stop.scheduledPlatform)?
+            .trimmingCharacters(in: .whitespacesAndNewlines)
         guard let platform, !platform.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return "Platform TBC"
         }
         let confirmed = stop.realtime?.platform != nil && stop.realtime?.platformConfirmed == true
-        return JourneyFormatting.qualifiedPlatformValue(platform, confirmed: confirmed)
+        return confirmed ? "Platform \(platform)" : "Expected platform \(platform)"
     }
 
     private func detailFreshnessText(_ detail: JourneyDetail) -> String {
         if detail.reportState == "complete" {
-            return "Live report complete"
+            return "Live data"
         }
         if detail.realtimeSource?.isEmpty == false {
-            return "Live data available"
+            return "Live data"
         }
-        return "Live data limited"
+        return "Limited live data"
     }
 
     private func currentTrainPosition(_ detail: JourneyDetail, now: Date) -> JourneyTrainPosition {
@@ -364,6 +339,124 @@ struct JourneyDetailView: View {
         return false
     }
 
+}
+
+private struct JourneyDetailFreshnessBadge: View {
+    var text: String
+    var surface: RTSurface
+
+    var body: some View {
+        Label(text, systemImage: "dot.radiowaves.left.and.right")
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(surface.dim)
+            .lineLimit(1)
+            .minimumScaleFactor(0.76)
+            .labelStyle(.titleAndIcon)
+            .accessibilityLabel(text)
+    }
+}
+
+private struct JourneyDetailTimeStrip: View {
+    var departure: String
+    var arrival: String
+    var platform: String
+    var surface: RTSurface
+    var prefersStackedLayout: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: RTSpacing.compact) {
+            if prefersStackedLayout {
+                VStack(alignment: .leading, spacing: RTSpacing.compact) {
+                    timePoint(label: "Departs", value: departure, textAlignment: .leading, frameAlignment: .leading)
+                    Divider()
+                        .background(surface.faint)
+                    timePoint(label: "Arrives", value: arrival, textAlignment: .leading, frameAlignment: .leading)
+                }
+            } else {
+                HStack(alignment: .center, spacing: RTSpacing.compact) {
+                    timePoint(label: "Departs", value: departure, textAlignment: .leading, frameAlignment: .leading)
+
+                    HStack(spacing: RTSpacing.small) {
+                        Rectangle()
+                            .fill(surface.faint)
+                            .frame(height: 1)
+                        Image(systemName: "arrow.right")
+                            .font(.caption.weight(.bold))
+                            .foregroundStyle(surface.accent)
+                        Rectangle()
+                            .fill(surface.faint)
+                            .frame(height: 1)
+                    }
+                    .frame(minWidth: 56, maxWidth: 92)
+                    .accessibilityHidden(true)
+
+                    timePoint(label: "Arrives", value: arrival, textAlignment: .trailing, frameAlignment: .trailing)
+                }
+            }
+
+            JourneyDetailPlatformLine(text: platform, surface: surface)
+        }
+        .padding(RTSpacing.compact)
+        .background(surface.softFill, in: RoundedRectangle(cornerRadius: RTRadius.card))
+        .overlay {
+            RoundedRectangle(cornerRadius: RTRadius.card)
+                .stroke(surface.softBorder, lineWidth: 1)
+        }
+    }
+
+    private func timePoint(
+        label: String,
+        value: String,
+        textAlignment: HorizontalAlignment,
+        frameAlignment: Alignment
+    ) -> some View {
+        VStack(alignment: textAlignment, spacing: 3) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(surface.dim)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+            Text(value)
+                .font(.title2.weight(.bold))
+                .foregroundStyle(surface.ink)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.72)
+        }
+        .frame(maxWidth: .infinity, alignment: frameAlignment)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityValue(value)
+    }
+}
+
+private struct JourneyDetailPlatformLine: View {
+    var text: String
+    var surface: RTSurface
+
+    var body: some View {
+        Label {
+            Text(text)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(surface.ink)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+        } icon: {
+            Image(systemName: "tram.fill")
+                .font(.caption.weight(.bold))
+                .foregroundStyle(surface.accent)
+        }
+        .labelStyle(.titleAndIcon)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .padding(.horizontal, RTSpacing.small)
+        .padding(.vertical, 9)
+        .background(Color.rightTrainPaperCream.opacity(0.78), in: RoundedRectangle(cornerRadius: RTRadius.chip))
+        .overlay {
+            RoundedRectangle(cornerRadius: RTRadius.chip)
+                .stroke(surface.faint, lineWidth: 1)
+        }
+        .accessibilityLabel(text)
+    }
 }
 
 struct JourneyStopRow: View {
@@ -460,12 +553,6 @@ struct JourneyTimelineMarker: View {
 
     var body: some View {
         ZStack(alignment: .top) {
-            Rectangle()
-                .fill(Color.rightTrainInkFaint)
-                .frame(width: 2)
-                .padding(.top, isFirst ? 10 : -12)
-                .padding(.bottom, isLast ? 58 : -12)
-
             Circle()
                 .fill(markerFill)
                 .frame(width: isCurrent ? 18 : 10, height: isCurrent ? 18 : 10)
