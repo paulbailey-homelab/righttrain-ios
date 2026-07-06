@@ -92,14 +92,26 @@ struct RecommendationResultsView: View {
     }
 
     private func searchPinHeader(recommendationCount: Int) -> some View {
-        VStack(alignment: .leading, spacing: 6) {
-            Text("\(recommendationCount) direct \(recommendationCount == 1 ? "train" : "trains") · \(summary.windowText)")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
+        VStack(alignment: .leading, spacing: RTSpacing.small) {
+            HStack(alignment: .firstTextBaseline, spacing: RTSpacing.small) {
+                Text("DIRECT TRAINS")
+                    .font(RTFont.eyebrow)
+                    .tracking(1.6)
+                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
 
-            HStack(alignment: .top, spacing: RTSpacing.listItem) {
+                Spacer(minLength: RTSpacing.small)
+
+                Text(summary.windowText)
+                    .font(.caption.weight(.semibold))
+                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
+                    .monospacedDigit()
+                    .lineLimit(1)
+            }
+
+            HStack(alignment: .center, spacing: RTSpacing.listItem) {
                 Text(summary.routeTitle)
                     .font(.system(size: 22, weight: .bold))
+                    .lineLimit(3)
                     .fixedSize(horizontal: false, vertical: true)
 
                 Spacer(minLength: 8)
@@ -111,6 +123,7 @@ struct RecommendationResultsView: View {
             }
         }
         .accessibilityElement(children: .contain)
+        .accessibilityLabel("\(summary.routeTitle), direct trains between \(summary.windowText)")
         .accessibilityHint("Creates a Search Pin for \(recommendationCount) direct trains in this departure range.")
     }
 
@@ -244,38 +257,46 @@ private struct SearchDirectJourneyCard: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .top, spacing: RTSpacing.listItem) {
-                VStack(alignment: .leading, spacing: 3) {
+                VStack(alignment: .leading, spacing: 4) {
                     Text("\(JourneyFormatting.departureText(journey)) → \(JourneyFormatting.arrivalText(journey))")
                         .font(emphasized ? .title3.weight(.semibold) : .headline)
                         .monospacedDigit()
                         .fixedSize(horizontal: false, vertical: true)
-                    Text(compactSummaryText)
-                        .font(.subheadline)
+
+                    Text(JourneyFormatting.durationText(journey))
+                        .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
+
+                    if let operatorText = JourneyFormatting.operatorSummaryText(journey) {
+                        Text(operatorText)
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
+                            .lineLimit(2)
+                            .fixedSize(horizontal: false, vertical: true)
+                    }
                 }
 
                 Spacer(minLength: 6)
 
-                if !inContainer {
-                    StatusPill(text: emphasized ? "Recommended" : "Alternative \(recommendation.rank)", tone: .accent)
+                VStack(alignment: .trailing, spacing: 8) {
+                    if !inContainer {
+                        StatusPill(text: emphasized ? "Best option" : "Alternative \(recommendation.rank)", tone: .accent)
+                    }
+                    PinJourneyIconButton(
+                        isPinned: isPinned,
+                        pinHint: "Pins this train as your current Journey Pin.",
+                        unpinHint: "Unpins this train and returns to watching the search.",
+                        action: pinJourney
+                    )
                 }
-                PinJourneyIconButton(
-                    isPinned: isPinned,
-                    pinHint: "Pins this train as your current Journey Pin.",
-                    unpinHint: "Unpins this train and returns to watching the search.",
-                    action: pinJourney
-                )
             }
 
             LazyVGrid(columns: metricColumns, alignment: .leading, spacing: 8) {
-                MetricView(label: "Dep", value: timeMetricText(JourneyFormatting.departureDisplay(journey)))
-                MetricView(label: "Arr", value: timeMetricText(JourneyFormatting.arrivalDisplay(journey)))
+                SearchTimeMetricView(label: "Dep", display: JourneyFormatting.departureDisplay(journey))
+                SearchTimeMetricView(label: "Arr", display: JourneyFormatting.arrivalDisplay(journey))
                 MetricView(label: "Platform", value: JourneyFormatting.platformMetricText(journey))
-                MetricView(label: "Confidence", value: catchabilityText)
             }
 
             DisruptionLine(journey: journey, score: recommendation.score)
@@ -301,45 +322,62 @@ private struct SearchDirectJourneyCard: View {
         .accessibilityElement(children: .contain)
     }
 
-    private var compactSummaryText: String {
-        var parts = [JourneyFormatting.durationText(journey)]
-        if let operatorText = JourneyFormatting.operatorSummaryText(journey) {
-            parts.append(operatorText)
-        }
-        return parts.joined(separator: " · ")
-    }
-
-    private func timeMetricText(_ display: JourneyTimeDisplay) -> String {
-        if let current = display.currentText, current != display.scheduledText {
-            return "\(current), sched \(display.scheduledText)"
-        }
-        return display.scheduledText
-    }
-
     private var metricColumns: [GridItem] {
         [GridItem(.adaptive(minimum: emphasized ? 92 : 78), spacing: 8, alignment: .leading)]
     }
-
-    private var catchabilityText: String {
-        if !recommendation.score.usable {
-            return "Not advised"
-        }
-        if JourneyFormatting.isCancelled(journey) || recommendation.score.cancellationPenaltyMinutes != nil {
-            return "Cancelled"
-        }
-        if recommendation.score.severeDelayPenaltyMinutes != nil {
-            return "Severe delay"
-        }
-        if recommendation.score.delayMinutes > 0 || recommendation.score.penaltyMinutes > 0 {
-            return "Check delay"
-        }
-        return recommendation.recommended ? "Best now" : "Usable"
-    }
-
     private var reasonText: String? {
         recommendation.score.reasons?
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
             .first { !$0.isEmpty }
+    }
+}
+
+private struct SearchTimeMetricView: View {
+    var label: String
+    var display: JourneyTimeDisplay
+
+    private var primaryText: String {
+        display.currentText ?? display.scheduledText
+    }
+
+    private var secondaryText: String? {
+        guard let current = display.currentText, current != display.scheduledText else {
+            return nil
+        }
+        return "was \(display.scheduledText)"
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(label)
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .lineLimit(1)
+
+            Text(primaryText)
+                .font(.subheadline.weight(.semibold))
+                .monospacedDigit()
+                .lineLimit(1)
+
+            if let secondaryText {
+                Text(secondaryText)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
+                    .monospacedDigit()
+                    .lineLimit(1)
+            }
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityValue(accessibilityValue)
+    }
+
+    private var accessibilityValue: String {
+        if let secondaryText {
+            return "\(primaryText), \(secondaryText)"
+        }
+        return primaryText
     }
 }
 

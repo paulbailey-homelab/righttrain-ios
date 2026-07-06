@@ -591,7 +591,7 @@ struct DisruptionLine: View {
         if delayMinutes > 0 {
             return "Expected delay: \(delayMinutes) minutes."
         }
-        return "No disruption reported for this recommendation."
+        return "No disruption reported."
     }
 }
 

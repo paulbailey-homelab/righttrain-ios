@@ -412,7 +412,7 @@ enum JourneyFormatting {
         if trimmed.isEmpty || trimmed == "-" || trimmed.uppercased() == "TBC" || confirmed {
             return trimmed.isEmpty ? "TBC" : trimmed
         }
-        return "\(trimmed) · expected"
+        return "Expected \(trimmed)"
     }
 
     static func platformStateText(primary: String, secondary: String? = nil, confirmed: Bool = true) -> String {
