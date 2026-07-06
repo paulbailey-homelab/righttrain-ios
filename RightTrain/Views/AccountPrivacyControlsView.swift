@@ -12,7 +12,7 @@ struct AccountPrivacyControlsView: View {
                     generateExport()
                 } label: {
                     HStack {
-                        Label(authViewModel.accountExport == nil ? "Generate Export" : "Regenerate Export", systemImage: "square.and.arrow.down")
+                        Label(authViewModel.accountExport == nil ? "Generate export" : "Regenerate export", systemImage: "square.and.arrow.down")
                         Spacer()
                         if isGeneratingExport {
                             ProgressView()
@@ -38,7 +38,7 @@ struct AccountPrivacyControlsView: View {
                 exportSummary(export)
             }
         }
-        .navigationTitle("Export Data")
+        .navigationTitle("Export data")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
         .background(Color.rightTrainSurfaceCream.ignoresSafeArea())

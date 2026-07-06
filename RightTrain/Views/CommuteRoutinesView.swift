@@ -237,39 +237,39 @@ struct CommuteRoutinesView: View {
                 )
             }
 
-            HStack(spacing: RTSpacing.listItem) {
-                Button {
+            HStack(spacing: RTSpacing.small) {
+                routineIconButton(
+                    systemImage: "arrow.up.right",
+                    accessibilityLabel: "Plan \(routine.name)",
+                    isProminent: true
+                ) {
                     appCoordinator.startJourneyPlan(from: routine)
-                } label: {
-                    Label("Plan", systemImage: "arrow.up.right")
                 }
-                .buttonStyle(.borderedProminent)
-                .tint(Color.rightTrainActionInk)
                 .accessibilityHint("Prefills the Plan tab with this commute route and departure window.")
 
-                Button {
+                routineIconButton(
+                    systemImage: routine.isPaused ? "play.fill" : "pause.fill",
+                    accessibilityLabel: routine.isPaused ? "Resume \(routine.name)" : "Pause \(routine.name)"
+                ) {
                     Task { await viewModel.setPaused(routine, paused: !routine.isPaused) }
-                } label: {
-                    Label(routine.isPaused ? "Resume" : "Pause", systemImage: routine.isPaused ? "play.fill" : "pause.fill")
                 }
-                .buttonStyle(.bordered)
 
-                Button {
+                routineIconButton(
+                    systemImage: "pencil",
+                    accessibilityLabel: "Edit \(routine.name)"
+                ) {
                     editorSheet = RoutineEditorSheet(routine: routine)
-                } label: {
-                    Label("Edit", systemImage: "pencil")
                 }
-                .buttonStyle(.bordered)
 
                 Spacer()
 
-                Button(role: .destructive) {
+                routineIconButton(
+                    systemImage: "trash",
+                    accessibilityLabel: "Delete \(routine.name)",
+                    role: .destructive
+                ) {
                     routineToDelete = routine
-                } label: {
-                    Image(systemName: "trash")
                 }
-                .buttonStyle(.bordered)
-                .accessibilityLabel("Delete \(routine.name)")
             }
         }
         .padding(RTSpacing.cardPadding)
@@ -290,6 +290,49 @@ struct CommuteRoutinesView: View {
         }
         .clipShape(RoundedRectangle(cornerRadius: RTRadius.card))
         .accessibilityElement(children: .combine)
+    }
+
+    private func routineIconButton(
+        systemImage: String,
+        accessibilityLabel: String,
+        isProminent: Bool = false,
+        role: ButtonRole? = nil,
+        action: @escaping () -> Void
+    ) -> some View {
+        Button(role: role, action: action) {
+            Image(systemName: systemImage)
+                .font(.subheadline.weight(.semibold))
+                .frame(width: 44, height: 38)
+        }
+        .buttonStyle(.plain)
+        .foregroundStyle(iconButtonForeground(isProminent: isProminent, role: role))
+        .background(iconButtonBackground(isProminent: isProminent, role: role), in: Capsule())
+        .overlay {
+            Capsule()
+                .stroke(iconButtonBorder(isProminent: isProminent, role: role), lineWidth: 1)
+        }
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private func iconButtonForeground(isProminent: Bool, role: ButtonRole?) -> Color {
+        if role == .destructive {
+            return .rightTrainDanger
+        }
+        return isProminent ? .rightTrainPaperCream : .rightTrainActionInk
+    }
+
+    private func iconButtonBackground(isProminent: Bool, role: ButtonRole?) -> Color {
+        if role == .destructive {
+            return Color.rightTrainDanger.opacity(0.10)
+        }
+        return isProminent ? .rightTrainActionInk : Color.rightTrainActionInk.opacity(0.12)
+    }
+
+    private func iconButtonBorder(isProminent: Bool, role: ButtonRole?) -> Color {
+        if role == .destructive {
+            return Color.rightTrainDanger.opacity(0.18)
+        }
+        return isProminent ? .clear : Color.rightTrainActionInk.opacity(0.20)
     }
 
     private func syncDefaultsFromUser() {

@@ -10,7 +10,7 @@ struct AccountRestoreView: View {
                 Button {
                     Task { await authViewModel.restorePortableAccount() }
                 } label: {
-                    Label("Log In with Passkey", systemImage: "key")
+                    Label("Log in with passkey", systemImage: "key")
                 }
                 .disabled(!authViewModel.isAccountCredentialSupported)
             } footer: {
@@ -26,11 +26,11 @@ struct AccountRestoreView: View {
                 Button {
                     Task { await authViewModel.recoverPortableAccount(recoveryCode: recoveryCode) }
                 } label: {
-                    Label("Use Recovery Code", systemImage: "lock.rotation")
+                    Label("Use recovery code", systemImage: "lock.rotation")
                 }
                 .disabled(recoveryCode.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty)
             } header: {
-                Label("Account Recovery", systemImage: "lifepreserver")
+                Label("Account recovery", systemImage: "lifepreserver")
             } footer: {
                 Text("Recovery adds a replacement passkey. RightTrain does not use email or phone number lookup for this flow.")
             }
@@ -38,11 +38,11 @@ struct AccountRestoreView: View {
 
             if let preferenceSet = authViewModel.accountPreferenceSet {
                 Section {
-                    SettingsAccountValueRow(title: "Preference Version", systemImage: "number", value: "\(preferenceSet.version)")
-                    SettingsAccountValueRow(title: "Last Synced", systemImage: "clock", value: preferenceSet.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                    SettingsAccountValueRow(title: "Saved Routines", systemImage: "tram", value: "\(preferenceSet.commuteRoutines.count)")
+                    SettingsAccountValueRow(title: "Preference version", systemImage: "number", value: "\(preferenceSet.version)")
+                    SettingsAccountValueRow(title: "Last synced", systemImage: "clock", value: preferenceSet.updatedAt.formatted(date: .abbreviated, time: .shortened))
+                    SettingsAccountValueRow(title: "Saved routines", systemImage: "tram", value: "\(preferenceSet.commuteRoutines.count)")
                 } header: {
-                    Label("Synced Preferences", systemImage: "arrow.down.doc")
+                    Label("Synced preferences", systemImage: "arrow.down.doc")
                 }
                 .listRowBackground(Color.rightTrainPaperCream)
             }
@@ -54,7 +54,7 @@ struct AccountRestoreView: View {
                 .listRowBackground(Color.rightTrainPaperCream)
             }
         }
-        .navigationTitle("Log In")
+        .navigationTitle("Log in")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
         .background(Color.rightTrainSurfaceCream.ignoresSafeArea())

@@ -1145,7 +1145,7 @@ struct PreviewFeedbackReviewScreen: View {
                     VStack(alignment: .leading, spacing: RTSpacing.compact) {
                         SectionHeader(
                             title: "What to include",
-                            subtitle: "Route, CRS if you have it, departure time, platform, and whether the app was late, stale, or wrong.",
+                            subtitle: "Route, station code if you have it, departure time, platform, and whether the app was late, stale, or wrong.",
                             tone: .accent
                         )
                         Link(destination: supportURL) {

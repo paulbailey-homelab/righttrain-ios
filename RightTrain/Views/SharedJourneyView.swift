@@ -34,10 +34,6 @@ struct SharedJourneyPresentation {
         Self.statusTone(status: journey.status, statusText: journey.statusText)
     }
 
-    var routeContext: String {
-        "\(journey.originName) (\(journey.originCrs)) to \(journey.destinationName) (\(journey.destinationCrs))"
-    }
-
     var freshnessText: String {
         "Updated \(SharedJourneyFormatting.relativeText(journey.refreshedAt))"
     }
@@ -130,10 +126,6 @@ struct SharedJourneyView: View {
                     Text(journey.routeTitle)
                         .font(.title.weight(.bold))
                         .lineLimit(3)
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(presentation.routeContext)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
                         .fixedSize(horizontal: false, vertical: true)
                 }
 

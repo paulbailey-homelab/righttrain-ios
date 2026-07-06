@@ -23,7 +23,7 @@ struct AccountCreationView: View {
                 Button {
                     Task { await authViewModel.createPortableAccount(migrateCurrentDevicePreferences: migratePreferences) }
                 } label: {
-                    Label("Create Account", systemImage: "key.badge.plus")
+                    Label("Create account", systemImage: "key.badge.plus")
                 }
                 .disabled(!authViewModel.isSignedIn || !authViewModel.isAccountCredentialSupported)
                 .accessibilityHint("Creates a passkey-backed account and shows a one-time recovery code.")
@@ -47,11 +47,11 @@ struct AccountCreationView: View {
                     Button {
                         authViewModel.acknowledgeRecoveryCode()
                     } label: {
-                        Label("I Saved This Code", systemImage: "checkmark.circle")
+                        Label("I saved this code", systemImage: "checkmark.circle")
                     }
                     .accessibilityHint("Hides the recovery code permanently.")
                 } header: {
-                    Label("Recovery Code", systemImage: "lock.rotation")
+                    Label("Recovery code", systemImage: "lock.rotation")
                 } footer: {
                     Text("Save this now. It will not be shown again.")
                 }
@@ -65,7 +65,7 @@ struct AccountCreationView: View {
                 .listRowBackground(Color.rightTrainPaperCream)
             }
         }
-        .navigationTitle("Create Account")
+        .navigationTitle("Create account")
         .navigationBarTitleDisplayMode(.inline)
         .scrollContentBackground(.hidden)
         .background(Color.rightTrainSurfaceCream.ignoresSafeArea())

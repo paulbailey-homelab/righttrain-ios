@@ -7,23 +7,24 @@ struct NotificationPermissionView: View {
 
     var body: some View {
         VStack(alignment: .leading, spacing: 14) {
-            SectionHeader(title: "Action-needed alerts", subtitle: subtitle)
+            SectionHeader(title: "When journeys change", subtitle: subtitle)
 
             HStack(spacing: RTSpacing.listItem) {
-                Label(statusTitle, systemImage: statusIcon)
+                Label("Notifications", systemImage: statusIcon)
                     .font(.subheadline.weight(.semibold))
                 Spacer()
                 StatusPill(text: statusTitle, tone: statusTone)
             }
 
-            Button {
-                Task { await handlePrimaryAction() }
-            } label: {
-                Label(buttonTitle, systemImage: buttonIcon)
+            if !isEnabledState {
+                Button {
+                    Task { await handlePrimaryAction() }
+                } label: {
+                    Label(buttonTitle, systemImage: buttonIcon)
+                }
+                .buttonStyle(.bordered)
+                .controlSize(.large)
             }
-            .buttonStyle(.bordered)
-            .controlSize(.large)
-            .disabled(isEnabledState)
         }
         .padding(RTSpacing.cardPadding)
         .background(Color.rightTrainSurface, in: RoundedRectangle(cornerRadius: RTRadius.card))
@@ -32,13 +33,13 @@ struct NotificationPermissionView: View {
     private var subtitle: String {
         switch viewModel.notificationStatus {
         case .authorized, .provisional:
-            return "Action-needed alerts can reach you when platforms, cancellations, delays, or better options change."
+            return "Get notified about platform changes, cancellations, delays, and better options."
         case .denied:
-            return "In-app monitoring still works. Turn alerts back on in Settings if you want platform moves, cancellations, delays, interchange risk, or better options to interrupt you."
+            return "In-app monitoring still works. Turn notifications back on if you want journey changes to reach you outside the app."
         case .notDetermined:
-            return "Allow action-needed alerts so journey changes can reach you outside the app."
+            return "Allow notifications so journey changes can reach you outside the app."
         case .ephemeral:
-            return "Temporary action-needed alerts are active for this device."
+            return "Temporary notifications are active for this device."
         @unknown default:
             return "Notification permission state could not be read."
         }
@@ -92,7 +93,7 @@ struct NotificationPermissionView: View {
         case .denied:
             return "Open Settings"
         default:
-            return "Allow Alerts"
+            return "Allow alerts"
         }
     }
 

@@ -100,10 +100,7 @@ struct ActiveItineraryPresentation {
             moment: ActiveWindowPresentation.journeyMoment(for: itinerary, isOffline: isOffline),
             needProfile: .connectionSensitiveTrip,
             routeTitle: routeTitle,
-            routeContextText: JourneyFormatting.crsRouteText(
-                originCrs: selected.originCrs,
-                destinationCrs: selected.destinationCrs
-            ),
+            routeContextText: routeContextText(for: selected),
             statusText: statusText.isEmpty ? pillText : statusText,
             statusTone: isOffline ? .amber : status.tone,
             timingText: "Dep \(ItineraryFormatting.departureText(selected)) · Arr \(ItineraryFormatting.arrivalText(selected))",
@@ -116,6 +113,20 @@ struct ActiveItineraryPresentation {
                 ? "Offline · showing saved journey data"
                 : ActiveWindowPresentation.freshnessText(updatedAt: latestRealtimeUpdate(in: selected), now: now)
         )
+    }
+
+    private func routeContextText(for selected: ItineraryRecommendation) -> String? {
+        guard selected.score.changeCount > 0 else {
+            return nil
+        }
+        if let connection = selected.connections.first {
+            let station = JourneyFormatting.stationDisplayName(
+                name: connection.atName,
+                fallback: connection.atCrs
+            )
+            return "\(ItineraryFormatting.changesText(selected)) via \(station)"
+        }
+        return ItineraryFormatting.changesText(selected)
     }
 
     var headerStatusText: String? {

@@ -82,25 +82,25 @@ struct SettingsProfileView: View {
                 NavigationLink {
                     LinkedDevicesView()
                 } label: {
-                    Label("Manage Devices", systemImage: "iphone.gen3")
+                    Label("Manage devices", systemImage: "iphone.gen3")
                 }
 
                 NavigationLink {
                     AccountPrivacyControlsView()
                 } label: {
-                    Label("Export Data", systemImage: "square.and.arrow.down")
+                    Label("Export data", systemImage: "square.and.arrow.down")
                 }
             } else {
                 NavigationLink {
                     AccountCreationView()
                 } label: {
-                    Label("Create Account", systemImage: "key.badge.plus")
+                    Label("Create account", systemImage: "key.badge.plus")
                 }
 
                 NavigationLink {
                     AccountRestoreView()
                 } label: {
-                    Label("Log In", systemImage: "person.crop.circle.badge.checkmark")
+                    Label("Log in", systemImage: "person.crop.circle.badge.checkmark")
                 }
             }
         } header: {
@@ -157,7 +157,7 @@ struct SettingsProfileView: View {
             }
 
             (Text("\(pinsUsed)").foregroundStyle(Color.rightTrainActionInk) +
-             Text(" / \(pinsLimit) pins used").foregroundStyle(Color.rightTrainInk.opacity(0.82)))
+             Text(" of \(pinsLimit) pins used").foregroundStyle(Color.rightTrainInk.opacity(0.82)))
                 .font(.system(size: 26, weight: .bold))
 
             // Progress bar
@@ -211,20 +211,20 @@ struct SettingsProfileView: View {
             Button {
                 Task { await subscriptionViewModel.restore() }
             } label: {
-                Label("Restore Purchases", systemImage: "arrow.clockwise")
+                Label("Restore purchases", systemImage: "arrow.clockwise")
             }
 
             if user.entitlements.paidSubscription != nil {
                 Button {
                     Task { await subscriptionViewModel.openManageSubscriptions() }
                 } label: {
-                    Label("Manage Subscription", systemImage: "gearshape")
+                    Label("Manage subscription", systemImage: "gearshape")
                 }
             }
         } header: {
             settingsSectionHeader("Plan", systemImage: "creditcard")
         } footer: {
-            Text("Pro unlocks up to 10 Search Pins and 10 saved commutes.")
+            Text("Pro unlocks up to 10 search pins and 10 saved commutes.")
         }
         .listRowBackground(Color.rightTrainPaperCream)
     }
@@ -265,7 +265,7 @@ struct SettingsProfileView: View {
         } header: {
             settingsSectionHeader("Alerts", systemImage: "bell")
         } footer: {
-            Text("Alerts cover action-needed journey changes. Live Activity preview runs for 30 seconds.")
+            Text("Live Activity preview runs for 30 seconds.")
         }
         .listRowBackground(Color.rightTrainPaperCream)
         .sensoryFeedback(.success, trigger: liveActivityPreviewFeedbackTrigger)

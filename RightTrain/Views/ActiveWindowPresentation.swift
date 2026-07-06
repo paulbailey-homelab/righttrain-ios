@@ -335,7 +335,7 @@ struct ActiveWindowPresentation {
             moment: moment,
             needProfile: needProfile,
             routeTitle: routeTitle ?? Self.routeTitle(for: journey),
-            routeContextText: JourneyFormatting.crsRouteText(journey),
+            routeContextText: JourneyFormatting.operatorSummaryText(journey),
             statusText: status.text,
             statusTone: status.tone,
             timingText: JourneyFormatting.glanceTimingText(departure: departure, arrival: arrival),

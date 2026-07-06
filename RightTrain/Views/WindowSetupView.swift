@@ -46,7 +46,7 @@ struct WindowSetupView: View {
             }
 
             VStack(alignment: .leading, spacing: RTSpacing.listItem) {
-                DatePicker("Travel from", selection: $viewModel.departureStart, in: Date()..., displayedComponents: [.date, .hourAndMinute])
+                DatePicker("Depart after", selection: $viewModel.departureStart, in: Date()..., displayedComponents: [.date, .hourAndMinute])
                     .datePickerStyle(.compact)
 
                 rangeHeader
@@ -424,7 +424,7 @@ struct StationSearchField: View {
 
     private var editingField: some View {
         HStack(spacing: 8) {
-            TextField("Station or CRS", text: $query)
+            TextField("Station name or code", text: $query)
                 .textInputAutocapitalization(.never)
                 .autocorrectionDisabled()
                 .focused($isFocused)

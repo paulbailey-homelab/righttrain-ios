@@ -96,7 +96,7 @@ struct StationPickerView: View {
 
     private var searchContent: some View {
         VStack(alignment: .leading, spacing: RTSpacing.compact) {
-            TextField("Station name or CRS", text: queryBinding)
+            TextField("Station name or code", text: queryBinding)
                 .textInputAutocapitalization(.characters)
                 .autocorrectionDisabled()
                 .padding(.horizontal, RTSpacing.compact)
@@ -111,7 +111,7 @@ struct StationPickerView: View {
             if viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).count < 2 {
                 StateMessage(
                     title: "Type at least two characters",
-                    message: "Use a station name or CRS code.",
+                    message: "Use a station name or three-letter station code.",
                     symbolName: "magnifyingglass"
                 )
             } else {
@@ -324,14 +324,13 @@ private struct StationPickerStationRow: View {
                     Text(station.displayName)
                         .font(.body.weight(.semibold))
                         .foregroundStyle(Color.rightTrainInk)
-                    HStack(spacing: RTSpacing.small) {
-                        Text(station.tpl)
-                        if let distance = station.distanceMeters {
+                    if let distance = station.distanceMeters {
+                        HStack(spacing: RTSpacing.small) {
                             Text(distanceText(distance))
                         }
+                        .font(.caption)
+                        .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
                     }
-                    .font(.caption)
-                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
                 }
                 Spacer(minLength: RTSpacing.small)
                 CRSBadge(crs: station.crs)
@@ -344,7 +343,7 @@ private struct StationPickerStationRow: View {
         }
         .buttonStyle(.plain)
         .accessibilityLabel("\(station.displayName), \(station.crs.uppercased())")
-        .accessibilityHint("Selects this \(station.crs.uppercased()) station.")
+        .accessibilityHint("Selects this station.")
     }
 
     private func distanceText(_ meters: Int) -> String {
@@ -405,7 +404,7 @@ private struct CRSBadge: View {
             .padding(.horizontal, 8)
             .padding(.vertical, 5)
             .background(Color.rightTrainActionInk.opacity(0.10), in: Capsule())
-            .accessibilityLabel("CRS \(crs.uppercased())")
+            .accessibilityLabel("Station code \(crs.uppercased())")
     }
 }
 
