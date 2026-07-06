@@ -107,7 +107,10 @@ struct ActiveItineraryPresentation {
             statusText: statusText.isEmpty ? pillText : statusText,
             statusTone: isOffline ? .amber : status.tone,
             timingText: "Dep \(ItineraryFormatting.departureText(selected)) · Arr \(ItineraryFormatting.arrivalText(selected))",
-            platformText: JourneyFormatting.platformStateText(primary: ItineraryFormatting.firstLegPlatformText(selected)),
+            platformText: JourneyFormatting.platformStateText(
+                primary: ItineraryFormatting.firstLegPlatformText(selected),
+                confirmed: ItineraryFormatting.firstLegPlatformConfirmed(selected)
+            ),
             nextActionText: nextActionText(for: selected, isOffline: isOffline),
             freshnessText: isOffline
                 ? "Offline · showing saved journey data"
@@ -180,7 +183,10 @@ struct ActiveItineraryPresentation {
         let platform = ItineraryFormatting.firstLegPlatformText(selected)
         switch phase {
         case .planning, .atOrigin:
-            let platformText = JourneyFormatting.platformStateText(primary: platform)
+            let platformText = JourneyFormatting.platformStateText(
+                primary: platform,
+                confirmed: ItineraryFormatting.firstLegPlatformConfirmed(selected)
+            )
             return platformText == "Platform TBC" ? "Watch for the first platform" : "Go to \(platformText.lowercased())"
         case .onLeg:
             return "Follow this leg and next change"
@@ -434,7 +440,8 @@ private struct ActiveItineraryPlanHeroCard: View {
     private var platform: ActiveWindowPresentation.PlatformDisplay {
         ActiveWindowPresentation.PlatformDisplay(
             primary: ItineraryFormatting.firstLegPlatformText(itinerary),
-            secondary: nil
+            secondary: nil,
+            confirmed: ItineraryFormatting.firstLegPlatformConfirmed(itinerary)
         )
     }
 

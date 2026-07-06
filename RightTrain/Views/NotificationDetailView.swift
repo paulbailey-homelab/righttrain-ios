@@ -288,7 +288,7 @@ private struct NotificationDetailContentView: View {
                 LazyVGrid(columns: columns, alignment: .leading, spacing: RTSpacing.small) {
                     MetricView(label: "Dep", value: notificationDepartureText(recommendation))
                     MetricView(label: "Arr", value: JourneyFormatting.arrivalText(recommendation.journey))
-                    MetricView(label: "Platform", value: JourneyFormatting.platformText(recommendation.journey))
+                    MetricView(label: "Platform", value: JourneyFormatting.platformMetricText(recommendation.journey))
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

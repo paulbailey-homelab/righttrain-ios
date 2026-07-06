@@ -86,18 +86,33 @@ struct PlatformSquareChip: View {
         return value
     }
 
+    private var hasKnownPlatform: Bool {
+        let value = featuredDisplayValue.uppercased()
+        return value != "TBC" && value != "-"
+    }
+
+    private var isExpected: Bool {
+        hasKnownPlatform && !platform.confirmed
+    }
+
+    private var featuredLabel: String? {
+        guard let label else { return nil }
+        return isExpected ? "Exp." : label
+    }
+
     var body: some View {
         Group {
             switch style {
             case .featured:
                 VStack(spacing: label == nil ? 0 : 1) {
-                    if let label {
-                        Text(label)
+                    if let featuredLabel {
+                        Text(featuredLabel)
                             .font(.caption2.weight(.semibold))
                             .foregroundStyle(.secondary)
                             .lineLimit(1)
                     }
                     Text(featuredDisplayValue)
+                        .italic(isExpected)
                         .font((label == nil ? Font.title : Font.title3).weight(.bold))
                         .foregroundStyle(.primary)
                         .lineLimit(1)
@@ -111,6 +126,7 @@ struct PlatformSquareChip: View {
                 }
             case .compact:
                 Text(compactDisplayValue)
+                    .italic(isExpected)
                     .font(.caption.weight(.bold))
                     .lineLimit(1)
                     .minimumScaleFactor(0.78)
@@ -135,7 +151,7 @@ struct PlatformSquareChip: View {
         case "-":
             return "Platform unavailable"
         default:
-            return "Platform \(accessibilityPlatformValue)"
+            return isExpected ? "Expected platform \(accessibilityPlatformValue)" : "Platform \(accessibilityPlatformValue)"
         }
     }
 }

@@ -1152,6 +1152,7 @@ enum TestFactory {
         actualDeparture: String? = nil,
         delayed: Bool? = nil,
         platform: String? = nil,
+        platformConfirmed: Bool? = nil,
         cancelled: Bool? = nil
     ) -> StopRealtime {
         StopRealtime(
@@ -1170,7 +1171,7 @@ enum TestFactory {
             reasonLocationTpl: nil,
             reasonLocationName: nil,
             platform: platform,
-            platformConfirmed: nil,
+            platformConfirmed: platformConfirmed,
             platformSource: nil,
             platformCisSupplement: nil,
             platformSupplement: nil,

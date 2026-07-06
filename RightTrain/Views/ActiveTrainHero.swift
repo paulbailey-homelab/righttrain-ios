@@ -380,8 +380,10 @@ struct StatusFirstHeroBlock: View {
 
     private var platformCell: some View {
         let value = compactPlatformValue
+        let hasKnownPlatform = value != "-" && value.uppercased() != "TBC"
+        let isExpected = hasKnownPlatform && !platform.confirmed
         return VStack(alignment: .leading, spacing: 3) {
-            Text("Platform")
+            Text(isExpected ? "Platform · exp" : "Platform")
                 .font(RTFont.eyebrow)
                 .tracking(0.5)
                 .foregroundStyle(surface.dim)
@@ -389,8 +391,9 @@ struct StatusFirstHeroBlock: View {
                 .minimumScaleFactor(0.78)
 
             Text(value)
+                .italic(isExpected)
                 .font(.system(size: 18, weight: .bold))
-                .foregroundStyle(value == "-" || value.uppercased() == "TBC" ? surface.dim : surface.ink)
+                .foregroundStyle(hasKnownPlatform ? surface.ink : surface.dim)
                 .lineLimit(1)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -434,7 +437,7 @@ struct StatusFirstHeroBlock: View {
             presentation.routeTitle,
             "Departs \(depTime)",
             "Arrives \(arrTime)",
-            "Platform \(platform.primary)"
+            JourneyFormatting.platformStateText(primary: platform.primary, confirmed: platform.confirmed)
         ].joined(separator: ", ")
     }
 }

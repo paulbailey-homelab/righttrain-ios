@@ -274,7 +274,7 @@ private struct SearchDirectJourneyCard: View {
             LazyVGrid(columns: metricColumns, alignment: .leading, spacing: 8) {
                 MetricView(label: "Dep", value: timeMetricText(JourneyFormatting.departureDisplay(journey)))
                 MetricView(label: "Arr", value: timeMetricText(JourneyFormatting.arrivalDisplay(journey)))
-                MetricView(label: "Platform", value: JourneyFormatting.platformText(journey))
+                MetricView(label: "Platform", value: JourneyFormatting.platformMetricText(journey))
                 MetricView(label: "Confidence", value: catchabilityText)
             }
 
@@ -913,8 +913,11 @@ struct RecommendationRow: View {
             MetricView(label: "Arrives", value: JourneyFormatting.arrivalText(journey))
             MetricView(label: "Duration", value: JourneyFormatting.durationText(journey))
         }
-        MetricView(label: "Dep platform", value: JourneyFormatting.platformText(journey))
-        MetricView(label: "Arr platform", value: JourneyFormatting.arrivalPlatformText(journey))
+        MetricView(label: "Dep platform", value: JourneyFormatting.platformMetricText(journey))
+        MetricView(label: "Arr platform", value: JourneyFormatting.qualifiedPlatformValue(
+            JourneyFormatting.arrivalPlatformText(journey),
+            confirmed: JourneyFormatting.arrivalPlatformConfirmed(journey)
+        ))
     }
 
     private var accessibilityLabel: String {
