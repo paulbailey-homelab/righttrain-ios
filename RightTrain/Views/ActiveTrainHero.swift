@@ -252,6 +252,7 @@ struct StatusFirstHeroBlock: View {
     var countdown: ActiveWindowPresentation.CountdownDisplay
     var surface: RTSurface
     var now: Date
+    var freshnessText: String
     var loadDetail: () async -> Void
     var requestUnpin: () -> Void
 
@@ -316,6 +317,9 @@ struct StatusFirstHeroBlock: View {
                 .foregroundStyle(surface.dim)
                 .lineLimit(1)
                 .minimumScaleFactor(0.82)
+
+            LiveFreshnessText(text: heroFreshnessText)
+                .padding(.top, RTSpacing.small)
         }
     }
 
@@ -428,6 +432,16 @@ struct StatusFirstHeroBlock: View {
         return p
     }
 
+    private var heroFreshnessText: String {
+        if freshnessText.hasPrefix("Updated") {
+            return "Train data \(freshnessText.lowercased())"
+        }
+        if freshnessText == "Live data pending" {
+            return "Train data pending"
+        }
+        return freshnessText
+    }
+
     private var accessibilityDescription: String {
         let depTime  = depDisplay.currentText ?? depDisplay.scheduledText
         let arrTime  = arrDisplay.currentText ?? arrDisplay.scheduledText
@@ -437,6 +451,7 @@ struct StatusFirstHeroBlock: View {
             presentation.routeTitle,
             "Departs \(depTime)",
             "Arrives \(arrTime)",
+            heroFreshnessText,
             JourneyFormatting.platformStateText(primary: platform.primary, confirmed: platform.confirmed)
         ].joined(separator: ", ")
     }

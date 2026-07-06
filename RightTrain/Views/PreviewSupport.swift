@@ -249,8 +249,8 @@ enum PreviewFixtures {
 
     static var staleDataWindow: WindowSubscription {
         var first = recommendation(serviceID: 9_041, departureOffset: 14, arrivalOffset: 94, rank: 1)
-        first.journey.statusText = "Live data stale"
-        first.journey.compactStatusText = "Stale data"
+        first.journey.statusText = "Update delayed"
+        first.journey.compactStatusText = "Update delayed"
         first.journey.statusKind = "unreported"
         first.journey.realtimeUpdatedAt = iso(minutesFromBase: -18)
         first.score.staleDataPenaltyMinutes = 8

@@ -1145,13 +1145,13 @@ enum LiveActivityPreviewScenario: String, CaseIterable {
                 arrivalOffset: 100,
                 platform: "TBC",
                 recommended: true,
-                statusText: "Live data stale",
+                statusText: "Update delayed",
                 statusKind: .unreported,
                 now: now
             )
             var state = contentState(
                 now: now,
-                statusText: "Live data stale",
+                statusText: "Update delayed",
                 statusKind: .unreported,
                 nextUpdateText: "Check before boarding",
                 trains: [train],

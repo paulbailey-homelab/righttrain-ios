@@ -297,14 +297,11 @@ struct ActiveWindowPresentation {
 
     static func freshnessText(updatedAt: Date?, now: Date = Date()) -> String {
         guard let updatedAt else {
-            return "Live data not reported yet"
+            return "Live data pending"
         }
         let seconds = max(0, now.timeIntervalSince(updatedAt))
         if seconds < 60 {
             return "Updated now"
-        }
-        if seconds > staleDataInterval {
-            return "Live data stale"
         }
         let minutes = Int((seconds / 60).rounded(.down))
         if minutes <= 1 {
@@ -313,7 +310,11 @@ struct ActiveWindowPresentation {
         if minutes < 60 {
             return "Updated \(minutes) min ago"
         }
-        return "Live data stale"
+        let hours = minutes / 60
+        if hours == 1 {
+            return "Updated 1 hr ago"
+        }
+        return "Updated \(hours) hr ago"
     }
 
     static func liveGlanceContent(

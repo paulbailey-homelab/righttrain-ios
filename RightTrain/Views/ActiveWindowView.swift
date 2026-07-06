@@ -33,41 +33,35 @@ struct ActiveWindowView: View {
     private func content(presentation: ActiveWindowPresentation, now: Date) -> some View {
         let surface = presentation.heroSurface
         let heroCountdown = ActiveWindowPresentation.countdown(for: presentation.heroRecommendation, now: now)
+        let showsHero = presentation.shouldShowHero(now: now)
+        let glance = ActiveWindowPresentation.liveGlanceContent(
+            for: presentation.heroRecommendation,
+            routeTitle: presentation.routeTitle,
+            needProfile: .oneOffDirectTrip,
+            now: now,
+            isOffline: shouldPresentOfflineGlance(for: presentation.heroRecommendation)
+        )
 
         VStack(alignment: .leading, spacing: 0) {
             statusPillRow(
                 presentation: presentation,
                 surface: surface
             )
-            .padding(.bottom, RTSpacing.compact)
+            .padding(.bottom, showsHero ? RTSpacing.small : RTSpacing.compact)
 
-            // The hero block below is the single source for route, timing,
-            // platform, and next action. While it is visible the old summary
-            // card would repeat all of it, so it collapses to a slim context
-            // strip (CRS route + freshness); the full panel only renders when
-            // there is no hero.
-            let glance = ActiveWindowPresentation.liveGlanceContent(
-                for: presentation.heroRecommendation,
-                routeTitle: presentation.routeTitle,
-                needProfile: .oneOffDirectTrip,
-                now: now,
-                isOffline: shouldPresentOfflineGlance(for: presentation.heroRecommendation)
-            )
-            if presentation.shouldShowHero(now: now) {
-                heroContextStrip(glance: glance, surface: surface)
-                    .padding(.bottom, RTSpacing.sectionGap)
-            } else {
+            if !showsHero {
                 LiveGlancePanel(content: glance)
                     .padding(.bottom, RTSpacing.sectionGap)
             }
 
             // ── Hero block ────────────────────────────────────────────────
-            if presentation.shouldShowHero(now: now) {
+            if showsHero {
                 StatusFirstHeroBlock(
                     presentation: presentation,
                     countdown: heroCountdown,
                     surface: surface,
                     now: now,
+                    freshnessText: glance.freshnessText,
                     loadDetail: { await loadDetail(presentation.heroRecommendation) },
                     requestUnpin: requestDeleteConfirmation
                 )
@@ -101,45 +95,18 @@ struct ActiveWindowView: View {
         }
     }
 
-    /// Slim replacement for the summary card while the hero owns the detail:
-    /// keeps CRS context and data freshness in the first screenful without
-    /// repeating route, timing, platform, and next action.
-    private func heroContextStrip(
-        glance: ActiveWindowPresentation.LiveGlanceContent,
-        surface: RTSurface
-    ) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: RTSpacing.small) {
-            if let routeContextText = glance.routeContextText {
-                Text(routeContextText)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(surface.dim)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
-            }
-            Spacer(minLength: RTSpacing.small)
-            LiveFreshnessText(text: glance.freshnessText)
-        }
-        .accessibilityElement(children: .combine)
-    }
-
     private func statusPillRow(
         presentation: ActiveWindowPresentation,
         surface: RTSurface
     ) -> some View {
-        HStack(alignment: .center, spacing: 0) {
+        HStack(alignment: .center, spacing: RTSpacing.small) {
             RTStatusPill(
                 statusText: pillStatusText(presentation: presentation),
                 surface: surface
             )
+            .fixedSize(horizontal: true, vertical: false)
 
             Spacer(minLength: RTSpacing.small)
-
-            if !presentation.heroIsPinnedTrain {
-                Text("\(presentation.recommendations.count) train\(presentation.recommendations.count == 1 ? "" : "s")")
-                    .font(RTFont.eyebrow)
-                    .tracking(2)
-                    .foregroundStyle(surface.dim)
-            }
 
             statusUnpinButton(presentation: presentation, surface: surface)
         }
