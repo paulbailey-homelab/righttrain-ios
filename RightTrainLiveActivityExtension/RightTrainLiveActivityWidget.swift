@@ -2880,12 +2880,20 @@ private struct InlinePlatformLabel: View {
 
     @ViewBuilder
     private func platformLabel(text: String, includesIcon: Bool) -> some View {
+        // Unconfirmed platforms render in italics, matching the departure-board
+        // convention for an estimated platform.
         if includesIcon {
-            Label(text, systemImage: "tram.fill")
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(Color.rightTrainActivityText)
+            HStack(spacing: 4) {
+                Image(systemName: "tram.fill")
+                    .imageScale(.small)
+                Text(text)
+                    .italic(!confirmed)
+            }
+            .font(.subheadline.weight(.bold))
+            .foregroundStyle(Color.rightTrainActivityText)
         } else {
             Text(text)
+                .italic(!confirmed)
                 .font(.subheadline.weight(.bold))
                 .foregroundStyle(Color.rightTrainActivityText)
         }

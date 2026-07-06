@@ -565,6 +565,7 @@ struct StatusFirstTrainRow: View {
                 }
 
                 Text(compactPlatform)
+                    .italic(isExpectedPlatform)
                     .font(.caption.weight(.bold))
                     .foregroundStyle(surface.ink)
                     .padding(.horizontal, 7)
@@ -628,6 +629,11 @@ struct StatusFirstTrainRow: View {
         return p
     }
 
+    private var isExpectedPlatform: Bool {
+        let p = compactPlatform.uppercased()
+        return p != "TBC" && p != "-" && !platform.confirmed
+    }
+
     private var accessibilityText: String {
         var parts: [String] = []
         if isPinned         { parts.append("Pinned journey") }
@@ -635,7 +641,7 @@ struct StatusFirstTrainRow: View {
         parts.append("Departs \(depDisplay.currentText ?? depDisplay.scheduledText)")
         parts.append("Arrives \(arrDisplay.currentText ?? arrDisplay.scheduledText)")
         if let status = rowStatus { parts.append(status.text) }
-        parts.append("Platform \(platform.primary)")
+        parts.append(JourneyFormatting.platformStateText(primary: platform.primary, confirmed: platform.confirmed))
         return parts.joined(separator: ", ")
     }
 }

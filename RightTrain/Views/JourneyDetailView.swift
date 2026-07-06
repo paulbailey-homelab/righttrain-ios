@@ -336,7 +336,8 @@ struct JourneyDetailView: View {
         guard let platform, !platform.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
             return "Platform TBC"
         }
-        return platform
+        let confirmed = stop.realtime?.platform != nil && stop.realtime?.platformConfirmed == true
+        return JourneyFormatting.qualifiedPlatformValue(platform, confirmed: confirmed)
     }
 
     private func detailFreshnessText(_ detail: JourneyDetail) -> String {

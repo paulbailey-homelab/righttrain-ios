@@ -245,6 +245,22 @@ final class JourneyFormattingTests: XCTestCase {
         XCTAssertEqual(JourneyFormatting.platformStateText(primary: "P12", secondary: "was 2"), "Platform 12 · was 2")
     }
 
+    func testPlatformStateTextQualifiesUnconfirmedPlatformAsExpected() {
+        XCTAssertEqual(JourneyFormatting.platformStateText(primary: "P4", confirmed: false), "Expected platform 4")
+        XCTAssertEqual(
+            JourneyFormatting.platformStateText(primary: "P12", secondary: "was 2", confirmed: false),
+            "Expected platform 12 · was 2"
+        )
+        XCTAssertEqual(JourneyFormatting.platformStateText(primary: "TBC", confirmed: false), "Platform TBC")
+    }
+
+    func testQualifiedPlatformValueAddsExpectedSuffixOnlyWhenUnconfirmed() {
+        XCTAssertEqual(JourneyFormatting.qualifiedPlatformValue("4", confirmed: true), "4")
+        XCTAssertEqual(JourneyFormatting.qualifiedPlatformValue("4", confirmed: false), "4 · expected")
+        XCTAssertEqual(JourneyFormatting.qualifiedPlatformValue("TBC", confirmed: false), "TBC")
+        XCTAssertEqual(JourneyFormatting.qualifiedPlatformValue("", confirmed: false), "TBC")
+    }
+
     func testFreshnessAndAccessibilityLabelsDescribeLiveConfidence() throws {
         let now = try XCTUnwrap(DateFormatting.date(from: "2026-01-10T10:10:00.000Z"))
 
@@ -805,6 +821,24 @@ final class JourneyFormattingTests: XCTestCase {
 
         XCTAssertEqual(platform.primary, "P8")
         XCTAssertEqual(platform.secondary, "was 7")
+    }
+
+    func testPlatformDisplayCarriesFeedConfirmationState() {
+        let unconfirmed = TestFactory.journey(originPlatform: "1")
+        XCTAssertFalse(ActiveWindowPresentation.platformDisplay(for: unconfirmed).confirmed)
+
+        let confirmed = TestFactory.journey(
+            originRealtime: TestFactory.realtime(platform: "1", platformConfirmed: true),
+            originPlatform: "1"
+        )
+        XCTAssertTrue(ActiveWindowPresentation.platformDisplay(for: confirmed).confirmed)
+
+        let arrivalConfirmed = TestFactory.journey(
+            destinationRealtime: TestFactory.realtime(platform: "8", platformConfirmed: true),
+            destinationPlatform: "7"
+        )
+        XCTAssertTrue(ActiveWindowPresentation.arrivalPlatformDisplay(for: arrivalConfirmed).confirmed)
+        XCTAssertFalse(ActiveWindowPresentation.arrivalPlatformDisplay(for: unconfirmed).confirmed)
     }
 
     func testActiveWindowCompactSummaryOmitsSingleTrainWindowMetadata() {

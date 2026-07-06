@@ -304,7 +304,8 @@ struct ItineraryOnFinalLegView: View {
                             PlatformSquareChip(
                                 platform: ActiveWindowPresentation.PlatformDisplay(
                                     primary: nonEmptyPlatform(leg.destinationRealtime?.platform) ?? nonEmptyPlatform(leg.destinationPlatform) ?? "TBC",
-                                    secondary: nil
+                                    secondary: nil,
+                                    confirmed: leg.destinationRealtime?.platformConfirmed == true
                                 ),
                                 style: .compact,
                                 label: "Arr"
@@ -322,7 +323,8 @@ struct ItineraryOnFinalLegView: View {
                             PlatformSquareChip(
                                 platform: ActiveWindowPresentation.PlatformDisplay(
                                     primary: nonEmptyPlatform(leg.destinationRealtime?.platform) ?? nonEmptyPlatform(leg.destinationPlatform) ?? "TBC",
-                                    secondary: nil
+                                    secondary: nil,
+                                    confirmed: leg.destinationRealtime?.platformConfirmed == true
                                 ),
                                 style: .compact,
                                 label: "Arr"

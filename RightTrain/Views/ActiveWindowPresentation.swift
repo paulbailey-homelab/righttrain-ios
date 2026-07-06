@@ -35,6 +35,7 @@ struct ActiveWindowPresentation {
     struct PlatformDisplay {
         var primary: String
         var secondary: String?
+        var confirmed: Bool = false
     }
 
     struct CollapsedSetupState {
@@ -337,7 +338,7 @@ struct ActiveWindowPresentation {
             statusText: status.text,
             statusTone: status.tone,
             timingText: JourneyFormatting.glanceTimingText(departure: departure, arrival: arrival),
-            platformText: JourneyFormatting.platformStateText(primary: platform.primary, secondary: platform.secondary),
+            platformText: JourneyFormatting.platformStateText(primary: platform.primary, secondary: platform.secondary, confirmed: platform.confirmed),
             nextActionText: JourneyFormatting.nextActionText(for: journey, platform: platform.primary, moment: moment),
             freshnessText: isOffline ? "Offline · showing saved journey data" : freshnessText(updatedAt: updatedAt, now: now)
         )
@@ -645,18 +646,20 @@ struct ActiveWindowPresentation {
     static func platformDisplay(for journey: JourneyResult) -> PlatformDisplay {
         platformDisplay(
             current: JourneyFormatting.platformText(journey),
-            scheduled: journey.originPlatform
+            scheduled: journey.originPlatform,
+            confirmed: JourneyFormatting.departurePlatformConfirmed(journey)
         )
     }
 
     static func arrivalPlatformDisplay(for journey: JourneyResult) -> PlatformDisplay {
         platformDisplay(
             current: JourneyFormatting.arrivalPlatformText(journey),
-            scheduled: journey.destinationPlatform
+            scheduled: journey.destinationPlatform,
+            confirmed: JourneyFormatting.arrivalPlatformConfirmed(journey)
         )
     }
 
-    private static func platformDisplay(current: String?, scheduled: String?) -> PlatformDisplay {
+    private static func platformDisplay(current: String?, scheduled: String?, confirmed: Bool) -> PlatformDisplay {
         let currentPlatform = compactPlatform(current)
         let scheduledPlatform = compactPlatform(scheduled)
         let secondary: String?
@@ -670,7 +673,7 @@ struct ActiveWindowPresentation {
             secondary = nil
         }
 
-        return PlatformDisplay(primary: currentPlatform, secondary: secondary)
+        return PlatformDisplay(primary: currentPlatform, secondary: secondary, confirmed: confirmed)
     }
 
     private static func journeyKey(_ journey: JourneyResult) -> String {

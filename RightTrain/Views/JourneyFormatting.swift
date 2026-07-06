@@ -393,15 +393,38 @@ enum JourneyFormatting {
         journey.destinationRealtime?.platform ?? journey.destinationPlatform ?? "TBC"
     }
 
-    static func platformStateText(primary: String, secondary: String? = nil) -> String {
+    static func departurePlatformConfirmed(_ journey: JourneyResult) -> Bool {
+        journey.realtimePlatformConfirmed || journey.originRealtime?.platformConfirmed == true
+    }
+
+    static func arrivalPlatformConfirmed(_ journey: JourneyResult) -> Bool {
+        journey.destinationRealtime?.platformConfirmed == true
+    }
+
+    /// Bare platform value with an "expected" qualifier when the feed has not
+    /// confirmed it, for metric cells whose label already says "Platform".
+    static func platformMetricText(_ journey: JourneyResult) -> String {
+        qualifiedPlatformValue(platformText(journey), confirmed: departurePlatformConfirmed(journey))
+    }
+
+    static func qualifiedPlatformValue(_ value: String, confirmed: Bool) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        if trimmed.isEmpty || trimmed == "-" || trimmed.uppercased() == "TBC" || confirmed {
+            return trimmed.isEmpty ? "TBC" : trimmed
+        }
+        return "\(trimmed) · expected"
+    }
+
+    static func platformStateText(primary: String, secondary: String? = nil, confirmed: Bool = true) -> String {
         let trimmed = primary.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty || trimmed == "-" || trimmed.uppercased() == "TBC" {
             return "Platform TBC"
         }
+        let prefix = confirmed ? "Platform" : "Expected platform"
         if let secondary = nonEmpty(secondary) {
-            return "Platform \(readablePlatform(trimmed)) · \(secondary)"
+            return "\(prefix) \(readablePlatform(trimmed)) · \(secondary)"
         }
-        return "Platform \(readablePlatform(trimmed))"
+        return "\(prefix) \(readablePlatform(trimmed))"
     }
 
     static func accessibilityStatusLabel(

@@ -126,6 +126,13 @@ enum ItineraryFormatting {
             ?? "TBC"
     }
 
+    static func firstLegPlatformConfirmed(_ itinerary: ItineraryRecommendation) -> Bool {
+        guard let first = itinerary.legs.first else {
+            return false
+        }
+        return first.realtimePlatformConfirmed || first.originRealtime?.platformConfirmed == true
+    }
+
     static func legRouteText(_ leg: ItineraryLeg) -> String {
         "\(originStationText(leg)) to \(destinationStationText(leg))"
     }
