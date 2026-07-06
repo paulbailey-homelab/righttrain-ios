@@ -271,7 +271,9 @@ enum ItineraryFormatting {
             return StatusDisplay(text: "Delayed \(itinerary.score.delayMinutes) min.", icon: "clock.fill", tone: .amber)
         }
         if !itinerary.score.usable {
-            let reason = itinerary.score.reasons?.first ?? "This journey is not currently usable."
+            let reason = itinerary.score.reasons?
+                .compactMap(JourneyFormatting.customerFacingRecommendationReason)
+                .first ?? "This journey is not currently usable."
             return StatusDisplay(text: reason, icon: "exclamationmark.triangle.fill", tone: .amber)
         }
         return StatusDisplay(text: "On time.", icon: "checkmark.circle.fill", tone: .green)

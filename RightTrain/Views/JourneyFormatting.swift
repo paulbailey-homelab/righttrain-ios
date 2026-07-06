@@ -427,6 +427,30 @@ enum JourneyFormatting {
         return "\(prefix) \(readablePlatform(trimmed))"
     }
 
+    static func customerFacingRecommendationReason(_ reason: String) -> String? {
+        let normalized = reason.trimmingCharacters(in: .whitespacesAndNewlines).lowercased()
+        switch normalized {
+        case "", "stale_realtime", "low_confidence_platform_or_status":
+            return nil
+        case "cancelled", "cancellation", "leg_cancelled":
+            return "Service cancelled."
+        case "severe_delay":
+            return "Significant delay reported."
+        case "meaningful_delay":
+            return "Delay reported."
+        case "connection_missed":
+            return "Connection missed."
+        case "connection_at_risk":
+            return "Connection at risk."
+        case "tight_connection":
+            return "Tight connection."
+        case "leg_deactivated":
+            return "Live details are unavailable for part of this journey."
+        default:
+            return reason.contains("_") ? nil : sentence(reason)
+        }
+    }
+
     static func accessibilityStatusLabel(
         statusText: String,
         platformText: String,
@@ -727,6 +751,14 @@ enum JourneyFormatting {
             return nil
         }
         return value
+    }
+
+    private static func sentence(_ value: String) -> String {
+        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !trimmed.isEmpty else { return trimmed }
+        let first = trimmed.prefix(1).uppercased()
+        let rest = trimmed.dropFirst()
+        return trimmed.hasSuffix(".") ? "\(first)\(rest)" : "\(first)\(rest)."
     }
 }
 

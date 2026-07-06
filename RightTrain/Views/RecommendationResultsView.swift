@@ -328,6 +328,7 @@ private struct SearchDirectJourneyCard: View {
     private var reasonText: String? {
         recommendation.score.reasons?
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .compactMap(JourneyFormatting.customerFacingRecommendationReason)
             .first { !$0.isEmpty }
     }
 }
@@ -556,6 +557,7 @@ private struct SearchItineraryJourneyCard: View {
     private var reasonText: String? {
         itinerary.score.reasons?
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
+            .compactMap(JourneyFormatting.customerFacingRecommendationReason)
             .first { !$0.isEmpty }
     }
 }
