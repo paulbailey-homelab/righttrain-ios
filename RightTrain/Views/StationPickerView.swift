@@ -3,6 +3,7 @@ import SwiftUI
 struct StationPickerView: View {
     @Environment(\.dismiss) private var dismiss
     @State private var viewModel: StationPickerViewModel
+    @FocusState private var isSearchFocused: Bool
     private let onSelect: (StationSuggestion) -> Void
 
     init(
@@ -63,18 +64,23 @@ struct StationPickerView: View {
             }
         }
         .listStyle(.insetGrouped)
-        // The system search field renders as Liquid Glass; typing always
-        // switches to the Search source.
-        .searchable(text: queryBinding, prompt: "Station name or code")
+        // Keep the search field visible (inside a tab's navigation stack the
+        // automatic placement hides it until you pull down) and focus it on
+        // arrival, since typing a station is the usual reason to be here.
+        // Typing always switches to the Search source.
+        .searchable(
+            text: queryBinding,
+            placement: .navigationBarDrawer(displayMode: .always),
+            prompt: "Station name or code"
+        )
+        .searchFocused($isSearchFocused)
         .textInputAutocapitalization(.characters)
         .autocorrectionDisabled()
         .navigationTitle(viewModel.context.selectionRole.title)
         .navigationBarTitleDisplayMode(.inline)
-        .toolbar {
-            ToolbarItem(placement: .cancellationAction) {
-                Button("Cancel") {
-                    dismiss()
-                }
+        .onAppear {
+            if viewModel.activeChoice == .search, viewModel.query.isEmpty {
+                isSearchFocused = true
             }
         }
         .task(id: viewModel.searchTaskKey) {
