@@ -3174,16 +3174,19 @@ struct LiveActivityLayoutProbe: View {
             case .watchSupplemental:
                 WatchActivityView(state: state, activityKind: activityKind)
             case .dynamicIslandCompact:
+                // The Dynamic Island is always dark; other surfaces follow
+                // the environment so light layouts can be exercised.
                 dynamicIslandCompact
+                    .environment(\.colorScheme, .dark)
             case .dynamicIslandExpanded:
                 dynamicIslandExpanded
+                    .environment(\.colorScheme, .dark)
             case .lockScreenStandard:
                 StandardActivityContentView(state: state, activityKind: activityKind)
             case .carPlaySupplemental:
                 WatchActivityView(state: state, activityKind: activityKind)
             }
         }
-        .environment(\.colorScheme, .dark)
     }
 
     private var selectedTrain: RightTrainLiveActivityAttributes.ContentState.Train? {
