@@ -36,11 +36,7 @@ struct BetaOnboardingView: View {
                 .padding(.horizontal, RTSpacing.compact)
                 .padding(.vertical, RTSpacing.small)
                 .foregroundStyle(Color.rightTrainActionInk)
-                .background(Color.rightTrainActionInk.opacity(0.10), in: Capsule())
-                .overlay {
-                    Capsule()
-                        .stroke(Color.rightTrainActionInk.opacity(0.26), lineWidth: 1)
-                }
+                .background(Color.rightTrainActionInk.opacity(0.12), in: Capsule())
         }
         .buttonStyle(.plain)
         .accessibilityHint("Shows beta guidance.")

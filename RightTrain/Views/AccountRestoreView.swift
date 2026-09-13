@@ -16,7 +16,6 @@ struct AccountRestoreView: View {
             } footer: {
                 Text("Use this when your passkey is available in iCloud Keychain or another credential provider.")
             }
-            .listRowBackground(Color.rightTrainPaperCream)
 
             Section {
                 TextField("Recovery code", text: $recoveryCode)
@@ -34,7 +33,6 @@ struct AccountRestoreView: View {
             } footer: {
                 Text("Recovery adds a replacement passkey. RightTrain does not use email or phone number lookup for this flow.")
             }
-            .listRowBackground(Color.rightTrainPaperCream)
 
             if let preferenceSet = authViewModel.accountPreferenceSet {
                 Section {
@@ -44,21 +42,16 @@ struct AccountRestoreView: View {
                 } header: {
                     Label("Synced preferences", systemImage: "arrow.down.doc")
                 }
-                .listRowBackground(Color.rightTrainPaperCream)
             }
 
             if let message = authViewModel.accountStatusMessage {
                 Section {
                     Label(message, systemImage: "checkmark.seal")
                 }
-                .listRowBackground(Color.rightTrainPaperCream)
             }
         }
         .navigationTitle("Log in")
         .navigationBarTitleDisplayMode(.inline)
-        .scrollContentBackground(.hidden)
-        .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
-        .lightSurfaceForeground()
     }
 }
 

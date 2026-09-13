@@ -15,13 +15,9 @@ struct LinkedDevicesView: View {
             } footer: {
                 Text("Labels are limited to platform, device class, app version, and recent activity. RightTrain does not show raw device identifiers here.")
             }
-            .listRowBackground(Color.rightTrainPaperCream)
         }
         .navigationTitle("Linked Devices")
         .navigationBarTitleDisplayMode(.inline)
-        .scrollContentBackground(.hidden)
-        .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
-        .lightSurfaceForeground()
         .task {
             await authViewModel.refreshLinkedDevices()
         }

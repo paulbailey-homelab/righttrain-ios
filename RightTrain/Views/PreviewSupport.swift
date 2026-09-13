@@ -1093,11 +1093,9 @@ struct PreviewNotificationPermissionReviewScreen: View {
             }
             .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
             .lightSurfaceForeground()
-            .toolbarColorScheme(.light, for: .navigationBar)
             .navigationTitle("Notifications")
             .navigationBarTitleDisplayMode(.inline)
         }
-        .environment(\.colorScheme, .light)
     }
 }
 
@@ -1115,11 +1113,9 @@ struct PreviewOnboardingReviewScreen: View {
             }
             .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
             .lightSurfaceForeground()
-            .toolbarColorScheme(.light, for: .navigationBar)
             .navigationTitle("Onboarding")
             .navigationBarTitleDisplayMode(.inline)
         }
-        .environment(\.colorScheme, .light)
     }
 }
 
@@ -1171,11 +1167,9 @@ struct PreviewFeedbackReviewScreen: View {
             }
             .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
             .lightSurfaceForeground()
-            .toolbarColorScheme(.light, for: .navigationBar)
             .navigationTitle("Feedback")
             .navigationBarTitleDisplayMode(.inline)
         }
-        .environment(\.colorScheme, .light)
     }
 }
 
@@ -1194,7 +1188,6 @@ struct PreviewStationPickerReviewScreen: View {
                 initialQuery: initialQuery
             ) { _ in }
         }
-        .environment(\.colorScheme, .light)
     }
 
     private var context: StationPickerContext {

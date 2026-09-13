@@ -203,12 +203,9 @@ struct CommuteRoutinesView: View {
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
 
-                    (Text(routineStatusText(routine, isScheduledNow: isScheduledNow, isLive: isLive))
-                        .fontWeight(.semibold)
-                        .foregroundColor(statusTone.color)
-                     + Text(" · \(routineAutoPinSummary(routine))")
-                        .foregroundColor(.secondary))
+                    Text("\(Text(routineStatusText(routine, isScheduledNow: isScheduledNow, isLive: isLive)).fontWeight(.semibold).foregroundStyle(statusTone.color)) · \(routineAutoPinSummary(routine))")
                         .font(.footnote)
+                        .foregroundStyle(.secondary)
                         .lineLimit(2)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)

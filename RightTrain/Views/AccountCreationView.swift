@@ -15,7 +15,6 @@ struct AccountCreationView: View {
             } footer: {
                 Text("RightTrain stores a pseudonymous account record and your synced preferences. The recovery code is shown once and only its verifier is stored by the service.")
             }
-            .listRowBackground(Color.rightTrainPaperCream)
 
             Section {
                 Toggle("Sync this device's saved preferences", isOn: $migratePreferences)
@@ -32,7 +31,6 @@ struct AccountCreationView: View {
                     Text("Account credentials are not available on this device.")
                 }
             }
-            .listRowBackground(Color.rightTrainPaperCream)
 
             if let recoveryCode = authViewModel.oneTimeRecoveryCode {
                 Section {
@@ -55,20 +53,15 @@ struct AccountCreationView: View {
                 } footer: {
                     Text("Save this now. It will not be shown again.")
                 }
-                .listRowBackground(Color.rightTrainPaperCream)
             }
 
             if let message = authViewModel.accountStatusMessage {
                 Section {
                     Label(message, systemImage: "checkmark.seal")
                 }
-                .listRowBackground(Color.rightTrainPaperCream)
             }
         }
         .navigationTitle("Create account")
         .navigationBarTitleDisplayMode(.inline)
-        .scrollContentBackground(.hidden)
-        .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
-        .lightSurfaceForeground()
     }
 }

@@ -119,11 +119,7 @@ struct PlatformSquareChip: View {
                         .minimumScaleFactor(0.55)
                 }
                 .frame(width: RTSize.buttonCompact, height: RTSize.buttonCompact)
-                .background(Color.secondary.opacity(0.10), in: RoundedRectangle(cornerRadius: RTRadius.chip))
-                .overlay {
-                    RoundedRectangle(cornerRadius: RTRadius.chip)
-                        .stroke(Color.secondary.opacity(RTOpacity.faint), lineWidth: 1)
-                }
+                .background(Color.rightTrainInsetFill, in: RoundedRectangle(cornerRadius: RTRadius.chip + 2, style: .continuous))
             case .compact:
                 Text(compactDisplayValue)
                     .italic(isExpected)
@@ -133,11 +129,7 @@ struct PlatformSquareChip: View {
                     .foregroundStyle(.primary)
                     .padding(.horizontal, 7)
                     .frame(height: 24)
-                    .background(Color.secondary.opacity(0.10), in: Capsule())
-                    .overlay {
-                        Capsule()
-                            .stroke(Color.secondary.opacity(RTOpacity.faint), lineWidth: 1)
-                    }
+                    .background(Color.rightTrainInsetFill, in: Capsule())
             }
         }
         .accessibilityElement(children: .ignore)
