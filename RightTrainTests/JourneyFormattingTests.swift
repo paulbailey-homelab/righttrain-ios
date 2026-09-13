@@ -254,9 +254,9 @@ final class JourneyFormattingTests: XCTestCase {
         XCTAssertEqual(JourneyFormatting.platformStateText(primary: "TBC", confirmed: false), "Platform TBC")
     }
 
-    func testQualifiedPlatformValueAddsExpectedSuffixOnlyWhenUnconfirmed() {
+    func testQualifiedPlatformValueAddsExpectedPrefixOnlyWhenUnconfirmed() {
         XCTAssertEqual(JourneyFormatting.qualifiedPlatformValue("4", confirmed: true), "4")
-        XCTAssertEqual(JourneyFormatting.qualifiedPlatformValue("4", confirmed: false), "4 · expected")
+        XCTAssertEqual(JourneyFormatting.qualifiedPlatformValue("4", confirmed: false), "Expected 4")
         XCTAssertEqual(JourneyFormatting.qualifiedPlatformValue("TBC", confirmed: false), "TBC")
         XCTAssertEqual(JourneyFormatting.qualifiedPlatformValue("", confirmed: false), "TBC")
     }
@@ -264,10 +264,10 @@ final class JourneyFormattingTests: XCTestCase {
     func testFreshnessAndAccessibilityLabelsDescribeLiveConfidence() throws {
         let now = try XCTUnwrap(DateFormatting.date(from: "2026-01-10T10:10:00.000Z"))
 
-        XCTAssertEqual(ActiveWindowPresentation.freshnessText(updatedAt: nil, now: now), "Live data not reported yet")
+        XCTAssertEqual(ActiveWindowPresentation.freshnessText(updatedAt: nil, now: now), "Live data pending")
         XCTAssertEqual(ActiveWindowPresentation.freshnessText(updatedAt: now.addingTimeInterval(-45), now: now), "Updated now")
         XCTAssertEqual(ActiveWindowPresentation.freshnessText(updatedAt: now.addingTimeInterval(-90), now: now), "Updated 1 min ago")
-        XCTAssertEqual(ActiveWindowPresentation.freshnessText(updatedAt: now.addingTimeInterval(-6 * 60), now: now), "Live data stale")
+        XCTAssertEqual(ActiveWindowPresentation.freshnessText(updatedAt: now.addingTimeInterval(-6 * 60), now: now), "Updated 6 min ago")
         XCTAssertEqual(
             JourneyFormatting.accessibilityStatusLabel(
                 statusText: "Platform changed",

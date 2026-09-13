@@ -12,11 +12,9 @@ struct ItineraryOnLegView: View {
 
     var body: some View {
         ActiveItineraryCard(
-            borderColor: approachingInterchange ? Color.rightTrainAmber.opacity(RTOpacity.secondary) : Color.rightTrainInkFaint,
-            borderWidth: approachingInterchange ? 2 : 1
+            borderColor: approachingInterchange ? Color.rightTrainAmber.opacity(RTOpacity.secondary) : Color.clear,
+            borderWidth: approachingInterchange ? 2 : 0
         ) {
-            ActiveItineraryHeader(presentation: presentation, recoveryFromCrs: presentation.recoveryFromCrs)
-
             if approachingInterchange {
                 approachingBanner
             }
@@ -40,14 +38,12 @@ struct ItineraryOnLegView: View {
                     Label("I'm on the next train", systemImage: "checkmark.circle.fill")
                         .frame(maxWidth: .infinity)
                 }
-                .buttonStyle(.plain)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Color.rightTrainPaperCream)
-                .frame(maxWidth: .infinity)
-                .frame(height: 44)
-                .background(Color.rightTrainActionInk, in: Capsule())
+                .buttonStyle(.rtPrimary)
                 .accessibilityIdentifier("active-itinerary-board-onward-leg")
             }
+        }
+        .background {
+            ActiveItineraryHeader(presentation: presentation, recoveryFromCrs: presentation.recoveryFromCrs)
         }
     }
 
@@ -121,10 +117,7 @@ struct ItineraryOnLegView: View {
                         .foregroundStyle(.secondary)
                         .multilineTextAlignment(.leading)
                 }
-                .padding(12)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.rightTrainSurfaceCream, in: RoundedRectangle(cornerRadius: RTRadius.chip))
-                .lightSurfaceForeground()
+                .itineraryLegRowChrome(systemImage: "tram.fill", showsDivider: approachingInterchange)
             }
             .buttonStyle(.plain)
         }
@@ -154,8 +147,9 @@ struct ItineraryOnLegView: View {
                     .foregroundStyle(.tertiary)
             }
         }
-        .padding(12)
-        .background(Color.rightTrainBackground, in: RoundedRectangle(cornerRadius: RTRadius.chip))
+        .padding(.top, RTSpacing.small)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .overlay(alignment: .top) { Divider() }
         .lightSurfaceForeground()
         // Interchange risk must reach VoiceOver as text — the pill colour
         // alone is not a status signal.
@@ -211,10 +205,7 @@ struct ItineraryOnLegView: View {
                     .foregroundStyle(.secondary)
                     .multilineTextAlignment(.leading)
             }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.rightTrainSurfaceCream, in: RoundedRectangle(cornerRadius: RTRadius.chip))
-            .lightSurfaceForeground()
+            .itineraryLegRowChrome(systemImage: "tram")
         }
         .buttonStyle(.plain)
     }
@@ -277,12 +268,13 @@ struct ItineraryOnFinalLegView: View {
 
     var body: some View {
         ActiveItineraryCard {
-            ActiveItineraryHeader(presentation: presentation)
-
             if let leg = itinerary.currentLeg {
                 arrivalCard(leg)
                 finalLegNextStep(leg)
             }
+        }
+        .background {
+            ActiveItineraryHeader(presentation: presentation)
         }
     }
 
@@ -341,7 +333,7 @@ struct ItineraryOnFinalLegView: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.rightTrainSurfaceCream, in: RoundedRectangle(cornerRadius: RTRadius.chip))
+            .background(Color.rightTrainInsetFill, in: RoundedRectangle(cornerRadius: RTRadius.chip))
             .lightSurfaceForeground()
         }
         .buttonStyle(.plain)
@@ -393,5 +385,31 @@ struct ItineraryOnFinalLegView: View {
             return nil
         }
         return trimmed
+    }
+}
+
+private extension View {
+    /// A tappable leg inside an itinerary card: icon column, content, chevron,
+    /// separated from the row above by a hairline instead of a filled box.
+    func itineraryLegRowChrome(systemImage: String, showsDivider: Bool = true) -> some View {
+        HStack(alignment: .center, spacing: RTSpacing.compact) {
+            Image(systemName: systemImage)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color.rightTrainActionInk)
+                .frame(width: RTSize.iconSmall)
+                .accessibilityHidden(true)
+            self
+                .frame(maxWidth: .infinity, alignment: .leading)
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+        }
+        .padding(.top, showsDivider ? RTSpacing.small : 0)
+        .overlay(alignment: .top) {
+            if showsDivider { Divider() }
+        }
+        .contentShape(Rectangle())
+        .lightSurfaceForeground()
     }
 }

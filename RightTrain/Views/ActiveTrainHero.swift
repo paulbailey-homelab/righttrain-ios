@@ -268,7 +268,7 @@ struct StatusFirstHeroBlock: View {
         Button {
             Task { await loadDetail() }
         } label: {
-            VStack(alignment: .leading, spacing: RTSpacing.sectionGap) {
+            VStack(alignment: .leading, spacing: RTSpacing.cardPadding) {
                 countdownHero
                 timeStrip
             }
@@ -286,40 +286,28 @@ struct StatusFirstHeroBlock: View {
 
     private var countdownHero: some View {
         VStack(alignment: .leading, spacing: 0) {
-            // Eyebrow: "PINNED TRAIN" / "RECOMMENDED TRAIN" / "ON BOARD"
-            Text(presentation.heroTitle.uppercased())
-                .font(RTFont.eyebrow)
-                .tracking(2)
-                .foregroundStyle(surface.dim)
-                .padding(.bottom, RTSpacing.xs)
-
-            // Optional prefix label ("Leaves in", "Departed", "Arriving at")
-            if let prefix = countdownPrefix {
-                Text(prefix)
-                    .font(.system(size: 15, weight: .semibold))
-                    .foregroundStyle(surface.dim)
-                    .padding(.bottom, 2)
-            }
+            // "Pinned train · leaves in" / "Recommended train · departed"
+            Text(countdownCaption)
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(.secondary)
 
             // Giant countdown value (the glanceable core)
             Text(countdownValue)
-                .font(.system(size: 56, weight: .bold))
+                .font(.system(size: 56, weight: .bold, design: .rounded))
                 .foregroundStyle(surface.ink)
                 .monospacedDigit()
                 .contentTransition(.numericText(countsDown: countdown.targetDate.map { $0 > now } ?? false))
                 .lineLimit(1)
                 .minimumScaleFactor(0.44)
-                .padding(.bottom, RTSpacing.compact)
 
             // Route context line
             Text(presentation.routeTitle)
-                .font(.system(size: 13, weight: .medium))
-                .foregroundStyle(surface.dim)
+                .font(.subheadline.weight(.semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.82)
 
             LiveFreshnessText(text: heroFreshnessText)
-                .padding(.top, RTSpacing.small)
+                .padding(.top, 2)
         }
     }
 
@@ -329,23 +317,18 @@ struct StatusFirstHeroBlock: View {
         HStack(spacing: 0) {
             timeCell(label: "Dep", display: depDisplay)
 
-            Rectangle()
-                .fill(surface.softBorder)
-                .frame(width: 1)
+            Divider()
+                .padding(.vertical, RTSpacing.compact)
 
             timeCell(label: "Arr", display: arrDisplay)
 
-            Rectangle()
-                .fill(surface.softBorder)
-                .frame(width: 1)
+            Divider()
+                .padding(.vertical, RTSpacing.compact)
 
             platformCell
         }
-        .background(surface.softFill, in: RoundedRectangle(cornerRadius: RTRadius.card))
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(surface.softBorder, lineWidth: 1)
-        }
+        .fixedSize(horizontal: false, vertical: true)
+        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
     }
 
     private func timeCell(label: String, display: JourneyTimeDisplay) -> some View {
@@ -354,13 +337,12 @@ struct StatusFirstHeroBlock: View {
 
         return VStack(alignment: .leading, spacing: 3) {
             Text(label)
-                .font(RTFont.eyebrow)
-                .tracking(1.5)
-                .foregroundStyle(surface.dim)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
 
             VStack(alignment: .leading, spacing: 1) {
                 Text(primaryTime)
-                    .font(.system(size: 18, weight: .bold))
+                    .font(.title3.weight(.semibold))
                     .monospacedDigit()
                     .contentTransition(.numericText())
                     .foregroundStyle(surface.ink)
@@ -388,15 +370,14 @@ struct StatusFirstHeroBlock: View {
         let isExpected = hasKnownPlatform && !platform.confirmed
         return VStack(alignment: .leading, spacing: 3) {
             Text(isExpected ? "Platform · exp" : "Platform")
-                .font(RTFont.eyebrow)
-                .tracking(0.5)
-                .foregroundStyle(surface.dim)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(.secondary)
                 .lineLimit(1)
                 .minimumScaleFactor(0.78)
 
             Text(value)
                 .italic(isExpected)
-                .font(.system(size: 18, weight: .bold))
+                .font(.title3.weight(.semibold))
                 .foregroundStyle(hasKnownPlatform ? surface.ink : surface.dim)
                 .lineLimit(1)
         }
@@ -406,6 +387,14 @@ struct StatusFirstHeroBlock: View {
     }
 
     // MARK: - Helpers
+
+    /// "Pinned train · leaves in" — hero title and countdown prefix on one line.
+    private var countdownCaption: String {
+        guard let prefix = countdownPrefix else {
+            return presentation.heroTitle
+        }
+        return "\(presentation.heroTitle) · \(prefix.lowercased())"
+    }
 
     /// Splits "Leaves in 14 min" into prefix "Leaves in" / value "14 min".
     /// Handles all countdown text variants produced by ActiveWindowPresentation.countdown().

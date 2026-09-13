@@ -44,6 +44,6 @@ struct CollapsedWindowSetupView: View {
             .fixedSize(horizontal: false, vertical: true)
             .padding(.horizontal, 9)
             .padding(.vertical, 5)
-            .background(Color.rightTrainBackground, in: Capsule())
+            .background(Color.rightTrainInsetFill, in: Capsule())
     }
 }

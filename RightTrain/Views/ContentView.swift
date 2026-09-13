@@ -148,8 +148,6 @@ private struct MainTabView: View {
                 .tag(AppTab.settings)
         }
         .tint(Color.rightTrainActionInk)
-        .toolbarBackground(Color.rightTrainPaperCream, for: .tabBar)
-        .toolbarBackground(.visible, for: .tabBar)
     }
 }
 
@@ -174,16 +172,7 @@ private struct PlanTabView: View {
     var body: some View {
         NavigationStack(path: $routePath) {
             ScrollViewReader { scrollProxy in
-                ScrollView {
-                    VStack(alignment: .leading, spacing: 24) {
-                        planContent(scrollProxy)
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, RTSpacing.pageHorizontal)
-                    .padding(.vertical, RTSpacing.pageVertical)
-                    .lightSurfaceForeground()
-                }
-                .safeAreaPadding(.bottom, RTSpacing.bottomSafeArea)
+                planContent(scrollProxy)
                 .scrollDismissesKeyboard(.interactively)
                 .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
                 .navigationTitle("Plan")
@@ -226,7 +215,11 @@ private struct PlanTabView: View {
     private func planContent(_ scrollProxy: ScrollViewProxy) -> some View {
         if let activeWindow = activeWindowViewModel.activeWindow,
            ActiveWindowPresentation.shouldCollapseSetup(for: activeWindow) {
-            CollapsedWindowSetupView(state: ActiveWindowPresentation.collapsedSetupState(for: activeWindow))
+            ScrollView {
+                CollapsedWindowSetupView(state: ActiveWindowPresentation.collapsedSetupState(for: activeWindow))
+                    .padding(.horizontal, RTSpacing.pageHorizontal)
+                    .padding(.vertical, RTSpacing.pageVertical)
+            }
         } else {
             WindowSetupView(
                 onStationFieldEditingBegan: { target in
@@ -278,41 +271,48 @@ private struct PlanSearchResultsView: View {
     var openItineraryLegDetail: (ItineraryLeg) async -> Void
 
     var body: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: RTSpacing.sectionGap) {
-                if let response = viewModel.recommendationResponse {
-                    RecommendationResultsView(
-                        response: response,
-                        summary: searchSummary(kind: .window),
-                        pinWindow: requestPinDirectWindow,
-                        isJourneyPinned: isPinnedDirectJourney,
-                        toggleJourneyPin: toggleDirectJourneyPin
-                    )
-                } else if let response = viewModel.journeyPlanResponse {
-                    ItineraryResultsView(
-                        response: response,
-                        summary: searchSummary(kind: .journey),
-                        isJourneyPinned: isPinnedRouteJourney,
-                        toggleJourneyPin: toggleRouteJourneyPin,
-                        openLegDetail: openItineraryLegDetail
-                    )
-                } else {
+        List {
+            if let response = viewModel.recommendationResponse {
+                RecommendationResultsView(
+                    response: response,
+                    summary: searchSummary(kind: .window),
+                    pinWindow: requestPinDirectWindow,
+                    isJourneyPinned: isPinnedDirectJourney,
+                    toggleJourneyPin: toggleDirectJourneyPin
+                )
+            } else if let response = viewModel.journeyPlanResponse {
+                ItineraryResultsView(
+                    response: response,
+                    summary: searchSummary(kind: .journey),
+                    isJourneyPinned: isPinnedRouteJourney,
+                    toggleJourneyPin: toggleRouteJourneyPin,
+                    openLegDetail: openItineraryLegDetail
+                )
+            } else {
+                Section {
                     EmptyStateView(
                         title: "No results",
                         message: "Adjust your route or departure time and search again.",
                         symbolName: "magnifyingglass",
                         tint: .rightTrainActionInk
                     )
+                    .listRowInsets(EdgeInsets())
                 }
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, RTSpacing.pageHorizontal)
-            .padding(.vertical, RTSpacing.pageVertical)
-            .lightSurfaceForeground()
         }
-        .safeAreaPadding(.bottom, RTSpacing.bottomSafeArea)
-        .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
-        .navigationTitle("Search Results")
+        .listStyle(.insetGrouped)
+        .toolbar {
+            if let response = viewModel.recommendationResponse,
+               !response.recommendations.isEmpty || response.topRecommendation != nil {
+                ToolbarItem(placement: .topBarTrailing) {
+                    SearchPinToolbarButton(
+                        recommendationCount: response.recommendations.count,
+                        action: requestPinDirectWindow
+                    )
+                }
+            }
+        }
+        .navigationTitle(viewModel.journeyPlanResponse != nil && viewModel.recommendationResponse == nil ? "Routes" : "Direct Trains")
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Replace current Pin?", isPresented: replaceConfirmationPresented, titleVisibility: .visible) {
             Button("Replace Pin", role: .destructive) {

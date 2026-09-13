@@ -1151,7 +1151,7 @@ struct PreviewFeedbackReviewScreen: View {
                         Link(destination: supportURL) {
                             Label("Email RightTrain support", systemImage: "envelope")
                                 .font(.system(size: 16, weight: .semibold))
-                                .foregroundStyle(Color.rightTrainSurfaceCream)
+                                .foregroundStyle(Color.rightTrainOnAccent)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: RTSize.buttonHeight)
                                 .background(Color.rightTrainActionInk, in: RoundedRectangle(cornerRadius: RTRadius.button))

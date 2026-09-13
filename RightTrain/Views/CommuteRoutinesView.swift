@@ -19,8 +19,6 @@ struct CommuteRoutinesView: View {
 
     private var commuteContent: some View {
         scrollContent
-            .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
-            .lightSurfaceForeground()
             .navigationTitle("Commutes")
             .navigationBarTitleDisplayMode(.large)
             .toolbar { addToolbarItem }
@@ -37,16 +35,12 @@ struct CommuteRoutinesView: View {
     }
 
     private var scrollContent: some View {
-        ScrollView {
-            VStack(alignment: .leading, spacing: 18) {
-                defaultsSection
-                routinesSection
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, RTSpacing.pageHorizontal)
-            .padding(.vertical, RTSpacing.pageVertical)
+        List {
+            defaultsSection
+            quickAddSection
+            routinesSection
         }
-        .safeAreaPadding(.bottom, RTSpacing.bottomSafeArea)
+        .listStyle(.insetGrouped)
     }
 
     @ToolbarContentBuilder
@@ -83,61 +77,74 @@ struct CommuteRoutinesView: View {
     }
 
     private var defaultsSection: some View {
-        VStack(alignment: .leading, spacing: RTSpacing.compact) {
-            Text("HOME & WORK")
-                .font(RTFont.eyebrow)
-                .tracking(2)
-                .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
-
-            VStack(spacing: RTSpacing.listItem) {
-                NavigationLink {
-                    StationPickerView(
-                        context: defaultPickerContext(role: .origin, previousSelection: homeStation, counterpart: workStation),
-                        apiClient: appCoordinator.stationPickerAPIClient,
-                        favourites: localStationFavourites,
-                        locationProvider: SystemStationLocationProvider()
-                    ) { station in
-                        homeStation = station
-                    }
-                } label: {
-                    StationPickerEntryLabel(title: "Home", station: homeStation, placeholder: "Choose home station")
+        Section {
+            NavigationLink {
+                StationPickerView(
+                    context: defaultPickerContext(role: .origin, previousSelection: homeStation, counterpart: workStation),
+                    apiClient: appCoordinator.stationPickerAPIClient,
+                    favourites: localStationFavourites,
+                    locationProvider: SystemStationLocationProvider()
+                ) { station in
+                    homeStation = station
                 }
-                .buttonStyle(.plain)
-
-                NavigationLink {
-                    StationPickerView(
-                        context: defaultPickerContext(role: .destination, previousSelection: workStation, counterpart: homeStation),
-                        apiClient: appCoordinator.stationPickerAPIClient,
-                        favourites: localStationFavourites,
-                        locationProvider: SystemStationLocationProvider()
-                    ) { station in
-                        workStation = station
-                    }
-                } label: {
-                    StationPickerEntryLabel(title: "Work", station: workStation, placeholder: "Choose work station")
-                }
-                .buttonStyle(.plain)
+            } label: {
+                StationFormLabel(title: "Home", station: homeStation, placeholder: "Choose station", showsChevron: false)
             }
 
-            VStack(spacing: RTSpacing.listItem) {
-                saveDefaultsButton
-                HStack(spacing: RTSpacing.listItem) {
-                    homeToWorkButton
-                    workToHomeButton
+            NavigationLink {
+                StationPickerView(
+                    context: defaultPickerContext(role: .destination, previousSelection: workStation, counterpart: homeStation),
+                    apiClient: appCoordinator.stationPickerAPIClient,
+                    favourites: localStationFavourites,
+                    locationProvider: SystemStationLocationProvider()
+                ) { station in
+                    workStation = station
+                }
+            } label: {
+                StationFormLabel(title: "Work", station: workStation, placeholder: "Choose station", showsChevron: false)
+            }
+
+            Button("Save Home & Work") {
+                Task {
+                    await viewModel.updateStationDefaults(
+                        homeStation: homeStation,
+                        workStation: workStation
+                    )
                 }
             }
+            .disabled(!hasUnsavedDefaults)
+        } header: {
+            Text("Home & Work")
+        } footer: {
+            Text("Used as favourites in the station picker and for quick commute setup.")
         }
-        .rtCard()
-        .lightSurfaceForeground()
+    }
+
+    private var quickAddSection: some View {
+        Section {
+            Button {
+                editorSheet = RoutineEditorSheet(originStation: homeStation, destinationStation: workStation)
+            } label: {
+                Label("Home to Work", systemImage: "arrow.right")
+            }
+
+            Button {
+                editorSheet = RoutineEditorSheet(originStation: workStation, destinationStation: homeStation)
+            } label: {
+                Label("Work to Home", systemImage: "arrow.left")
+            }
+        } header: {
+            Text("New commute")
+        }
+        .disabled(homeStation == nil || workStation == nil)
+    }
+
+    private var hasUnsavedDefaults: Bool {
+        homeStation?.crs != currentHomeDefault || workStation?.crs != currentWorkDefault
     }
 
     private var routinesSection: some View {
-        VStack(alignment: .leading, spacing: RTSpacing.compact) {
-            Text("SAVED · \(viewModel.routines.count) OF \(authViewModel.user?.entitlements.commuteRoutineLimit ?? 2)")
-                .font(RTFont.eyebrow)
-                .tracking(2)
-                .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
-
+        Section {
             if viewModel.routines.isEmpty {
                 EmptyStateView(
                     title: "No saved commutes",
@@ -148,71 +155,39 @@ struct CommuteRoutinesView: View {
                         editorSheet = RoutineEditorSheet()
                     }
                 )
+                .listRowInsets(EdgeInsets())
             } else {
-                TimelineView(.periodic(from: .now, by: 60)) { timeline in
-                    ForEach(viewModel.routines) { routine in
+                // One TimelineView per row: wrapping the ForEach would collapse
+                // every commute into a single list row.
+                ForEach(viewModel.routines) { routine in
+                    TimelineView(.periodic(from: .now, by: 60)) { timeline in
                         routineRow(routine, now: timeline.date)
                     }
                 }
             }
-        }
-    }
-
-    private var saveDefaultsButton: some View {
-        Button {
-            Task {
-                await viewModel.updateStationDefaults(
-                    homeStation: homeStation,
-                    workStation: workStation
-                )
+        } header: {
+            Text("Saved · \(viewModel.routines.count) of \(authViewModel.user?.entitlements.commuteRoutineLimit ?? 2)")
+        } footer: {
+            if !viewModel.routines.isEmpty {
+                Text("Tap a commute to edit it. Swipe for pause and delete.")
             }
-        } label: {
-            Label("Save", systemImage: "checkmark")
-                .frame(maxWidth: .infinity)
         }
-        .buttonStyle(.borderedProminent)
-        .controlSize(.large)
-    }
-
-    private var homeToWorkButton: some View {
-        Button {
-            editorSheet = RoutineEditorSheet(
-                originStation: homeStation,
-                destinationStation: workStation
-            )
-        } label: {
-            Label("Home to Work", systemImage: "arrow.right")
-                .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.bordered)
-        .disabled(homeStation == nil || workStation == nil)
-    }
-
-    private var workToHomeButton: some View {
-        Button {
-            editorSheet = RoutineEditorSheet(
-                originStation: workStation,
-                destinationStation: homeStation
-            )
-        } label: {
-            Label("Work to Home", systemImage: "arrow.left")
-                .frame(maxWidth: .infinity)
-        }
-        .buttonStyle(.bordered)
-        .disabled(homeStation == nil || workStation == nil)
     }
 
     private func routineRow(_ routine: CommuteRoutine, now: Date) -> some View {
         let isScheduledNow = isCurrentRoutine(routine, now: now)
         let isLive = isLiveActivityRunning(for: routine)
-        let stripColor = routineStripColor(isScheduledNow: isScheduledNow, isLive: isLive, isPaused: routine.isPaused)
+        let statusTone = routineStatusTone(routine, isScheduledNow: isScheduledNow, isLive: isLive)
 
-        return VStack(alignment: .leading, spacing: RTSpacing.compact) {
-            HStack(alignment: .top) {
-                VStack(alignment: .leading, spacing: RTSpacing.small / 2) {
+        return HStack(alignment: .center, spacing: RTSpacing.compact) {
+            Button {
+                editorSheet = RoutineEditorSheet(routine: routine)
+            } label: {
+                VStack(alignment: .leading, spacing: 2) {
                     HStack(spacing: RTSpacing.small - 2) {
                         Text(routine.name)
                             .font(.headline)
+                            .foregroundStyle(.primary)
 
                         if isLive {
                             Image(systemName: "dot.radiowaves.left.and.right")
@@ -223,116 +198,81 @@ struct CommuteRoutinesView: View {
                         }
                     }
 
-                    Text("\(viewModel.stationName(for: routine.originCrs)) to \(viewModel.stationName(for: routine.destinationCrs)) at \(routine.departureTime)")
+                    Text("\(viewModel.stationName(for: routine.originCrs)) → \(viewModel.stationName(for: routine.destinationCrs)) · \(routine.departureTime)")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                    Text(routineAutoPinSummary(routine))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
+                        .fixedSize(horizontal: false, vertical: true)
+
+                    (Text(routineStatusText(routine, isScheduledNow: isScheduledNow, isLive: isLive))
+                        .fontWeight(.semibold)
+                        .foregroundColor(statusTone.color)
+                     + Text(" · \(routineAutoPinSummary(routine))")
+                        .foregroundColor(.secondary))
+                        .font(.footnote)
+                        .lineLimit(2)
                 }
-                Spacer()
-                StatusPill(
-                    text: routineStatusText(routine, isScheduledNow: isScheduledNow, isLive: isLive),
-                    tone: routineStatusTone(routine, isScheduledNow: isScheduledNow, isLive: isLive)
-                )
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
+            }
+            .buttonStyle(.plain)
+            .accessibilityHint("Edits this commute.")
+
+            Button {
+                appCoordinator.startJourneyPlan(from: routine)
+            } label: {
+                Image(systemName: "arrow.up.right.circle.fill")
+                    .font(.title2)
+                    .symbolRenderingMode(.hierarchical)
+                    .foregroundStyle(Color.rightTrainActionInk)
+                    .frame(width: RTSize.tapTarget, height: RTSize.tapTarget)
+            }
+            .buttonStyle(.borderless)
+            .accessibilityLabel("Plan \(routine.name)")
+            .accessibilityHint("Prefills the Plan tab with this commute route and departure window.")
+        }
+        .opacity(routine.isPaused ? 0.7 : 1)
+        .swipeActions(edge: .trailing, allowsFullSwipe: false) {
+            Button(role: .destructive) {
+                routineToDelete = routine
+            } label: {
+                Label("Delete", systemImage: "trash")
             }
 
-            HStack(spacing: RTSpacing.small) {
-                routineIconButton(
-                    systemImage: "arrow.up.right",
-                    accessibilityLabel: "Plan \(routine.name)",
-                    isProminent: true
-                ) {
-                    appCoordinator.startJourneyPlan(from: routine)
-                }
-                .accessibilityHint("Prefills the Plan tab with this commute route and departure window.")
-
-                routineIconButton(
-                    systemImage: routine.isPaused ? "play.fill" : "pause.fill",
-                    accessibilityLabel: routine.isPaused ? "Resume \(routine.name)" : "Pause \(routine.name)"
-                ) {
-                    Task { await viewModel.setPaused(routine, paused: !routine.isPaused) }
-                }
-
-                routineIconButton(
-                    systemImage: "pencil",
-                    accessibilityLabel: "Edit \(routine.name)"
-                ) {
-                    editorSheet = RoutineEditorSheet(routine: routine)
-                }
-
-                Spacer()
-
-                routineIconButton(
-                    systemImage: "trash",
-                    accessibilityLabel: "Delete \(routine.name)",
-                    role: .destructive
-                ) {
-                    routineToDelete = routine
-                }
+            Button {
+                Task { await viewModel.setPaused(routine, paused: !routine.isPaused) }
+            } label: {
+                Label(routine.isPaused ? "Resume" : "Pause", systemImage: routine.isPaused ? "play.fill" : "pause.fill")
+            }
+            .tint(Color.rightTrainAmber)
+        }
+        .contextMenu {
+            Button {
+                appCoordinator.startJourneyPlan(from: routine)
+            } label: {
+                Label("Plan Journey", systemImage: "arrow.up.right")
+            }
+            Button {
+                editorSheet = RoutineEditorSheet(routine: routine)
+            } label: {
+                Label("Edit", systemImage: "pencil")
+            }
+            Button {
+                Task { await viewModel.setPaused(routine, paused: !routine.isPaused) }
+            } label: {
+                Label(routine.isPaused ? "Resume" : "Pause", systemImage: routine.isPaused ? "play.fill" : "pause.fill")
+            }
+            Button(role: .destructive) {
+                routineToDelete = routine
+            } label: {
+                Label("Delete", systemImage: "trash")
             }
         }
-        .padding(RTSpacing.cardPadding)
-        .padding(.leading, 4)
-        .background {
-            HStack(spacing: 0) {
-                Rectangle()
-                    .fill(stripColor)
-                    .frame(width: 4)
-                Spacer()
-            }
+        .accessibilityAction(named: routine.isPaused ? "Resume \(routine.name)" : "Pause \(routine.name)") {
+            Task { await viewModel.setPaused(routine, paused: !routine.isPaused) }
         }
-        .background(Color.rightTrainPaperCream)
-        .lightSurfaceForeground()
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(Color.rightTrainInkFaint, lineWidth: 1)
+        .accessibilityAction(named: "Delete \(routine.name)") {
+            routineToDelete = routine
         }
-        .clipShape(RoundedRectangle(cornerRadius: RTRadius.card))
-        .accessibilityElement(children: .combine)
-    }
-
-    private func routineIconButton(
-        systemImage: String,
-        accessibilityLabel: String,
-        isProminent: Bool = false,
-        role: ButtonRole? = nil,
-        action: @escaping () -> Void
-    ) -> some View {
-        Button(role: role, action: action) {
-            Image(systemName: systemImage)
-                .font(.subheadline.weight(.semibold))
-                .frame(width: 44, height: 38)
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(iconButtonForeground(isProminent: isProminent, role: role))
-        .background(iconButtonBackground(isProminent: isProminent, role: role), in: Capsule())
-        .overlay {
-            Capsule()
-                .stroke(iconButtonBorder(isProminent: isProminent, role: role), lineWidth: 1)
-        }
-        .accessibilityLabel(accessibilityLabel)
-    }
-
-    private func iconButtonForeground(isProminent: Bool, role: ButtonRole?) -> Color {
-        if role == .destructive {
-            return .rightTrainDanger
-        }
-        return isProminent ? .rightTrainPaperCream : .rightTrainActionInk
-    }
-
-    private func iconButtonBackground(isProminent: Bool, role: ButtonRole?) -> Color {
-        if role == .destructive {
-            return Color.rightTrainDanger.opacity(0.10)
-        }
-        return isProminent ? .rightTrainActionInk : Color.rightTrainActionInk.opacity(0.12)
-    }
-
-    private func iconButtonBorder(isProminent: Bool, role: ButtonRole?) -> Color {
-        if role == .destructive {
-            return Color.rightTrainDanger.opacity(0.18)
-        }
-        return isProminent ? .clear : Color.rightTrainActionInk.opacity(0.20)
     }
 
     private func syncDefaultsFromUser() {
@@ -394,9 +334,11 @@ struct CommuteRoutinesView: View {
 
     private func routineAutoPinSummary(_ routine: CommuteRoutine) -> String {
         let autoPin = routine.autoArmEnabled
-            ? "Auto-pin \(routine.autoArmLeadMinutes)m before"
-            : "Manual pin"
-        return "\(weekdayText(routine.activeWeekdays)) • \(routine.windowMinutes)m window • \(autoPin)"
+            ? "pins \(routine.autoArmLeadMinutes)m before"
+            : nil
+        return [weekdayText(routine.activeWeekdays), "\(routine.windowMinutes)m window", autoPin]
+            .compactMap { $0 }
+            .joined(separator: " · ")
     }
 
     private func routineStatusText(_ routine: CommuteRoutine, isScheduledNow: Bool, isLive: Bool) -> String {
@@ -409,7 +351,7 @@ struct CommuteRoutinesView: View {
         if isScheduledNow {
             return "Auto-pin due"
         }
-        return routine.autoArmEnabled ? "Auto-pin on" : "Manual"
+        return routine.autoArmEnabled ? "Auto-pin" : "Manual"
     }
 
     private func routineStatusTone(_ routine: CommuteRoutine, isScheduledNow: Bool, isLive: Bool) -> StatusPill.Tone {
@@ -417,13 +359,6 @@ struct CommuteRoutinesView: View {
             return .accent
         }
         return routine.isPaused ? .amber : .green
-    }
-
-    /// 4pt left-edge strip colour for a commute card.
-    private func routineStripColor(isScheduledNow: Bool, isLive: Bool, isPaused: Bool) -> Color {
-        if isLive || isScheduledNow { return .rightTrainGoodBg }
-        if isPaused { return .rightTrainWarnBg }
-        return .rightTrainInkFaint
     }
 
     private func isLiveActivityRunning(for routine: CommuteRoutine) -> Bool {
@@ -523,9 +458,8 @@ private struct RoutineEditorView: View {
                             origin = station
                         }
                     } label: {
-                        StationPickerEntryLabel(title: "From", station: origin, placeholder: "Choose origin")
+                        StationFormLabel(title: "From", station: origin, placeholder: "Choose origin", showsChevron: false)
                     }
-                    .buttonStyle(.plain)
 
                     NavigationLink {
                         StationPickerView(
@@ -537,9 +471,8 @@ private struct RoutineEditorView: View {
                             destination = station
                         }
                     } label: {
-                        StationPickerEntryLabel(title: "To", station: destination, placeholder: "Choose destination")
+                        StationFormLabel(title: "To", station: destination, placeholder: "Choose destination", showsChevron: false)
                     }
-                    .buttonStyle(.plain)
                 }
 
                 Section("Schedule") {
@@ -581,6 +514,7 @@ private struct RoutineEditorView: View {
     private var weekdayPicker: some View {
         HStack {
             ForEach(dayOptions, id: \.value) { day in
+                if day.value > 1 { Spacer(minLength: 0) }
                 Button {
                     if activeWeekdays.contains(day.value) {
                         activeWeekdays.remove(day.value)
@@ -591,8 +525,8 @@ private struct RoutineEditorView: View {
                     Text(day.label)
                         .font(.caption.weight(.semibold))
                         .frame(width: RTSize.avatarSmall, height: RTSize.avatarSmall)
-                        .background(activeWeekdays.contains(day.value) ? Color.rightTrainActionInk : Color.rightTrainBackground, in: Circle())
-                        .foregroundStyle(activeWeekdays.contains(day.value) ? Color.white : Color.primary)
+                        .background(activeWeekdays.contains(day.value) ? Color.rightTrainActionInk : Color.rightTrainInsetFill, in: Circle())
+                        .foregroundStyle(activeWeekdays.contains(day.value) ? Color.rightTrainOnAccent : Color.primary)
                 }
                 .buttonStyle(.plain)
             }

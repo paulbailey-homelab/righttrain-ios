@@ -227,7 +227,7 @@ struct SharedJourneyView: View {
                 Link(destination: appURL) {
                     Label("Open in RightTrain", systemImage: "arrow.up.forward.app")
                         .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Color.rightTrainSurfaceCream)
+                        .foregroundStyle(Color.rightTrainOnAccent)
                         .frame(maxWidth: .infinity)
                         .frame(height: RTSize.buttonHeight)
                         .background(Color.rightTrainActionInk, in: RoundedRectangle(cornerRadius: RTRadius.button))

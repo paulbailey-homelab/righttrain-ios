@@ -99,43 +99,25 @@ struct ActiveWindowView: View {
         presentation: ActiveWindowPresentation,
         surface: RTSurface
     ) -> some View {
-        HStack(alignment: .center, spacing: RTSpacing.small) {
-            RTStatusPill(
-                statusText: pillStatusText(presentation: presentation),
-                surface: surface
-            )
-            .fixedSize(horizontal: true, vertical: false)
-
-            Spacer(minLength: RTSpacing.small)
-
-            statusUnpinButton(presentation: presentation, surface: surface)
+        RTStatusPill(
+            statusText: pillStatusText(presentation: presentation),
+            surface: surface
+        )
+        .fixedSize(horizontal: true, vertical: false)
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .pinnedActionsToolbar(
+            primaryAction: PinnedHeaderPrimaryAction(
+                title: presentation.heroIsPinnedTrain ? "Unpin Journey" : "Unpin Search",
+                systemImage: "pin.slash",
+                role: .destructive,
+                accessibilityHint: "Removes this \(presentation.heroIsPinnedTrain ? "Journey" : "Search") Pin.",
+                isDisabled: isDeleting,
+                action: requestDeleteConfirmation
+            ),
+            showsMenu: false
+        ) {
+            EmptyView()
         }
-    }
-
-    private func statusUnpinButton(
-        presentation: ActiveWindowPresentation,
-        surface: RTSurface
-    ) -> some View {
-        Button(role: .destructive) {
-            requestDeleteConfirmation()
-        } label: {
-            Label("Unpin", systemImage: "pin.slash")
-                .font(RTFont.eyebrow)
-                .tracking(1.2)
-                .lineLimit(1)
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(surface.ink)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(surface.softFill, in: Capsule())
-        .overlay {
-            Capsule()
-                .stroke(surface.softBorder, lineWidth: 1)
-        }
-        .disabled(isDeleting)
-        .accessibilityLabel(presentation.heroIsPinnedTrain ? "Unpin journey" : "Unpin search")
-        .accessibilityHint("Removes this \(presentation.heroIsPinnedTrain ? "Journey" : "Search") Pin.")
     }
 
     private func pillStatusText(presentation: ActiveWindowPresentation) -> String {
@@ -156,10 +138,11 @@ struct ActiveWindowView: View {
         surface: RTSurface,
         now: Date
     ) -> some View {
-        VStack(alignment: .leading, spacing: RTSpacing.compact) {
+        VStack(alignment: .leading, spacing: RTSpacing.small) {
             Text("Other trains in this search")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(surface.dim)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, RTSpacing.cardPadding)
 
             VStack(alignment: .leading, spacing: 0) {
                 let all = future + cancelled
@@ -174,16 +157,11 @@ struct ActiveWindowView: View {
                     )
                     if index < all.count - 1 {
                         Divider()
-                            .background(surface.faint)
                     }
                 }
             }
-            .padding(RTSpacing.cardPadding)
-            .background(surface.softFill, in: RoundedRectangle(cornerRadius: RTRadius.card))
-            .overlay {
-                RoundedRectangle(cornerRadius: RTRadius.card)
-                    .stroke(surface.softBorder, lineWidth: 1)
-            }
+            .padding(.horizontal, RTSpacing.cardPadding)
+            .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
         }
     }
 
@@ -194,12 +172,12 @@ struct ActiveWindowView: View {
     ) -> some View {
         let journey = presentation.heroRecommendation.journey
 
-        return VStack(alignment: .leading, spacing: RTSpacing.compact) {
-            HStack(alignment: .top, spacing: RTSpacing.listItem) {
+        return VStack(alignment: .leading, spacing: 0) {
+            HStack(alignment: .top, spacing: RTSpacing.compact) {
                 Image(systemName: countdown.isDeparted ? "tram.fill" : "figure.walk")
-                    .font(.subheadline.weight(.semibold))
+                    .font(.body.weight(.semibold))
                     .foregroundStyle(surface.accent)
-                    .frame(width: RTSize.iconSmall)
+                    .frame(width: RTSize.iconMedium)
 
                 VStack(alignment: .leading, spacing: 4) {
                     Text(pinnedNextStepTitle(journey: journey, countdown: countdown))
@@ -208,31 +186,38 @@ struct ActiveWindowView: View {
                         .fixedSize(horizontal: false, vertical: true)
 
                     Text(pinnedNextStepMessage(countdown: countdown))
-                        .font(.caption)
-                        .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
                 }
+                Spacer(minLength: 0)
             }
+            .padding(.vertical, RTSpacing.compact)
+
+            Divider()
+                .padding(.leading, RTSize.iconMedium + RTSpacing.compact)
 
             Button {
                 Task { await loadDetail(presentation.heroRecommendation) }
             } label: {
-                Label("View stops", systemImage: "list.bullet")
-                    .font(.subheadline.weight(.semibold))
-                    .frame(maxWidth: .infinity)
+                HStack(spacing: RTSpacing.compact) {
+                    Image(systemName: "list.bullet")
+                        .frame(width: RTSize.iconMedium)
+                    Text("View stops")
+                    Spacer()
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .font(.body)
+                .foregroundStyle(Color.rightTrainActionInk)
+                .frame(minHeight: RTSize.tapTarget)
+                .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-            .foregroundStyle(Color.rightTrainPaperCream)
-            .frame(maxWidth: .infinity)
-            .frame(height: 42)
-            .background(Color.rightTrainActionInk, in: Capsule())
         }
-        .padding(RTSpacing.cardPadding)
-        .background(surface.softFill, in: RoundedRectangle(cornerRadius: RTRadius.card))
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(surface.softBorder, lineWidth: 1)
-        }
+        .padding(.horizontal, RTSpacing.cardPadding)
+        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
     }
 
     private func pinnedNextStepTitle(
@@ -432,6 +417,7 @@ struct ActiveOnTrainJourneyView: View {
         VStack(alignment: .leading, spacing: RTSpacing.cardPadding) {
             PinnedObjectHeader(
                 kind: .journey,
+                showsKindBadge: false,
                 showsActionMenu: false,
                 title: "\(JourneyFormatting.isArrived(journey) ? "Arrived at" : "On board to") \(JourneyFormatting.destinationStationText(journey))",
                 summary: journeyPinSummary,
@@ -440,7 +426,7 @@ struct ActiveOnTrainJourneyView: View {
                 updatedAt: journey.realtimeUpdatedAt.flatMap(DateFormatting.date(from:)),
                 now: Date(),
                 primaryAction: PinnedHeaderPrimaryAction(
-                    title: "Unpin",
+                    title: "Unpin Journey",
                     systemImage: "pin.slash",
                     role: .destructive,
                     accessibilityHint: "Removes this Journey Pin.",
@@ -544,12 +530,8 @@ struct ActiveOnTrainJourneyView: View {
             }
             .padding(.horizontal, RTSpacing.cardPadding)
             .padding(.vertical, 6)
-            .background(Color.rightTrainSurface, in: RoundedRectangle(cornerRadius: RTRadius.card))
+            .background(Color.rightTrainSurface, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
             .lightSurfaceForeground()
-            .overlay {
-                RoundedRectangle(cornerRadius: RTRadius.card)
-                    .stroke(Color.rightTrainBorder, lineWidth: 1)
-            }
         }
     }
 
@@ -567,12 +549,8 @@ struct ActiveOnTrainJourneyView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(RTSpacing.cardPadding)
-            .background(Color.rightTrainSurface, in: RoundedRectangle(cornerRadius: RTRadius.card))
+            .background(Color.rightTrainSurface, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
             .lightSurfaceForeground()
-            .overlay {
-                RoundedRectangle(cornerRadius: RTRadius.card)
-                    .stroke(Color.rightTrainBorder, lineWidth: 1)
-            }
         }
     }
 

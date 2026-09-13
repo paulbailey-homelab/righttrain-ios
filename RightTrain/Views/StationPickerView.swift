@@ -233,60 +233,6 @@ struct StationPickerView: View {
     }
 }
 
-struct StationPickerEntryLabel: View {
-    var title: String
-    var station: StationSuggestion?
-    var placeholder: String
-
-    var body: some View {
-        HStack(spacing: RTSpacing.compact) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text(title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Text(station?.displayName ?? placeholder)
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(station == nil ? Color.rightTrainInk.opacity(RTOpacity.secondary) : Color.rightTrainInk)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
-            }
-            Spacer(minLength: RTSpacing.small)
-            if let station {
-                CRSBadge(crs: station.crs)
-            }
-            Image(systemName: "chevron.right")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.rightTrainInk.opacity(0.42))
-        }
-        .padding(.horizontal, RTSpacing.compact)
-        .padding(.vertical, RTSpacing.small)
-        .frame(minHeight: 56)
-        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.chip))
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.chip)
-                .stroke(Color.rightTrainInkFaint, lineWidth: 1)
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
-struct StationPickerEntryRow: View {
-    var title: String
-    var station: StationSuggestion?
-    var placeholder: String
-    var action: () -> Void
-
-    var body: some View {
-        Button(action: action) {
-            StationPickerEntryLabel(title: title, station: station, placeholder: placeholder)
-        }
-        .buttonStyle(.plain)
-        .accessibilityLabel(title)
-        .accessibilityValue(station.map { "\($0.displayName), \($0.crs.uppercased())" } ?? "No station selected")
-        .accessibilityHint("Opens station picker.")
-    }
-}
-
 private struct StationPickerSelectedSummary: View {
     var role: StationPickerSelectionRole
     var station: StationSuggestion

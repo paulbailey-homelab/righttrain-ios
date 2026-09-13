@@ -6,12 +6,13 @@ import SwiftUI
 // action, timing/platform, and freshness. These tokens provide shared emphasis
 // without making colour the only status signal.
 //
-// Appearance stance: the app is deliberately light-only. The cream/paper
-// editorial identity has no dark counterpart, so Info.plist sets
-// UIUserInterfaceStyle = Light — do NOT reintroduce per-view
-// `.environment(\.colorScheme, .light)` overrides. The Live Activity widget
-// renders on the lock screen where dark appearance still applies; it manages
-// its own fixed colours independently of this stance.
+// Appearance stance: the app follows the system appearance and uses iOS
+// semantic colours (grouped backgrounds, label, separator) so it reads as a
+// native app in light and dark mode. Brand identity comes from the green
+// accent only. The historical token names below (cream, paper, ink) are kept
+// so call sites compile, but they now resolve to system colours — don't
+// reintroduce fixed cream surfaces or light-only overrides. The Live Activity
+// widget manages its own fixed colours independently of this.
 
 extension Color {
     // On-time surface
@@ -29,20 +30,28 @@ extension Color {
     static let rightTrainBadInk     = Color("RightTrainBadInk")
     static let rightTrainBadAccent  = Color("RightTrainBadAccent")
 
-    // Neutral / planning surface
-    static let rightTrainSurfaceCream = Color("RightTrainSurfaceCream")
-    static let rightTrainPaperCream   = Color("RightTrainPaperCream")
-    static let rightTrainInk          = Color("RightTrainInk")
-    static let rightTrainInkFaint     = Color("RightTrainInkFaint")
+    // Neutral surfaces — system semantic colours.
+    /// Page background (grouped).
+    static let rightTrainSurfaceCream = Color(uiColor: .systemGroupedBackground)
+    /// Content on top of the page background (grouped rows and cards).
+    static let rightTrainPaperCream   = Color(uiColor: .secondarySystemGroupedBackground)
+    /// Fill nested inside a card (a time strip inside a grouped block).
+    static let rightTrainInsetFill    = Color(uiColor: .tertiarySystemFill)
+    static let rightTrainInk          = Color(uiColor: .label)
+    static let rightTrainInkFaint     = Color(uiColor: .separator)
     static let rightTrainActionInk    = Color("RightTrainGoodBg")
+    /// Text/icons on a filled accent background: white on the dark light-mode
+    /// green, near-black on the brighter dark-mode green.
+    static let rightTrainOnAccent     = Color(uiColor: UIColor { traits in
+        traits.userInterfaceStyle == .dark ? UIColor(white: 0.04, alpha: 1) : .white
+    })
 
-    // Legacy backward-compat aliases — kept so existing call sites compile unchanged.
-    // The underlying xcasset values have been updated to match the new design tokens.
-    static let rightTrainBackground = Color("RightTrainBackground")   // → cream #F4F0E8
-    static let rightTrainSurface    = Color("RightTrainSurface")      // → paper cream #FFFCF5
-    static let rightTrainHighlight  = Color("RightTrainHighlight")    // → paper cream #FFFCF5
-    static let rightTrainAccent     = Color("RightTrainAccent")       // → good accent #9EE07C
-    static let rightTrainBorder     = Color("RightTrainBorder")       // → ink-faint
+    // Legacy aliases — kept so existing call sites compile unchanged.
+    static let rightTrainBackground = Color(uiColor: .systemGroupedBackground)
+    static let rightTrainSurface    = Color(uiColor: .secondarySystemGroupedBackground)
+    static let rightTrainHighlight  = Color(uiColor: .secondarySystemGroupedBackground)
+    static let rightTrainAccent     = Color("RightTrainAccent")
+    static let rightTrainBorder     = Color(uiColor: .separator)
     static let rightTrainAmber      = Color("RightTrainAmber")        // → warn bg #D08214
     static let rightTrainSuccess    = Color("RightTrainSuccess")      // → good bg #0E4A30
     static let rightTrainDanger     = Color("RightTrainDanger")       // → bad bg #831F12
@@ -107,14 +116,10 @@ extension View {
             .animation(.easeInOut(duration: 0.4), value: surface)
     }
 
-    /// Applies fixed ink colours for cream/paper surfaces so dark mode does not
-    /// turn text white on the app's intentionally light cards.
+    /// Applies the standard primary/secondary/tertiary label hierarchy.
+    /// (Historically pinned ink colours on light-only cream cards; now adaptive.)
     func lightSurfaceForeground() -> some View {
-        self.foregroundStyle(
-            Color.rightTrainInk,
-            Color.rightTrainInk.opacity(RTOpacity.dim),
-            Color.rightTrainInk.opacity(RTOpacity.tertiary)
-        )
+        self.foregroundStyle(.primary, .secondary, .tertiary)
     }
 }
 
@@ -139,9 +144,10 @@ enum RTOpacity {
 
 enum RTRadius {
     static let chip: CGFloat     = 8
+    /// Matches inset-grouped list sections.
     static let card: CGFloat     = 12
-    static let button: CGFloat   = 14
-    static let heroCard: CGFloat = 18
+    static let button: CGFloat   = 12
+    static let heroCard: CGFloat = 12
     static let live: CGFloat     = 22
 }
 
@@ -154,10 +160,14 @@ enum RTSpacing {
     static let compact: CGFloat         = 12
     static let listItem: CGFloat        = 10
     static let cardPadding: CGFloat     = 16
-    static let pageHorizontal: CGFloat  = 22
-    static let pageVertical: CGFloat    = 24
-    static let sectionGap: CGFloat      = 22
-    static let bottomSafeArea: CGFloat  = 88
+    /// Same leading margin as inset-grouped lists, so custom pages and
+    /// native lists line up.
+    static let pageHorizontal: CGFloat  = 16
+    static let pageVertical: CGFloat    = 12
+    static let sectionGap: CGFloat      = 20
+    /// Extra bottom padding for scroll views. The tab bar already insets
+    /// content, so this only needs a small breathing gap.
+    static let bottomSafeArea: CGFloat  = 16
     static let statusBarSafeArea: CGFloat = 50
 }
 
@@ -171,7 +181,7 @@ enum RTSize {
     /// Compact square action button (e.g. pin toggle).
     static let buttonCompact: CGFloat = 52
     /// Full-width primary button height.
-    static let buttonHeight: CGFloat = 56
+    static let buttonHeight: CGFloat = 50
     /// Minimum height for dense list rows.
     static let rowMinHeight: CGFloat = 42
     static let iconSmall: CGFloat = 22

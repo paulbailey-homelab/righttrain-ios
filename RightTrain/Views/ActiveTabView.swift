@@ -40,15 +40,16 @@ struct ActiveTabView: View {
     var body: some View {
         NavigationStack(path: $routePath) {
             ScrollView {
-                VStack(alignment: .leading, spacing: 0) {
-                    VStack(alignment: .leading, spacing: 24) {
-                        activeJourneyContent
-                    }
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.horizontal, RTSpacing.pageHorizontal)
-                    .padding(.top, RTSpacing.pageVertical)
-                    .padding(.bottom, RTSpacing.pageVertical)
+                VStack(alignment: .leading, spacing: RTSpacing.sectionGap) {
+                    activeJourneyContent
+
+                    // Scrolls with the content: a pinned bottom strip used
+                    // to cover a third of the screen and clip the cards.
+                    BetaOnboardingView()
                 }
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .padding(.horizontal, RTSpacing.pageHorizontal)
+                .padding(.vertical, RTSpacing.pageVertical)
             }
             .safeAreaPadding(.bottom, RTSpacing.bottomSafeArea)
             .safeAreaInset(edge: .top, spacing: 0) {
@@ -56,27 +57,23 @@ struct ActiveTabView: View {
                     stickyJustDepartedPrompt(now: context.date)
                 }
             }
-            .safeAreaInset(edge: .bottom, spacing: 0) {
-                // Full-width opaque strip: scroll content must never show
-                // through around the chip (it used to float on a chip-width
-                // translucent patch, visually colliding with cards).
-                BetaOnboardingView()
-                    .padding(.horizontal, RTSpacing.pageHorizontal)
-                    .padding(.vertical, RTSpacing.small)
-                    .frame(maxWidth: .infinity)
-                    .background(activeSurface.bg)
-            }
             .scrollDismissesKeyboard(.interactively)
             .refreshable {
                 await activeWindowViewModel.refreshActiveWindowFromPullGesture()
             }
             .background(activeSurface.bg.ignoresSafeArea())
             .animation(.easeInOut(duration: 0.4), value: activeSurface)
-            .toolbarBackground(Color.rightTrainPaperCream, for: .tabBar)
-            .toolbarBackground(.visible, for: .tabBar)
-            .navigationBarHidden(activeSurface.isStatus)
             .navigationTitle("Pinned")
-            .navigationBarTitleDisplayMode(.large)
+            // A live journey needs the first screenful for guidance, so the
+            // large title only appears when there is nothing pinned.
+            .navigationBarTitleDisplayMode(activePrimaryContent == .empty ? .large : .inline)
+            .toolbar {
+                if activeWindowViewModel.canShareActiveJourney {
+                    ToolbarItem(placement: .topBarTrailing) {
+                        shareJourneyButton
+                    }
+                }
+            }
             .withAppNavigationDestinations()
             .sheet(item: $preparedShareItem) { item in
                 ActivityShareSheet(activityItems: [item.url])
@@ -124,10 +121,6 @@ struct ActiveTabView: View {
                 appCoordinator.startNewJourneyPlan()
             }
         }
-
-        if activeWindowViewModel.canShareActiveJourney {
-            shareJourneyButton
-        }
     }
 
     private var activePrimaryContent: ActiveTabPrimaryContent {
@@ -144,27 +137,12 @@ struct ActiveTabView: View {
         Button {
             prepareShareLink()
         } label: {
-            HStack(spacing: RTSpacing.small) {
-                Image(systemName: "square.and.arrow.up")
-                    .font(.subheadline.weight(.semibold))
-                Text(isPreparingShare ? "Preparing Share Link" : "Share Journey")
-                    .font(.subheadline.weight(.semibold))
-                Spacer(minLength: RTSpacing.small)
-                if isPreparingShare {
-                    ProgressView()
-                        .controlSize(.small)
-                }
-            }
-            .padding(.horizontal, RTSpacing.cardPadding)
-            .padding(.vertical, RTSpacing.compact)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.rightTrainSurface, in: RoundedRectangle(cornerRadius: RTRadius.chip))
-            .overlay {
-                RoundedRectangle(cornerRadius: RTRadius.chip)
-                    .stroke(Color.rightTrainBorder, lineWidth: 1)
+            if isPreparingShare {
+                ProgressView()
+            } else {
+                Label("Share Journey", systemImage: "square.and.arrow.up")
             }
         }
-        .buttonStyle(.plain)
         .disabled(isPreparingShare)
         .accessibilityHint("Creates a private share link and opens the iOS share sheet.")
     }
@@ -217,15 +195,10 @@ struct ActiveTabView: View {
                 },
                 accessibilityLabel: trainAccessibilityLabel(for: recommendation)
             )
-            .padding(RTSpacing.cardPadding)
-            .background(Color.rightTrainSurface, in: RoundedRectangle(cornerRadius: RTRadius.card))
-            .overlay {
-                RoundedRectangle(cornerRadius: RTRadius.card)
-                    .stroke(Color.rightTrainBorder, lineWidth: 1)
-            }
+            .rtCard()
             .padding(.horizontal, RTSpacing.pageHorizontal)
             .padding(.vertical, RTSpacing.small)
-            .background(Color.rightTrainBackground.opacity(0.96))
+            .background(.bar)
             .accessibilitySortPriority(10)
         }
     }
@@ -315,67 +288,12 @@ private struct NoActiveJourneyView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: RTSpacing.sectionGap) {
-            VStack(alignment: .leading, spacing: RTSpacing.compact) {
-                HStack(alignment: .center, spacing: RTSpacing.small) {
-                    StatusPill(text: prompt.statusText, tone: .neutral)
-                    Spacer(minLength: RTSpacing.small)
-                    Label("Manual setup", systemImage: "slider.horizontal.3")
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
-                        .lineLimit(1)
-                }
-
-                Text(prompt.title)
-                    .font(.title.weight(.bold))
-                    .foregroundStyle(Color.rightTrainInk)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text(prompt.detailText)
-                    .font(.body)
-                    .foregroundStyle(Color.rightTrainInk.opacity(0.68))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            VStack(alignment: .leading, spacing: RTSpacing.listItem) {
-                setupRow(systemImage: "mappin.and.ellipse", title: "Route", value: "Origin and destination")
-                setupRow(systemImage: "clock", title: "Window", value: "When you need to travel")
-                setupRow(systemImage: "arrow.triangle.branch", title: "Route type", value: "Direct or with changes")
-            }
-
-            Button(action: planAction) {
-                Label(prompt.primaryActionText, systemImage: "arrow.right.circle.fill")
-            }
-            .buttonStyle(.rtPrimary)
-            .accessibilityHint("Opens route and time setup.")
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .rtCard()
-        .lightSurfaceForeground()
-    }
-
-    private func setupRow(systemImage: String, title: String, value: String) -> some View {
-        HStack(alignment: .center, spacing: RTSpacing.small) {
-            Image(systemName: systemImage)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Color.rightTrainActionInk)
-                .frame(width: RTSize.iconMedium)
-                .accessibilityHidden(true)
-
-            VStack(alignment: .leading, spacing: 2) {
-                Text(title)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
-                Text(value)
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(Color.rightTrainInk)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            Spacer(minLength: RTSpacing.small)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(title)
-        .accessibilityValue(value)
+        EmptyStateView(
+            title: prompt.title,
+            message: prompt.detailText,
+            symbolName: "tram.fill",
+            primaryAction: .init(label: prompt.primaryActionText, systemImage: "magnifyingglass", perform: planAction)
+        )
+        .accessibilityHint("Opens route and time setup.")
     }
 }
