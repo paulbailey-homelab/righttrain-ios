@@ -29,12 +29,14 @@ struct RightTrainLiveActivityWidget: Widget {
                 }
 
                 DynamicIslandExpandedRegion(.trailing) {
-                    if let platformChange = context.state.activePlatformChange {
-                        PlatformChangeIslandMetric(change: platformChange, edge: .trailing)
-                    } else if let platform = islandPlatform(for: context) {
-                        IslandEdgeMetric(label: platform.label, value: platform.value, edge: .trailing)
-                    } else {
-                        IslandEdgeMetric(label: "Status", value: context.state.selectedTrain?.statusText ?? context.state.statusText, edge: .trailing)
+                    Group {
+                        if let platformChange = context.state.activePlatformChange {
+                            PlatformChangeIslandMetric(change: platformChange, edge: .trailing)
+                        } else if let platform = islandPlatform(for: context) {
+                            IslandEdgeMetric(label: platform.label, value: platform.value, edge: .trailing)
+                        } else {
+                            IslandEdgeMetric(label: "Status", value: context.state.selectedTrain?.statusText ?? context.state.statusText, edge: .trailing)
+                        }
                     }
                 }
 
@@ -54,7 +56,6 @@ struct RightTrainLiveActivityWidget: Widget {
                 } else if let platform = compactPlatform(for: context) {
                     CompactPlatformText(
                         platform: platform.value,
-                        fullLabel: platform.label,
                         accessibilityPrefix: platform.accessibilityPrefix
                     )
                 } else if statusKind != .good {
@@ -65,10 +66,23 @@ struct RightTrainLiveActivityWidget: Widget {
                     StatusGlyph(kind: statusKind, delayMinutes: context.state.selectedTrain?.delayMinutes ?? context.state.delayMinutes)
                 }
             } minimal: {
-                StatusGlyph(
-                    kind: context.state.selectedTrain?.statusKind ?? context.state.statusKind,
-                    delayMinutes: context.state.selectedTrain?.delayMinutes ?? context.state.delayMinutes
-                )
+                let statusKind = context.state.selectedTrain?.statusKind ?? context.state.statusKind
+                if statusKind.isHeroAnomalous || islandPlatform(for: context) == nil {
+                    StatusGlyph(
+                        kind: statusKind,
+                        delayMinutes: context.state.selectedTrain?.delayMinutes ?? context.state.delayMinutes,
+                        showsText: false
+                    )
+                } else if let platform = islandPlatform(for: context) {
+                    // An on-time tick says nothing; the platform is the
+                    // one thing worth a glance when the island is shared.
+                    Text(readablePlatformValue(platform.value))
+                        .font(.caption.weight(.bold))
+                        .monospacedDigit()
+                        .foregroundStyle(Color.rightTrainActivityText)
+                        .minimumScaleFactor(0.6)
+                        .accessibilityLabel("\(platform.accessibilityLabel) \(readablePlatformValue(platform.value))")
+                }
             }
             .widgetURL(activityURL(for: context))
             .keylineTint(keylineTint(for: context))
@@ -98,39 +112,39 @@ struct RightTrainLiveActivityWidget: Widget {
         return context.state.recommendedTrain?.departureTime ?? context.state.compactWindowEmptyStateText
     }
 
-    private func islandPlatform(for context: ActivityViewContext<RightTrainLiveActivityAttributes>) -> (label: String, value: String)? {
+    private func islandPlatform(for context: ActivityViewContext<RightTrainLiveActivityAttributes>) -> (label: String, value: String, accessibilityLabel: String)? {
         if context.attributes.activityKind == .train,
            let train = context.state.selectedTrain,
            train.isOnboard {
-            return displayPlatform(train.arrivalPlatform).map { (label: "Arr plat", value: $0) }
+            return displayPlatform(train.arrivalPlatform).map { (label: "Platform", value: $0, accessibilityLabel: "Arrival platform") }
         }
         // On approaching_interchange, the user cares most about the
         // ONWARD platform at the interchange. Surface it in the island.
         if context.attributes.activityKind == .leg,
            ItineraryPhase.from(rawValue: context.state.phase) == .approachingInterchange,
            let platform = displayPlatform(context.state.interchange?.onwardPlatform) {
-            return (label: "Onward", value: platform)
+            return (label: "Change to", value: platform, accessibilityLabel: "Onward platform")
         }
         // On any boarded leg, current arrival platform is the next signal.
         if context.attributes.activityKind == .leg,
            let train = context.state.activeItineraryTrain,
            let platform = displayPlatform(train.arrivalPlatform) {
-            return (label: "Arr plat", value: platform)
+            return (label: "Platform", value: platform, accessibilityLabel: "Arrival platform")
         }
-        return departurePlatform(for: context).map { (label: "Dep plat", value: $0) }
+        return departurePlatform(for: context).map { (label: "Platform", value: $0, accessibilityLabel: "Departure platform") }
     }
 
-    private func compactPlatform(for context: ActivityViewContext<RightTrainLiveActivityAttributes>) -> (label: String, value: String, accessibilityPrefix: String)? {
+    private func compactPlatform(for context: ActivityViewContext<RightTrainLiveActivityAttributes>) -> (value: String, accessibilityPrefix: String)? {
         if context.attributes.activityKind == .train,
            let train = context.state.selectedTrain,
            train.isOnboard,
            let platform = displayPlatform(train.arrivalPlatform) {
-            return (label: "Arr", value: platform, accessibilityPrefix: "Arrival platform")
+            return (value: platform, accessibilityPrefix: "Arrival platform")
         }
         if context.attributes.activityKind == .leg,
            ItineraryPhase.from(rawValue: context.state.phase) == .approachingInterchange,
            let platform = displayPlatform(context.state.interchange?.onwardPlatform) {
-            return (label: "Onw", value: platform, accessibilityPrefix: "Onward platform")
+            return (value: platform, accessibilityPrefix: "Onward platform")
         }
         return nil
     }
@@ -210,15 +224,14 @@ private struct IslandLeadingMetric: View {
     var context: ActivityViewContext<RightTrainLiveActivityAttributes>
 
     var body: some View {
-        if let date = metricDate {
-            if train?.isOnboard == true || train?.departed == true || date > Date() {
-                RelativeIslandEdgeMetric(label: label, date: date, clockText: fallbackTime, countsDown: date > Date())
-            } else {
-                IslandEdgeMetric(label: label, value: fallbackTime)
-            }
-        } else {
-            IslandEdgeMetric(label: label, value: fallbackTime)
-        }
+        // The clock time is what departure boards show and never goes
+        // stale; the live countdown sits in the bottom region.
+        IslandEdgeMetric(label: label, value: fallbackTime, tint: tint)
+    }
+
+    private var tint: Color {
+        let delayed = showsArrival ? train?.arrivalDelayed : train?.departureDelayed
+        return delayed == true ? .rightTrainActivityLate : .rightTrainActivityText
     }
 
     private var isOnboardTrainActivity: Bool {
@@ -236,13 +249,6 @@ private struct IslandLeadingMetric: View {
         isOnboardTrainActivity || isOnboardLegActivity
     }
 
-    private var metricDate: Date? {
-        if showsArrival {
-            return train?.arrivalDate ?? train?.scheduledArrivalDate ?? context.state.arrivalDate ?? context.state.scheduledArrivalDate
-        }
-        return train?.departureDate ?? train?.scheduledDepartureDate ?? context.state.departureDate ?? context.state.scheduledDepartureDate
-    }
-
     private var train: RightTrainLiveActivityAttributes.ContentState.Train? {
         switch context.attributes.activityKind {
         case .train:
@@ -255,15 +261,7 @@ private struct IslandLeadingMetric: View {
     }
 
     private var label: String {
-        if showsArrival {
-            return "Arr"
-        }
-        switch context.attributes.activityKind {
-        case .window:
-            return "Best"
-        default:
-            return "Dep"
-        }
+        showsArrival ? "Arrives" : "Departs"
     }
 
     private var fallbackTime: String {
@@ -279,8 +277,8 @@ private struct CompactLeadingMetric: View {
 
     var body: some View {
         Text(time)
-            .font(.caption2.weight(.semibold))
-            .foregroundStyle(Color.rightTrainActivityText)
+            .font(.caption.weight(.semibold))
+            .foregroundStyle(isDelayed ? Color.rightTrainActivityLate : Color.rightTrainActivityText)
             .monospacedDigit()
             .lineLimit(1)
             .minimumScaleFactor(0.62)
@@ -308,6 +306,11 @@ private struct CompactLeadingMetric: View {
 
     private var isOnboardLegActivity: Bool {
         context.attributes.activityKind == .leg
+    }
+
+    private var isDelayed: Bool {
+        let delayed = isOnboardTrainActivity || isOnboardLegActivity ? train?.arrivalDelayed : train?.departureDelayed
+        return delayed == true
     }
 
     private var time: String {
@@ -355,7 +358,7 @@ private struct DynamicIslandBottomContent: View {
     @ViewBuilder
     private var detailContent: some View {
         if context.attributes.activityKind == .train, let train = context.state.selectedTrain {
-            IslandTrainSummary(train: train, mode: .arrival)
+            IslandTrainSummary(train: train, mode: train.isOnboard ? .arrival : .departure)
         } else if context.attributes.activityKind == .itinerary || context.attributes.activityKind == .leg {
             if context.attributes.activityKind == .leg,
                context.state.resolvedPhase == .approachingInterchange {
@@ -428,42 +431,21 @@ private struct IslandTrainSummary: View {
     var mode: Mode
 
     var body: some View {
-        HStack(alignment: .center, spacing: 7) {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
             IslandStatusText(kind: train.statusKind, delayMinutes: train.delayMinutes)
-            ActivityTimeText(
-                scheduled: scheduledTime,
-                current: currentTime,
-                delayed: delayed,
-                font: .subheadline.weight(.bold)
-            )
+            if train.statusKind != .cancelled {
+                IslandCountdownText(date: targetDate, prefix: mode == .arrival ? "Arrives in " : "Departs in ")
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
 
-    private var scheduledTime: String {
+    private var targetDate: Date? {
         switch mode {
         case .departure:
-            return train.scheduledDepartureTime
+            return train.departed ? nil : train.departureDate ?? train.scheduledDepartureDate
         case .arrival:
-            return train.scheduledArrivalTime
-        }
-    }
-
-    private var currentTime: String {
-        switch mode {
-        case .departure:
-            return train.departureTime
-        case .arrival:
-            return train.arrivalTime
-        }
-    }
-
-    private var delayed: Bool {
-        switch mode {
-        case .departure:
-            return train.departureDelayed
-        case .arrival:
-            return train.arrivalDelayed
+            return train.statusKind == .arrived ? nil : train.arrivalDate ?? train.scheduledArrivalDate
         }
     }
 }
@@ -472,33 +454,38 @@ private struct IslandItinerarySummary: View {
     var state: RightTrainLiveActivityAttributes.ContentState
 
     var body: some View {
-        HStack(alignment: .center, spacing: 7) {
+        HStack(alignment: .firstTextBaseline, spacing: 6) {
             IslandStatusText(kind: state.statusKind, delayMinutes: state.delayMinutes)
-            IslandSummaryText(text: primaryText)
+            if let train = state.activeItineraryTrain {
+                IslandCountdownText(
+                    date: state.resolvedPhase.isOnboard
+                        ? train.arrivalDate ?? train.scheduledArrivalDate
+                        : train.departureDate ?? train.scheduledDepartureDate,
+                    prefix: state.resolvedPhase.isOnboard ? "Arrives in " : "Departs in "
+                )
+            } else {
+                IslandSummaryText(text: state.compactItinerarySummaryText)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
+}
 
-    private var primaryText: String {
-        if state.resolvedPhase == .approachingInterchange,
-           let interchange = state.interchange {
-            let platform = interchange.onwardPlatform?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let platformText: String
-            if let platform, !platform.isEmpty {
-                platformText = "P\(readablePlatformValue(platform))"
-            } else {
-                platformText = "P TBC"
-            }
-            return "Get off · \(platformText)"
+/// Live countdown for the expanded island's bottom row. Renders nothing
+/// once the moment has passed so a stale "in 0 minutes" never lingers.
+private struct IslandCountdownText: View {
+    var date: Date?
+    var prefix: String
+
+    var body: some View {
+        if let date, date > Date() {
+            MinuteRelativeText(date: date, prefix: prefix)
+                .font(.subheadline)
+                .foregroundStyle(Color.rightTrainActivitySecondaryText)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.74)
         }
-        if state.resolvedPhase.isOnboard,
-           let train = state.activeItineraryTrain {
-            return "Arr \(train.arrivalTime)"
-        }
-        if let train = state.activeItineraryTrain {
-            return "Dep \(train.departureTime)"
-        }
-        return state.compactItinerarySummaryText
     }
 }
 
@@ -513,16 +500,23 @@ private struct IslandStatusText: View {
     var body: some View {
         HStack(spacing: 4) {
             Image(systemName: kind.symbolName)
-                .imageScale(.medium)
-            Text(kind.compactText)
+                .imageScale(.small)
+            Text(text)
                 .lineLimit(1)
                 .minimumScaleFactor(0.74)
                 .allowsTightening(true)
         }
-        .font(.subheadline.weight(.bold))
+        .font(.subheadline.weight(.semibold))
         .foregroundStyle(tint)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var text: String {
+        if kind == .delayed, let delayMinutes, delayMinutes > 0 {
+            return "\(delayMinutes) min late"
+        }
+        return kind.compactText
     }
 
     private var accessibilityLabel: String {
@@ -568,23 +562,16 @@ private func compactPlatformDisplayValue(_ platform: String) -> String {
 
 private struct CompactPlatformText: View {
     var platform: String
-    var fullLabel: String = "Plat"
     var accessibilityPrefix: String = "Departure platform"
 
     private var platformDisplayValue: String {
         readablePlatformValue(platform)
     }
 
-    private var compactPlatformValue: String {
-        compactPlatformDisplayValue(platform)
-    }
-
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            Text("\(fullLabel) \(platformDisplayValue)")
-            Text(compactPlatformValue)
-        }
-        .font(.caption2.weight(.bold))
+        Text(compactPlatformDisplayValue(platform))
+        .font(.caption.weight(.semibold))
+        .monospacedDigit()
         .foregroundStyle(Color.rightTrainActivityText)
         .lineLimit(1)
         .minimumScaleFactor(0.55)
@@ -600,16 +587,11 @@ private struct CompactPlatformChangeText: View {
         compactPlatformDisplayValue(change.currentPlatform)
     }
 
-    private var fullText: String {
-        "\(compactPlatformDisplayValue(change.previousPlatform))->\(currentPlatform)"
-    }
-
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            Text(fullText)
-            Text(currentPlatform)
-        }
-        .font(.caption2.weight(.bold))
+        Label(currentPlatform, systemImage: "arrow.left.arrow.right")
+        .labelStyle(.titleAndIcon)
+        .font(.caption.weight(.semibold))
+        .monospacedDigit()
         .foregroundStyle(Color.rightTrainActivityLate)
         .lineLimit(1)
         .minimumScaleFactor(0.55)
@@ -632,43 +614,16 @@ private struct ActivityContentView: View {
     }
 }
 
-private struct ActivityStatusBackground: View {
-    var statusKind: RightTrainLiveActivityAttributes.StatusKind
-
-    var body: some View {
-        ZStack {
-            Color.rightTrainActivityBackground
-            // Status-first: the card surface takes on the status colour at a
-            // meaningful opacity so the state is readable in <1 second.
-            statusKind.tint.opacity(statusKind.activitySurfaceOpacity)
-        }
-    }
-}
-
 private struct ActivityCardChrome: ViewModifier {
     var statusKind: RightTrainLiveActivityAttributes.StatusKind
 
     func body(content: Content) -> some View {
+        // The system draws the Lock Screen container and adapts it to the
+        // wallpaper and appearance. Status is carried by tinted text and
+        // symbols, not by repainting the whole surface.
         content
-            .background {
-                ActivityStatusBackground(statusKind: statusKind)
-                    .clipShape(RoundedRectangle(cornerRadius: 24, style: .continuous))
-            }
-            .overlay {
-                if statusKind.usesSevereInnerStroke {
-                    // Cancelled / missed: bold 2pt ring
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .strokeBorder(statusKind.tint.opacity(0.78), lineWidth: 2)
-                        .padding(1)
-                } else if statusKind.usesModerateInnerStroke {
-                    // Delayed / at-risk: subtle 1pt ring reinforces the amber surface
-                    RoundedRectangle(cornerRadius: 24, style: .continuous)
-                        .strokeBorder(statusKind.tint.opacity(0.42), lineWidth: 1)
-                        .padding(1)
-                }
-            }
-            .activityBackgroundTint(statusKind.activityBackgroundTintColor)
-            .activitySystemActionForegroundColor(.rightTrainActivityAccent)
+            .activityBackgroundTint(nil)
+            .activitySystemActionForegroundColor(.rightTrainActivityText)
     }
 }
 
@@ -749,20 +704,9 @@ private struct WatchActivityView: View {
             }
         }
         .padding(8)
-        .activityBackgroundTint(watchStatusKind.activityBackgroundTintColor)
+        .activityBackgroundTint(nil)
         .activitySystemActionForegroundColor(.rightTrainActivityAccent)
         .accessibilityElement(children: .combine)
-    }
-
-    private var watchStatusKind: RightTrainLiveActivityAttributes.StatusKind {
-        switch activityKind {
-        case .train:
-            return state.selectedTrain?.statusKind ?? state.statusKind
-        case .itinerary, .leg:
-            return state.statusKind
-        case .window:
-            return state.recommendedTrain?.statusKind ?? state.statusKind
-        }
     }
 }
 
@@ -1089,7 +1033,7 @@ private struct WindowBoardActivityView: View {
                             .minimumScaleFactor(0.58)
                             .allowsTightening(true)
                             .truncationMode(.middle)
-                        Text(state.windowSearchRangeLabelText)
+                        Text(train.operatorDisplayText ?? state.windowSearchRangeLabelText)
                             .font(.caption.weight(.medium))
                             .foregroundStyle(Color.rightTrainActivitySecondaryText)
                             .lineLimit(1)
@@ -1100,7 +1044,8 @@ private struct WindowBoardActivityView: View {
 
                     Spacer(minLength: 6)
 
-                    if train.statusKind.isHeroAnomalous {
+                    // The hero already says "Cancelled".
+                    if train.statusKind.isHeroAnomalous, train.statusKind != .cancelled {
                         StatusBadge(text: train.statusText, kind: train.statusKind, delayMinutes: train.delayMinutes)
                             .layoutPriority(0)
                     }
@@ -1112,20 +1057,23 @@ private struct WindowBoardActivityView: View {
 
                     Spacer(minLength: 6)
 
-                    InlinePlatformLabel(
-                        platform: train.departurePlatform,
-                        confirmed: state.platformConfirmed,
-                        platformChange: state.platformChange(for: train)
-                    )
+                    if train.statusKind != .cancelled {
+                        InlinePlatformLabel(
+                            platform: train.departurePlatform,
+                            confirmed: state.platformConfirmed,
+                            platformChange: state.platformChange(for: train)
+                        )
+                    }
                 }
 
                 if let summary = state.disruptionSummaryText(for: train) {
                     DisruptionSummaryLine(text: summary, kind: train.statusKind)
                 } else {
-                    WindowBoardFooterRow(train: train, otherDeparturesText: state.otherDeparturesText)
+                    OtherDeparturesFooter(text: state.otherDeparturesText)
                 }
             }
-            .padding(14)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
             .activityCardChrome(statusKind: train.statusKind)
             .accessibilityElement(children: .combine)
         } else {
@@ -1138,7 +1086,8 @@ private struct WindowBoardActivityView: View {
                     .allowsTightening(true)
                 EmptyWindowText(text: state.windowEmptyStateText)
             }
-            .padding(14)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
             .activityCardChrome(statusKind: state.statusKind)
             .accessibilityElement(children: .combine)
         }
@@ -1183,7 +1132,7 @@ private struct ItineraryBoardActivityView: View {
                         // Hero countdown: ARRIVAL when on a leg (gets the
                         // user off at the right station), DEPARTURE when
                         // still planning/at-origin.
-                        CountdownHeroBlock(train: train, mode: state.resolvedPhase.isOnboard ? .arrival : .departure)
+                        JourneyHeroBlock(train: train, mode: state.resolvedPhase.isOnboard ? .arrival : .departure)
                             .layoutPriority(1)
 
                         Spacer(minLength: 6)
@@ -1196,23 +1145,43 @@ private struct ItineraryBoardActivityView: View {
                     }
                 }
 
-                if state.resolvedPhase != .approachingInterchange,
-                   let summary = state.disruptionSummaryText(for: train) {
-                    DisruptionSummaryLine(text: summary, kind: state.statusKind)
-                }
-
-                if let interchange = state.interchange,
-                   state.resolvedPhase.isOnboard,
-                   state.resolvedPhase != .approachingInterchange {
-                    InterchangeBanner(
-                        interchange: interchange,
-                        approaching: state.resolvedPhase == .approachingInterchange
+                // Once aboard, the leg list is history; show only what the
+                // traveller acts on next so the card stays within the
+                // Lock Screen's height budget.
+                switch state.resolvedPhase {
+                case .approachingInterchange, .onFinalLeg:
+                    JourneyProgressFooter(
+                        train: train,
+                        originText: train.departureTime,
+                        destinationText: train.arrivalTime
                     )
+                case .onLeg:
+                    if let interchange = state.interchange {
+                        InterchangeBanner(interchange: interchange, approaching: false)
+                    } else {
+                        JourneyProgressFooter(
+                            train: train,
+                            originText: train.departureTime,
+                            destinationText: train.arrivalTime
+                        )
+                    }
+                case .planning, .atOrigin:
+                    // One line only: a full leg list cannot fit the Lock
+                    // Screen's 160pt budget and would get scaled down.
+                    if let summary = state.disruptionSummaryText(for: train),
+                       summary != state.otherDeparturesText?.trimmingCharacters(in: .whitespacesAndNewlines) {
+                        DisruptionSummaryLine(text: summary, kind: state.statusKind)
+                    } else if let connection = state.nextConnection(after: train) {
+                        ConnectionTimelineRow(
+                            current: connection.current,
+                            next: connection.next,
+                            emphasized: state.statusKind == .atRisk || state.statusKind == .missed
+                        )
+                    }
                 }
-
-                ItineraryTrainTimeline(state: state)
             }
-            .padding(14)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
             .activityCardChrome(statusKind: state.statusKind)
             .accessibilityElement(children: .combine)
         } else {
@@ -1225,210 +1194,15 @@ private struct ItineraryBoardActivityView: View {
                     .allowsTightening(true)
                 EmptyWindowText(text: state.windowEmptyStateText)
             }
-            .padding(14)
+            .padding(.horizontal, 16)
+            .padding(.vertical, 14)
             .activityCardChrome(statusKind: state.statusKind)
             .accessibilityElement(children: .combine)
         }
     }
 }
 
-private struct ItineraryTrainTimeline: View {
-    var state: RightTrainLiveActivityAttributes.ContentState
-
-    var body: some View {
-        ViewThatFits(in: .vertical) {
-            ItineraryTimelineContent(state: state, maxVisible: 4)
-            ItineraryTimelineContent(state: state, maxVisible: 3)
-            ItineraryTimelineContent(state: state, maxVisible: 2)
-            ItineraryTimelineContent(state: state, maxVisible: 1)
-        }
-    }
-}
-
-private struct ItineraryTimelineContent: View {
-    var state: RightTrainLiveActivityAttributes.ContentState
-    var maxVisible: Int
-
-    private var trains: [RightTrainLiveActivityAttributes.ContentState.Train] {
-        state.trains
-    }
-
-    private var visibleTrains: [RightTrainLiveActivityAttributes.ContentState.Train] {
-        Array(trains.prefix(maxVisible))
-    }
-
-    private var activeConnectionIndex: Int? {
-        visibleTrains.indices.first { index in
-            guard index + 1 < visibleTrains.count else {
-                return false
-            }
-            return !visibleTrains[index + 1].departed
-        }
-    }
-
-    var body: some View {
-        let phase = ItineraryPhase.from(rawValue: state.phase)
-        let onboardLegIndex = phase.isOnboard ? state.currentLegIndex : nil
-        VStack(spacing: 0) {
-            ForEach(visibleTrains.indices, id: \.self) { index in
-                LegTimelineRow(
-                    train: visibleTrains[index],
-                    isPinnedFirstLeg: onboardLegIndex == index || (phase == .atOrigin && state.pinnedFirstLeg != nil && index == 0)
-                )
-
-                if index + 1 < visibleTrains.count {
-                    ConnectionTimelineRow(
-                        current: visibleTrains[index],
-                        next: visibleTrains[index + 1],
-                        emphasized: connectionShouldEmphasize(index: index)
-                    )
-                }
-            }
-
-            if trains.count > visibleTrains.count {
-                Text(overflowText)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(Color.rightTrainActivitySecondaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.58)
-                    .allowsTightening(true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 3)
-            }
-        }
-    }
-
-    private var overflowText: String {
-        let hiddenCount = max(trains.count - visibleTrains.count, 0)
-        guard hiddenCount > 0 else {
-            return ""
-        }
-        if let firstHidden = trains.dropFirst(visibleTrains.count).first {
-            return "via \(firstHidden.compactDestinationName) +\(hiddenCount) more"
-        }
-        return "+\(hiddenCount) more \(hiddenCount == 1 ? "leg" : "legs")"
-    }
-
-    private func connectionShouldEmphasize(index: Int) -> Bool {
-        guard index + 1 < visibleTrains.count else {
-            return false
-        }
-        if connectionMinutes(from: visibleTrains[index], to: visibleTrains[index + 1]).map({ $0 < 4 }) == true {
-            return true
-        }
-        switch state.statusKind {
-        case .atRisk, .missed:
-            return activeConnectionIndex == index
-        default:
-            return false
-        }
-    }
-
-    private func connectionMinutes(
-        from current: RightTrainLiveActivityAttributes.ContentState.Train,
-        to next: RightTrainLiveActivityAttributes.ContentState.Train
-    ) -> Int? {
-        guard let arrival = current.arrivalDate ?? current.scheduledArrivalDate,
-              let departure = next.departureDate ?? next.scheduledDepartureDate else {
-            return nil
-        }
-        return max(0, Int((departure.timeIntervalSince(arrival) / 60).rounded()))
-    }
-}
-
-private struct LegTimelineRow: View {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-
-    var train: RightTrainLiveActivityAttributes.ContentState.Train
-    var isPinnedFirstLeg: Bool
-
-    private var isCompleted: Bool {
-        isPinnedFirstLeg || train.departed || train.statusKind == .arrived
-    }
-
-    private var isTerminalProblem: Bool {
-        train.statusKind == .cancelled || train.statusKind == .missed
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            HStack(alignment: .center, spacing: 8) {
-                TimelineNode(completed: isCompleted, kind: train.statusKind)
-
-                ActivityTimeText(
-                    scheduled: train.scheduledDepartureTime,
-                    current: train.departureTime,
-                    delayed: train.departureDelayed,
-                    font: .caption.weight(.bold)
-                )
-
-                ViewThatFits(in: .horizontal) {
-                    destinationText(train.destinationName)
-                    destinationText(train.compactDestinationName)
-                }
-
-                Spacer(minLength: 4)
-
-                if isPinnedFirstLeg {
-                    Text("ON BOARD")
-                        .font(.caption2.weight(.bold))
-                        .foregroundStyle(Color.rightTrainActivityBackground)
-                        .padding(.horizontal, 6)
-                        .padding(.vertical, 2)
-                        .background(Color.rightTrainActivityAccent, in: Capsule())
-                } else if train.statusKind.isHeroAnomalous && dynamicTypeSize.rightTrainPrefersExpandedLayout {
-                    StatusGlyph(kind: train.statusKind, delayMinutes: train.delayMinutes)
-                } else if train.statusKind.isHeroAnomalous {
-                    StatusBadge(text: train.statusText, kind: train.statusKind, delayMinutes: train.delayMinutes)
-                }
-            }
-
-            if isPinnedFirstLeg {
-                TimelineProgressHairline(progress: train.journeyProgress ?? 0)
-                    .padding(.leading, 20)
-            }
-        }
-        .opacity(train.departed ? 0.58 : 1)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel)
-    }
-
-    private var accessibilityLabel: String {
-        var parts = [
-            "Leg to \(train.destinationName)",
-            departureAccessibilityText,
-            train.departurePlatform.uppercased() == "TBC" ? "Platform to be confirmed" : "Platform \(train.departurePlatform)",
-            train.statusKind.accessibilityLabel
-        ]
-        if isPinnedFirstLeg {
-            parts.append("On board")
-        }
-        if let progress = train.journeyProgress, isPinnedFirstLeg {
-            parts.append("\(Int((min(max(progress, 0), 1) * 100).rounded())) percent through this leg")
-        }
-        return parts.joined(separator: ", ")
-    }
-
-    private func destinationText(_ value: String) -> some View {
-        Text(value)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(isTerminalProblem ? train.statusKind.tint : Color.rightTrainActivityText)
-            .strikethrough(isTerminalProblem, color: train.statusKind.tint)
-            .lineLimit(1)
-            .minimumScaleFactor(0.58)
-            .allowsTightening(true)
-    }
-
-    private var departureAccessibilityText: String {
-        if train.departureDelayed, train.scheduledDepartureTime != train.departureTime {
-            return "scheduled \(train.scheduledDepartureTime), now \(train.departureTime)"
-        }
-        return "departs \(train.departureTime)"
-    }
-}
-
 private struct ConnectionTimelineRow: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var current: RightTrainLiveActivityAttributes.ContentState.Train
     var next: RightTrainLiveActivityAttributes.ContentState.Train
@@ -1450,7 +1224,7 @@ private struct ConnectionTimelineRow: View {
               arrivalPlatform != departurePlatform else {
             return nil
         }
-        return "Plat \(arrivalPlatform) -> \(departurePlatform)"
+        return "platform \(arrivalPlatform) to \(departurePlatform)"
     }
 
     private var symbolName: String {
@@ -1464,7 +1238,7 @@ private struct ConnectionTimelineRow: View {
     private var text: String {
         var value = "Change at \(current.compactDestinationName)"
         if let minutes {
-            value += " - \(minutes) min"
+            value += " · \(minutes) min"
         }
         if let platformChangeText {
             value += " · \(platformChangeText)"
@@ -1481,8 +1255,6 @@ private struct ConnectionTimelineRow: View {
                 Image(systemName: symbolName)
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(tint)
-                    .background(Color.rightTrainActivityBackground)
-                    .symbolEffect(.pulse, options: .repeating, isActive: emphasized && !reduceMotion)
             }
             .frame(width: 12, height: 18)
 
@@ -1526,29 +1298,6 @@ private struct ConnectionTimelineRow: View {
             value += ", \(platformChangeText)"
         }
         return value
-    }
-}
-
-private struct TimelineNode: View {
-    var completed: Bool
-    var kind: RightTrainLiveActivityAttributes.StatusKind
-
-    var body: some View {
-        ZStack {
-            if kind == .cancelled || kind == .missed {
-                Image(systemName: kind.symbolName)
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(kind.tint)
-            } else if completed {
-                Circle()
-                    .fill(Color.rightTrainActivityAccent)
-            } else {
-                Circle()
-                    .strokeBorder(Color.rightTrainActivitySecondaryText.opacity(0.75), lineWidth: 2)
-            }
-        }
-        .frame(width: 12, height: 12)
-        .accessibilityHidden(true)
     }
 }
 
@@ -1608,8 +1357,8 @@ private struct OnboardTrainActivityContent: View {
                 compactLayout
             }
         }
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
         .activityCardChrome(statusKind: train.statusKind)
         .accessibilityElement(children: .combine)
     }
@@ -1653,7 +1402,6 @@ private struct OnboardTrainActivityContent: View {
                 Spacer(minLength: 6)
 
                 InlinePlatformLabel(
-                    label: "Arr plat",
                     platform: train.arrivalPlatform,
                     confirmed: true,
                     accessibilityPrefix: "Arrival platform"
@@ -1694,34 +1442,35 @@ private struct OnboardTrainActivityContent: View {
     }
 
     private var arrivalSummary: some View {
-        VStack(alignment: .trailing, spacing: 3) {
-            HStack(spacing: 5) {
-                if showsStatusGlyph {
-                    StatusGlyph(kind: train.statusKind, delayMinutes: train.delayMinutes)
+        HStack(alignment: .lastTextBaseline, spacing: 14) {
+            VStack(alignment: .trailing, spacing: 0) {
+                HStack(spacing: 4) {
+                    if showsStatusGlyph {
+                        StatusGlyph(kind: train.statusKind, delayMinutes: train.delayMinutes, showsText: false)
+                            .imageScale(.small)
+                    }
+
+                    Text(train.arrivalLabel)
+                        .font(.caption.weight(.medium))
+                        .foregroundStyle(Color.rightTrainActivitySecondaryText)
+                        .lineLimit(1)
                 }
 
-                Text(train.arrivalLabel)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(Color.rightTrainActivitySecondaryText)
-                    .lineLimit(1)
+                ActivityTimeText(
+                    scheduled: train.scheduledArrivalTime,
+                    current: train.arrivalTime,
+                    delayed: train.arrivalDelayed,
+                    font: .title.weight(.semibold)
+                )
+                .fontDesign(.rounded)
             }
 
-            ActivityTimeText(
-                scheduled: train.scheduledArrivalTime,
-                current: train.arrivalTime,
-                delayed: train.arrivalDelayed,
-                font: .title2.weight(.bold)
-            )
-
             InlinePlatformLabel(
-                label: "Arr plat",
                 platform: train.arrivalPlatform,
                 confirmed: true,
                 accessibilityPrefix: "Arrival platform"
             )
-            .font(.caption.weight(.bold))
         }
-        .frame(minWidth: 98, alignment: .trailing)
     }
 }
 
@@ -1740,13 +1489,7 @@ private struct PinnedTrainPreDepartureContent: View {
                         .minimumScaleFactor(0.58)
                         .allowsTightening(true)
                         .truncationMode(.middle)
-                    HStack(spacing: 6) {
-                        if let operatorText = train.operatorDisplayText {
-                            Text(operatorText)
-                        }
-                        Text(state.compactUpdatedAtText)
-                            .monospacedDigit()
-                    }
+                    Text(train.operatorDisplayText ?? state.routeTitle)
                     .font(.caption.weight(.medium))
                     .foregroundStyle(Color.rightTrainActivitySecondaryText)
                     .lineLimit(1)
@@ -1755,7 +1498,7 @@ private struct PinnedTrainPreDepartureContent: View {
                 }
                 .layoutPriority(2)
 
-                if train.statusKind.isHeroAnomalous {
+                if train.statusKind.isHeroAnomalous, train.statusKind != .cancelled {
                     Spacer(minLength: 6)
 
                     StatusBadge(text: train.statusText, kind: train.statusKind, delayMinutes: train.delayMinutes)
@@ -1764,25 +1507,27 @@ private struct PinnedTrainPreDepartureContent: View {
             }
 
             HStack(alignment: .lastTextBaseline, spacing: 10) {
-                CountdownHeroBlock(train: train)
+                JourneyHeroBlock(train: train)
                     .layoutPriority(1)
 
                 Spacer(minLength: 6)
 
-                InlinePlatformLabel(
-                    platform: train.departurePlatform,
-                    confirmed: state.platformConfirmed,
-                    platformChange: state.platformChange(for: train)
-                )
+                if train.statusKind != .cancelled {
+                    InlinePlatformLabel(
+                        platform: train.departurePlatform,
+                        confirmed: state.platformConfirmed,
+                        platformChange: state.platformChange(for: train)
+                    )
+                }
             }
 
-            JourneyProgressFooter(
-                train: train,
-                originText: state.originCrs,
-                destinationText: state.destinationCrs
-            )
+            // A progress bar at 0% says nothing before departure.
+            if let summary = state.disruptionSummaryText(for: train) {
+                DisruptionSummaryLine(text: summary, kind: train.statusKind)
+            }
         }
-        .padding(14)
+        .padding(.horizontal, 16)
+        .padding(.vertical, 14)
         .activityCardChrome(statusKind: train.statusKind)
         .accessibilityElement(children: .combine)
     }
@@ -1841,11 +1586,11 @@ private struct InterchangeHeroBlock: View {
         case "missed":
             return "missed"
         case "tight":
-            return "\(interchange.expectedMarginMinutes)m tight"
+            return "\(interchange.expectedMarginMinutes) min, tight"
         case "at_risk":
-            return "\(max(interchange.expectedMarginMinutes, 0))m spare"
+            return "\(max(interchange.expectedMarginMinutes, 0)) min spare"
         default:
-            return "\(interchange.expectedMarginMinutes)m spare"
+            return "\(interchange.expectedMarginMinutes) min spare"
         }
     }
 
@@ -1859,7 +1604,7 @@ private struct InterchangeHeroBlock: View {
                 .allowsTightening(true)
                 .truncationMode(.middle)
 
-            Text("Next: plat \(onwardPlatform) · \(onwardDeparture) · \(marginText)")
+            Text("Next train: platform \(onwardPlatform) · \(onwardDeparture) · \(marginText)")
                 .font(.caption.weight(.semibold))
                 .foregroundStyle(interchange.riskStatus == "tight" || interchange.riskStatus == "at_risk" ? Color.rightTrainActivityLate : Color.rightTrainActivitySecondaryText)
                 .monospacedDigit()
@@ -1965,202 +1710,12 @@ private struct IslandTitle: View {
         case "missed":
             return "missed"
         case "tight":
-            return "\(interchange.expectedMarginMinutes)m tight"
+            return "\(interchange.expectedMarginMinutes) min, tight"
         case "at_risk":
-            return "\(max(interchange.expectedMarginMinutes, 0))m spare"
+            return "\(max(interchange.expectedMarginMinutes, 0)) min spare"
         default:
-            return "\(interchange.expectedMarginMinutes)m spare"
+            return "\(interchange.expectedMarginMinutes) min spare"
         }
-    }
-}
-
-private struct WindowBoardTrainList: View {
-    var state: RightTrainLiveActivityAttributes.ContentState
-    var maxVisibleTrains: Int
-
-    private var visibleTrains: [RightTrainLiveActivityAttributes.ContentState.Train] {
-        state.windowBoardVisibleTrains(maxVisibleTrains: maxVisibleTrains)
-    }
-
-    private var cancelledCount: Int {
-        state.cancelledTrainCount ?? state.trains.filter { $0.statusKind == .cancelled }.count
-    }
-
-    private var departedCount: Int {
-        state.departedTrainCount ?? state.trains.filter(\.departed).count
-    }
-
-    private var hiddenUpcomingCount: Int {
-        let upcomingCount = state.upcomingTrainCount ?? state.trains.filter { !$0.departed && $0.statusKind != .cancelled && $0.statusKind != .arrived }.count
-        return max(upcomingCount - visibleTrains.count, 0)
-    }
-
-    private var overflowText: String? {
-        var segments: [String] = []
-        if hiddenUpcomingCount > 0 {
-            segments.append("\(hiddenUpcomingCount) later")
-        }
-        if departedCount > 0 {
-            segments.append("\(departedCount) already departed")
-        }
-        if cancelledCount > 0 {
-            segments.append("\(cancelledCount) cancelled")
-        }
-        guard !segments.isEmpty else {
-            return nil
-        }
-
-        let prefix = visibleTrains.isEmpty ? "" : "Plus "
-        return "\(prefix)\(segments.joined(separator: ", "))"
-    }
-
-    var body: some View {
-        VStack(spacing: 0) {
-            if visibleTrains.isEmpty, overflowText == nil {
-                EmptyWindowText(text: state.windowEmptyStateText)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.vertical, 6)
-            }
-
-            ForEach(visibleTrains) { train in
-                TimetableTrainRow(train: train)
-                    .padding(.vertical, 3)
-
-                if train.id != visibleTrains.last?.id {
-                    Divider()
-                        .overlay(Color.rightTrainActivityDivider)
-                }
-            }
-
-            if let overflowText {
-                if !visibleTrains.isEmpty {
-                    Divider()
-                        .overlay(Color.rightTrainActivityDivider)
-                }
-
-                Text(overflowText)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(Color.rightTrainActivitySecondaryText)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.58)
-                    .allowsTightening(true)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                    .padding(.top, 4)
-            }
-        }
-    }
-}
-
-private struct TimetableTrainRow: View {
-    var train: RightTrainLiveActivityAttributes.ContentState.Train
-
-    var body: some View {
-        HStack(alignment: .center, spacing: 8) {
-            HStack(spacing: 5) {
-                ActivityTimeText(
-                    scheduled: train.scheduledDepartureTime,
-                    current: train.departureTime,
-                    delayed: train.departureDelayed,
-                    font: .headline.weight(.bold)
-                )
-                Image(systemName: "arrow.right")
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(Color.rightTrainActivitySecondaryText)
-                ActivityTimeText(
-                    scheduled: train.scheduledArrivalTime,
-                    current: train.arrivalTime,
-                    delayed: train.arrivalDelayed,
-                    font: .headline.weight(.bold)
-                )
-            }
-            .layoutPriority(1)
-
-            Spacer(minLength: 4)
-
-            HStack(spacing: 5) {
-                PlatformBadge(text: "Plat \(train.departurePlatform)")
-                if train.statusKind.isHeroAnomalous {
-                    StatusBadge(text: train.statusText, kind: train.statusKind)
-                }
-            }
-        }
-        .opacity(train.departed ? 0.58 : 1)
-    }
-}
-
-private struct CompactTrainRow: View {
-    var train: RightTrainLiveActivityAttributes.ContentState.Train
-
-    var body: some View {
-        HStack(spacing: 6) {
-            ActivityTimeText(scheduled: train.scheduledDepartureTime, current: train.departureTime, delayed: train.departureDelayed)
-            Text("P\(train.departurePlatform)")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(Color.rightTrainActivitySecondaryText)
-            Spacer(minLength: 4)
-            if train.statusKind.isHeroAnomalous {
-                Text(train.statusText)
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(train.statusKind.tint)
-                    .lineLimit(1)
-            }
-        }
-        .opacity(train.departed ? 0.58 : 1)
-    }
-}
-
-private struct WindowBoardFooterRow: View {
-    var train: RightTrainLiveActivityAttributes.ContentState.Train
-    var otherDeparturesText: String?
-
-    private var hasOperator: Bool {
-        train.operatorDisplayText != nil
-    }
-
-    private var hasOtherDepartures: Bool {
-        otherDeparturesText?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false
-    }
-
-    var body: some View {
-        if hasOperator || hasOtherDepartures {
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
-                if hasOperator {
-                    TrainOperatorFooterText(train: train)
-                        .layoutPriority(0)
-                }
-
-                Spacer(minLength: 8)
-
-                OtherDeparturesFooter(text: otherDeparturesText, alignment: .trailing)
-                    .layoutPriority(1)
-            }
-        }
-    }
-}
-
-private struct TrainOperatorFooterText: View {
-    var train: RightTrainLiveActivityAttributes.ContentState.Train
-
-    var body: some View {
-        ViewThatFits(in: .horizontal) {
-            if let operatorName = train.operatorNameDisplayText {
-                text(operatorName)
-            }
-
-            if let operatorCode = train.operatorCodeDisplayText {
-                text(operatorCode)
-            }
-        }
-        .accessibilityLabel(train.operatorDisplayText ?? "")
-    }
-
-    private func text(_ value: String) -> some View {
-        Text(value)
-            .font(.caption.weight(.medium))
-            .foregroundStyle(Color.rightTrainActivitySecondaryText)
-            .lineLimit(1)
-            .minimumScaleFactor(0.58)
-            .allowsTightening(true)
     }
 }
 
@@ -2186,8 +1741,6 @@ private struct OtherDeparturesFooter: View {
 }
 
 private struct JourneyProgressFooter: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
     var train: RightTrainLiveActivityAttributes.ContentState.Train
     var originText: String
     var destinationText: String
@@ -2202,56 +1755,52 @@ private struct JourneyProgressFooter: View {
         return 0
     }
 
-    private var liveDotShouldAnimate: Bool {
-        progress > 0 && progress < 1 && train.statusKind != .cancelled && train.statusKind != .missed
-    }
-
-    private var dotTint: Color {
+    private var tint: Color {
         switch train.statusKind {
-        case .cancelled:
+        case .cancelled, .missed:
             return .rightTrainActivityDanger
-        case .delayed, .unreported, .notReported:
+        case .delayed, .atRisk, .unreported, .notReported:
             return .rightTrainActivityLate
         case .unknown:
-            return .rightTrainActivityUnknown
+            return .rightTrainActivitySecondaryText
         default:
             return .rightTrainActivityAccent
         }
+    }
+
+    /// While the train is moving, let the system advance the bar between
+    /// pushes. Outside that window fall back to the last reported value.
+    private var liveInterval: ClosedRange<Date>? {
+        guard train.statusKind != .arrived,
+              train.statusKind != .cancelled,
+              let departure = train.departureDate ?? train.scheduledDepartureDate,
+              let arrival = train.arrivalDate ?? train.scheduledArrivalDate,
+              departure < arrival,
+              departure <= Date(),
+              arrival > Date() else {
+            return nil
+        }
+        return departure...arrival
     }
 
     var body: some View {
         HStack(alignment: .center, spacing: 8) {
             endpointText(originText)
 
-            GeometryReader { proxy in
-                let dotSize: CGFloat = 11
-                let usableWidth = max(proxy.size.width - dotSize, 0)
-                let dotOffset = usableWidth * CGFloat(progress)
-                ZStack(alignment: .leading) {
-                    Capsule()
-                        .fill(Color.rightTrainActivityDivider)
-                        .frame(height: 3)
-
-                    Capsule()
-                        .fill(dotTint.opacity(0.45))
-                        .frame(width: max(dotSize / 2, dotOffset + dotSize / 2), height: 3)
-
-                    Image(systemName: "circle.fill")
-                        .font(.system(size: dotSize, weight: .bold))
-                        .foregroundStyle(dotTint)
-                        .frame(width: dotSize, height: dotSize)
-                        .shadow(color: dotTint.opacity(0.95), radius: 6)
-                        .shadow(color: dotTint.opacity(0.55), radius: 12)
-                        .overlay {
-                            Circle()
-                                .stroke(Color.white.opacity(0.42), lineWidth: 1)
-                        }
-                        .symbolEffect(.variableColor.iterative, options: .repeating, isActive: liveDotShouldAnimate && !reduceMotion)
-                        .offset(x: dotOffset)
+            Group {
+                if let liveInterval {
+                    ProgressView(timerInterval: liveInterval, countsDown: false) {
+                        EmptyView()
+                    } currentValueLabel: {
+                        EmptyView()
+                    }
+                } else {
+                    ProgressView(value: progress)
                 }
-                .frame(maxWidth: .infinity, maxHeight: .infinity, alignment: .center)
             }
-            .frame(height: 18)
+            .progressViewStyle(.linear)
+            .labelsHidden()
+            .tint(tint)
 
             endpointText(destinationText)
         }
@@ -2261,12 +1810,12 @@ private struct JourneyProgressFooter: View {
 
     private func endpointText(_ value: String) -> some View {
         Text(value)
-            .font(.caption2.weight(.bold))
+            .font(.caption.weight(.semibold))
             .foregroundStyle(Color.rightTrainActivitySecondaryText)
+            .monospacedDigit()
             .lineLimit(1)
-            .minimumScaleFactor(0.58)
-            .allowsTightening(true)
-            .frame(minWidth: 28)
+            .minimumScaleFactor(0.7)
+            .fixedSize(horizontal: true, vertical: false)
     }
 }
 
@@ -2474,7 +2023,9 @@ private struct CompactItineraryDetail: View {
     }
 }
 
-private struct CountdownHeroBlock: View {
+/// Lock Screen hero: a live countdown as the label and the board time
+/// (scheduled struck through when it has moved) as the headline.
+private struct JourneyHeroBlock: View {
     enum Mode {
         case departure
         case arrival
@@ -2492,189 +2043,33 @@ private struct CountdownHeroBlock: View {
         }
     }
 
-    private var clockText: String {
-        switch mode {
-        case .departure: return train.departureTime
-        case .arrival: return train.arrivalTime
-        }
+    private var scheduledTime: String {
+        mode == .arrival ? train.scheduledArrivalTime : train.scheduledDepartureTime
     }
 
-    private var countsDown: Bool {
-        guard let targetDate else {
-            return false
-        }
-        return !train.departed && targetDate > Date()
+    private var currentTime: String {
+        mode == .arrival ? train.arrivalTime : train.departureTime
     }
 
-    var body: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(eyebrow)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.rightTrainActivitySecondaryText)
-                .lineLimit(1)
-
-            ViewThatFits(in: .horizontal) {
-                heroLabel(font: .largeTitle.weight(.bold), compact: false)
-                heroLabel(font: .title.weight(.bold), compact: false)
-                heroLabel(font: .title2.weight(.bold), compact: true)
-            }
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel)
-    }
-
-    private func heroLabel(font: Font, compact: Bool) -> some View {
-        Group {
-            if compact {
-                Text(compactHeroText)
-            } else {
-                heroText
-            }
-        }
-        .font(font)
-        .fontDesign(.rounded)
-        .foregroundStyle(heroTint)
-        .monospacedDigit()
-        .contentTransition(.numericText(countsDown: countsDown))
-        .lineLimit(1)
-        .minimumScaleFactor(0.5)
-        .allowsTightening(true)
-    }
-
-    @ViewBuilder private var heroText: some View {
-        switch heroTextKind {
-        case .cancelled:
-            Text("Cancelled")
-        case .departed(let date):
-            MinuteRelativeText(date: date, prefix: mode == .arrival ? "Arrived " : "Departed ", suffix: " ago")
-        case .boarding:
-            Text(mode == .arrival ? "Arriving" : "Boarding")
-        case .relative(let date):
-            MinuteRelativeText(date: date)
-        case .awaiting:
-            Text("Awaiting")
-        case .clock:
-            Text(clockText)
-        }
-    }
-
-    private enum HeroTextKind {
-        case cancelled
-        case departed(Date)
-        case boarding
-        case relative(Date)
-        case awaiting
-        case clock
-    }
-
-    private var heroTextKind: HeroTextKind {
-        if train.statusKind == .cancelled {
-            return .cancelled
-        }
-        if mode == .departure, train.departed, let targetDate {
-            return .departed(targetDate)
-        }
-        if mode == .arrival, train.statusKind == .arrived, let targetDate {
-            return .departed(targetDate)
-        }
-        if let targetDate, isBoarding(targetDate) {
-            return .boarding
-        }
-        if let targetDate, targetDate > Date() {
-            return .relative(targetDate)
-        }
-        if targetDate != nil {
-            return .awaiting
-        }
-        return .clock
-    }
-
-    private var compactHeroText: String {
-        switch heroTextKind {
-        case .cancelled:
-            return "Cncl"
-        case .departed:
-            return mode == .arrival ? "Arr" : "Left"
-        case .boarding:
-            return mode == .arrival ? "Arr" : "Board"
-        case .relative:
-            return clockText
-        case .awaiting:
-            return "Wait"
-        case .clock:
-            return clockText
-        }
-    }
-
-    private var eyebrow: String {
-        switch train.statusKind {
-        case .cancelled:
-            return "Service"
-        case .arrived:
-            return "Arrived"
-        default:
-            switch mode {
-            case .departure:
-                return train.departed ? "Left" : "Departs"
-            case .arrival:
-                return "Arrives"
-            }
-        }
-    }
-
-    private var heroTint: Color {
-        switch train.statusKind {
-        case .cancelled, .missed:
-            return .rightTrainActivityDanger
-        case .delayed, .atRisk, .unreported, .notReported:
-            return train.delayMinutes >= 25 ? .rightTrainActivityDanger : .rightTrainActivityLate
-        default:
-            return .rightTrainActivityText
-        }
-    }
-
-    private var accessibilityLabel: String {
-        var parts = [eyebrow]
-        if let targetDate {
-            let formatter = RelativeDateTimeFormatter()
-            formatter.unitsStyle = .full
-            parts.append(formatter.localizedString(for: targetDate, relativeTo: Date()))
-        } else {
-            parts.append(clockText)
-        }
-        let scheduled = mode == .arrival ? train.scheduledArrivalTime : train.scheduledDepartureTime
-        parts.append("scheduled \(scheduled)")
-        let delayed = mode == .arrival ? train.arrivalDelayed : train.departureDelayed
-        if delayed {
-            parts.append("now \(clockText)")
-        }
-        return parts.joined(separator: ", ")
-    }
-
-    private func isBoarding(_ date: Date) -> Bool {
-        let interval = date.timeIntervalSinceNow
-        return interval <= 60 && interval >= -60 && !train.departed
-    }
-}
-
-private struct JourneyHeroBlock: View {
-    var train: RightTrainLiveActivityAttributes.ContentState.Train
-
-    private var targetDate: Date? {
-        train.departureDate ?? train.scheduledDepartureDate
-    }
-
-    private var countsDown: Bool {
-        guard let targetDate else { return false }
-        return !train.departed && targetDate > Date()
+    private var isDelayed: Bool {
+        mode == .arrival ? train.arrivalDelayed : train.departureDelayed
     }
 
     private var isCancelled: Bool {
         train.statusKind == .cancelled
     }
 
-    private var isBoarding: Bool {
-        guard let targetDate, !train.departed else { return false }
+    private var hasHappened: Bool {
+        switch mode {
+        case .departure:
+            return train.departed
+        case .arrival:
+            return train.statusKind == .arrived
+        }
+    }
+
+    private var isImminent: Bool {
+        guard let targetDate, !hasHappened else { return false }
         let interval = targetDate.timeIntervalSinceNow
         return interval <= 60 && interval >= -60
     }
@@ -2682,26 +2077,25 @@ private struct JourneyHeroBlock: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
             eyebrow
-                .font(.caption.weight(.semibold))
+                .font(.caption.weight(.medium))
                 .foregroundStyle(Color.rightTrainActivitySecondaryText)
+                .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .allowsTightening(true)
-                .contentTransition(.numericText(countsDown: countsDown))
 
             if isCancelled {
                 Text("Cancelled")
-                    .font(.title.weight(.bold))
+                    .font(.title.weight(.semibold))
                     .fontDesign(.rounded)
                     .foregroundStyle(Color.rightTrainActivityDanger)
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
-                    .allowsTightening(true)
             } else {
                 ViewThatFits(in: .horizontal) {
-                    departureTime(font: .title.weight(.bold))
-                    departureTime(font: .title2.weight(.bold))
-                    departureTime(font: .title3.weight(.bold))
+                    headlineTime(font: .title.weight(.semibold))
+                    headlineTime(font: .title2.weight(.semibold))
+                    headlineTime(font: .title3.weight(.semibold))
                 }
             }
         }
@@ -2709,120 +2103,65 @@ private struct JourneyHeroBlock: View {
         .accessibilityLabel(accessibilityLabel)
     }
 
+    private var verb: String {
+        mode == .arrival ? "Arrives" : "Departs"
+    }
+
+    private var pastVerb: String {
+        mode == .arrival ? "Arrived" : "Departed"
+    }
+
     @ViewBuilder private var eyebrow: some View {
         if isCancelled {
-            Text("Service")
-        } else if train.departed, let targetDate {
-            MinuteRelativeText(date: targetDate, prefix: "Departed ", suffix: " ago")
-        } else if isBoarding {
-            Text("Boarding")
+            Text("Was due \(scheduledTime)")
+        } else if hasHappened, let targetDate {
+            MinuteRelativeText(date: targetDate, prefix: "\(pastVerb) ", suffix: " ago")
+        } else if isImminent {
+            Text(mode == .arrival ? "Arriving now" : "Departing now")
         } else if let targetDate, targetDate > Date() {
-            MinuteRelativeText(date: targetDate, prefix: "Departs in ")
-        } else if targetDate != nil {
-            Text("Awaiting")
+            MinuteRelativeText(date: targetDate, prefix: "\(verb) in ")
         } else {
-            Text("Departs")
+            Text(targetDate == nil ? verb : "Expected")
         }
     }
 
-    private func departureTime(font: Font) -> some View {
+    private func headlineTime(font: Font) -> some View {
         ActivityTimeText(
-            scheduled: train.scheduledDepartureTime,
-            current: train.departureTime,
-            delayed: train.departureDelayed,
+            scheduled: scheduledTime,
+            current: currentTime,
+            delayed: isDelayed,
             font: font
         )
         .fontDesign(.rounded)
     }
 
     private var accessibilityLabel: String {
-        var parts: [String] = []
         if isCancelled {
-            parts.append("Service cancelled")
-            return parts.joined(separator: ", ")
+            return "Service cancelled, was due \(scheduledTime)"
         }
-        if train.departed, let targetDate {
+        var parts: [String] = []
+        if let targetDate {
             let formatter = RelativeDateTimeFormatter()
             formatter.unitsStyle = .full
-            parts.append("Departed " + formatter.localizedString(for: targetDate, relativeTo: Date()))
-        } else if isBoarding {
-            parts.append("Boarding")
-        } else if let targetDate, targetDate > Date() {
-            let formatter = RelativeDateTimeFormatter()
-            formatter.unitsStyle = .full
-            parts.append("Departs " + formatter.localizedString(for: targetDate, relativeTo: Date()))
+            let relative = formatter.localizedString(for: targetDate, relativeTo: Date())
+            parts.append(hasHappened ? "\(pastVerb) \(relative)" : "\(verb) \(relative)")
         } else {
-            parts.append("Departs \(train.departureTime)")
+            parts.append("\(verb) \(currentTime)")
         }
-        parts.append("scheduled departure \(train.scheduledDepartureTime)")
-        if train.departureDelayed {
-            parts.append("now \(train.departureTime)")
+        parts.append("scheduled \(scheduledTime)")
+        if isDelayed, scheduledTime != currentTime {
+            parts.append("now \(currentTime)")
         }
         return parts.joined(separator: ", ")
     }
 }
 
-private struct SecondaryTimeRow: View {
-    var departureLabel: String
-    var scheduledDeparture: String
-    var currentDeparture: String
-    var departureDelayed: Bool
-    var arrivalLabel: String
-    var scheduledArrival: String
-    var currentArrival: String
-    var arrivalDelayed: Bool
-
-    var body: some View {
-        ViewThatFits(in: .horizontal) {
-            timeRow(showLabels: true, font: .subheadline.weight(.semibold), spacing: 6)
-            timeRow(showLabels: false, font: .subheadline.weight(.semibold), spacing: 5)
-            timeRow(showLabels: false, font: .caption.weight(.bold), spacing: 4)
-        }
-        .lineLimit(1)
-        .minimumScaleFactor(0.58)
-        .allowsTightening(true)
-    }
-
-    private func timeRow(showLabels: Bool, font: Font, spacing: CGFloat) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: spacing) {
-            if showLabels {
-                secondaryLabel(departureLabel)
-            }
-            ActivityTimeText(
-                scheduled: scheduledDeparture,
-                current: currentDeparture,
-                delayed: departureDelayed,
-                font: font
-            )
-            Image(systemName: "arrow.right")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(Color.rightTrainActivitySecondaryText)
-            if showLabels {
-                secondaryLabel(arrivalLabel)
-            }
-            ActivityTimeText(
-                scheduled: scheduledArrival,
-                current: currentArrival,
-                delayed: arrivalDelayed,
-                font: font
-            )
-            Spacer(minLength: 0)
-        }
-    }
-
-    private func secondaryLabel(_ text: String) -> some View {
-        Text(text)
-            .font(.caption2.weight(.medium))
-            .foregroundStyle(Color.rightTrainActivitySecondaryText)
-    }
-}
-
 private struct InlinePlatformLabel: View {
-    var label: String = "Plat"
     var platform: String
     var confirmed: Bool
     var accessibilityPrefix: String = "Departure platform"
     var platformChange: RightTrainLiveActivityAttributes.ContentState.PlatformChange? = nil
+    var valueFont: Font = .title.weight(.semibold)
 
     private var platformText: String {
         platform.trimmingCharacters(in: .whitespacesAndNewlines)
@@ -2836,118 +2175,64 @@ private struct InlinePlatformLabel: View {
         readablePlatformValue(platformText)
     }
 
-    private var compactPlatformValue: String {
-        compactPlatformDisplayValue(platformText)
+    private var label: String {
+        if platformChange != nil, hasKnownPlatform {
+            return "Now platform"
+        }
+        if hasKnownPlatform, !confirmed {
+            return "Expected platform"
+        }
+        return "Platform"
+    }
+
+    private var value: String {
+        hasKnownPlatform ? platformDisplayValue : "TBC"
+    }
+
+    private var valueTint: Color {
+        if !hasKnownPlatform || (platformChange != nil) {
+            return .rightTrainActivityLate
+        }
+        return .rightTrainActivityText
     }
 
     var body: some View {
-        Group {
-            if let platformChange, hasKnownPlatform {
-                PlatformChangeBadge(change: platformChange)
-            } else if hasKnownPlatform {
-                ViewThatFits(in: .horizontal) {
-                    HStack(spacing: 5) {
-                        platformLabel(text: "\(label) \(platformDisplayValue)", includesIcon: true)
-                    }
-                    HStack(spacing: 4) {
-                        platformLabel(text: compactPlatformValue, includesIcon: false)
-                    }
+        VStack(alignment: .trailing, spacing: 0) {
+            Text(label)
+                .font(.caption.weight(.medium))
+                .foregroundStyle(Color.rightTrainActivitySecondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.7)
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                if let platformChange, hasKnownPlatform {
+                    Text(readablePlatformValue(platformChange.previousPlatform))
+                        .font(.subheadline.weight(.medium))
+                        .strikethrough(true, color: Color.rightTrainActivitySecondaryText)
+                        .foregroundStyle(Color.rightTrainActivitySecondaryText)
                 }
-                .accessibilityElement(children: .ignore)
-                .accessibilityLabel(accessibilityLabel)
-            } else {
-                tbcBadge
-                    .font(.subheadline.weight(.bold))
-                    .accessibilityLabel("\(accessibilityPrefix) to be confirmed")
+                Text(value)
+                    .font(valueFont)
+                    .fontDesign(.rounded)
+                    .foregroundStyle(valueTint)
             }
+            .monospacedDigit()
+            .lineLimit(1)
+            .minimumScaleFactor(0.58)
+            .contentTransition(.numericText())
         }
-        .lineLimit(1)
-        .minimumScaleFactor(0.58)
-        .allowsTightening(true)
         .layoutPriority(1)
-    }
-
-    @ViewBuilder
-    private func platformLabel(text: String, includesIcon: Bool) -> some View {
-        // Unconfirmed platforms render in italics, matching the departure-board
-        // convention for an estimated platform.
-        if includesIcon {
-            HStack(spacing: 4) {
-                Image(systemName: "tram.fill")
-                    .imageScale(.small)
-                Text(text)
-                    .italic(!confirmed)
-            }
-            .font(.subheadline.weight(.bold))
-            .foregroundStyle(Color.rightTrainActivityText)
-        } else {
-            Text(text)
-                .italic(!confirmed)
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(Color.rightTrainActivityText)
-        }
-    }
-
-    @ViewBuilder
-    private var tbcBadge: some View {
-        Text("TBC")
-            .font(.caption.weight(.bold))
-            .foregroundStyle(Color.rightTrainActivityLate)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 4)
-            .background(Color.rightTrainActivityLate.opacity(0.14), in: Capsule())
-            .overlay {
-                Capsule()
-                    .stroke(Color.rightTrainActivityLate.opacity(0.36), lineWidth: 1)
-            }
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
     }
 
     private var accessibilityLabel: String {
-        confirmed ? "\(accessibilityPrefix) \(platformDisplayValue)" : "\(accessibilityPrefix) \(platformDisplayValue), not confirmed"
-    }
-}
-
-private struct PlatformChangeBadge: View {
-    var change: RightTrainLiveActivityAttributes.ContentState.PlatformChange
-
-    private var previous: String {
-        readablePlatformValue(change.previousPlatform)
-    }
-
-    private var current: String {
-        readablePlatformValue(change.currentPlatform)
-    }
-
-    var body: some View {
-        ViewThatFits(in: .horizontal) {
-            label(text: "Plat \(previous) -> \(current)", includesIcon: true)
-            label(text: "\(compactPlatformDisplayValue(change.previousPlatform))->\(compactPlatformDisplayValue(change.currentPlatform))", includesIcon: false)
-            label(text: compactPlatformDisplayValue(change.currentPlatform), includesIcon: false)
+        guard hasKnownPlatform else {
+            return "\(accessibilityPrefix) to be confirmed"
         }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Departure platform changed from \(previous) to \(current)")
-    }
-
-    private func label(text: String, includesIcon: Bool) -> some View {
-        HStack(spacing: 5) {
-            if includesIcon {
-                Image(systemName: "arrow.triangle.2.circlepath")
-                    .imageScale(.small)
-            }
-            Text(text)
+        if let platformChange {
+            return "\(accessibilityPrefix) changed from \(readablePlatformValue(platformChange.previousPlatform)) to \(platformDisplayValue)"
         }
-        .font(.subheadline.weight(.bold))
-        .foregroundStyle(Color.rightTrainActivityLate)
-        .lineLimit(1)
-        .minimumScaleFactor(0.58)
-        .allowsTightening(true)
-        .padding(.horizontal, 7)
-        .padding(.vertical, 4)
-        .background(Color.rightTrainActivityLate.opacity(0.14), in: Capsule())
-        .overlay {
-            Capsule()
-                .stroke(Color.rightTrainActivityLate.opacity(0.36), lineWidth: 1)
-        }
+        return confirmed ? "\(accessibilityPrefix) \(platformDisplayValue)" : "\(accessibilityPrefix) \(platformDisplayValue), expected"
     }
 }
 
@@ -2994,7 +2279,7 @@ private struct InterchangeBanner: View {
             }
             Spacer(minLength: 4)
             if let platform = onwardPlatformDisplay {
-                Text("Plat \(platform)")
+                Text("Platform \(platform)")
                     .font(.caption2.weight(.bold))
                     .foregroundStyle(Color.rightTrainActivityText)
                     .padding(.horizontal, 6)
@@ -3027,12 +2312,12 @@ private struct InterchangeBanner: View {
             return "Missed connection"
         case "at_risk":
             return interchange.expectedMarginMinutes > 0
-                ? "At risk · \(interchange.expectedMarginMinutes)m spare"
+                ? "At risk · \(interchange.expectedMarginMinutes) min spare"
                 : "At risk"
         case "tight":
-            return "Tight · \(max(interchange.expectedMarginMinutes, 0))m spare"
+            return "Tight · \(max(interchange.expectedMarginMinutes, 0)) min spare"
         default:
-            return interchange.expectedMarginMinutes > 0 ? "\(interchange.expectedMarginMinutes)m spare" : nil
+            return interchange.expectedMarginMinutes > 0 ? "\(interchange.expectedMarginMinutes) min spare" : nil
         }
     }
 
@@ -3064,90 +2349,6 @@ private struct InterchangeBanner: View {
                 ? RightTrainLiveActivityAttributes.StatusKind.delayed.tint
                 : .rightTrainActivityAccent
         }
-    }
-}
-
-private struct PinnedTimeBlock: View {
-    var label: String
-    var scheduled: String
-    var current: String
-    var delayed: Bool
-    var font: Font = .title3.weight(.bold)
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 1) {
-            Text(label)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(Color.rightTrainActivitySecondaryText)
-            ActivityTimeText(scheduled: scheduled, current: current, delayed: delayed, font: font)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-private struct TimeBlock: View {
-    enum Kind {
-        case departure
-        case arrival
-    }
-
-    var label: String
-    var train: RightTrainLiveActivityAttributes.ContentState.Train
-    var kind: Kind
-
-    private var scheduled: String {
-        switch kind {
-        case .departure:
-            return train.scheduledDepartureTime
-        case .arrival:
-            return train.scheduledArrivalTime
-        }
-    }
-
-    private var current: String {
-        switch kind {
-        case .departure:
-            return train.departureTime
-        case .arrival:
-            return train.arrivalTime
-        }
-    }
-
-    private var delayed: Bool {
-        switch kind {
-        case .departure:
-            return train.departureDelayed
-        case .arrival:
-            return train.arrivalDelayed
-        }
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(Color.rightTrainActivitySecondaryText)
-            ActivityTimeText(scheduled: scheduled, current: current, delayed: delayed, font: .title3.weight(.bold))
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-    }
-}
-
-private struct PlatformBlock: View {
-    var label: String
-    var value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(Color.rightTrainActivitySecondaryText)
-            Text(value)
-                .font(.subheadline.weight(.bold))
-                .foregroundStyle(Color.rightTrainActivityText)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
     }
 }
 
@@ -3207,26 +2408,6 @@ private struct ActivityTimeText: View {
     }
 }
 
-private struct IslandMetric: View {
-    var label: String
-    var value: String
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(Color.rightTrainActivitySecondaryText)
-            Text(value)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.rightTrainActivityText)
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.58)
-                .allowsTightening(true)
-        }
-    }
-}
-
 private struct IslandEdgeMetric: View {
     var label: String
     var value: String
@@ -3234,37 +2415,28 @@ private struct IslandEdgeMetric: View {
     var edge: IslandExpandedEdge = .leading
 
     var body: some View {
-        Text(value)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(tint)
-            .monospacedDigit()
-            .lineLimit(1)
-            .minimumScaleFactor(0.58)
-            .allowsTightening(true)
-            .frame(maxWidth: IslandExpandedEdge.contentMaxWidth, alignment: edge.alignment)
-            .padding(edge.paddingEdges, IslandExpandedEdge.safeInset)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(accessibilityLabel)
-            .accessibilityValue(value)
-    }
-
-    private var accessibilityLabel: String {
-        switch label {
-        case "Best":
-            return "Best departure"
-        case "Dep":
-            return "Departure"
-        case "Arr":
-            return "Arrival"
-        case "Dep plat":
-            return "Departure platform"
-        case "Arr plat":
-            return "Arrival platform"
-        case "Onward":
-            return "Onward platform"
-        default:
-            return label
+        VStack(alignment: edge.horizontalAlignment, spacing: 0) {
+            Text(label)
+                .font(.caption2.weight(.medium))
+                .foregroundStyle(Color.rightTrainActivitySecondaryText)
+                .lineLimit(1)
+                .minimumScaleFactor(0.8)
+            Text(value)
+                .font(.title3.weight(.semibold))
+                .fontDesign(.rounded)
+                .foregroundStyle(tint)
+                .monospacedDigit()
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
+                .allowsTightening(true)
+                .contentTransition(.numericText())
         }
+        .frame(maxWidth: .infinity, alignment: edge.alignment)
+        // Keep clear of the island's rounded shoulders.
+        .padding(edge.paddingEdges, 6)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(label)
+        .accessibilityValue(value)
     }
 }
 
@@ -3274,8 +2446,8 @@ private struct PlatformChangeIslandMetric: View {
 
     var body: some View {
         IslandEdgeMetric(
-            label: "Changed",
-            value: "\(compactPlatformDisplayValue(change.previousPlatform))->\(compactPlatformDisplayValue(change.currentPlatform))",
+            label: "Now platform",
+            value: readablePlatformValue(change.currentPlatform),
             tint: .rightTrainActivityLate,
             edge: edge
         )
@@ -3284,151 +2456,20 @@ private struct PlatformChangeIslandMetric: View {
     }
 }
 
-private struct RelativeIslandEdgeMetric: View {
-    var label: String
-    var date: Date
-    var clockText: String? = nil
-    var countsDown: Bool
-    var edge: IslandExpandedEdge = .leading
-
-    var body: some View {
-        valueText
-            .frame(maxWidth: IslandExpandedEdge.contentMaxWidth, alignment: edge.alignment)
-            .padding(edge.paddingEdges, IslandExpandedEdge.safeInset)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel(accessibilityLabel)
-            .accessibilityValue(accessibilityValue)
-    }
-
-    @ViewBuilder
-    private var valueText: some View {
-        if countsDown {
-            MinuteRelativeText(date: date)
-                .contentTransition(.numericText(countsDown: true))
-                .metricTextStyle()
-        } else if let clockText, !clockText.isEmpty {
-            Text(clockText)
-                .metricTextStyle()
-        } else {
-            MinuteRelativeText(date: date)
-                .contentTransition(.numericText(countsDown: false))
-                .metricTextStyle()
-        }
-    }
-
-    private var accessibilityLabel: String {
-        switch label {
-        case "Best":
-            return "Best departure"
-        case "Arr":
-            return "Arrival"
-        default:
-            return "Departure"
-        }
-    }
-
-    private var accessibilityValue: String {
-        let relative = RelativeDateTimeFormatter()
-        relative.unitsStyle = .full
-        let relativeText = relative.localizedString(for: date, relativeTo: Date())
-        if let clockText, !clockText.isEmpty {
-            return "\(relativeText), \(clockText)"
-        }
-        return relativeText
-    }
-}
-
 private enum IslandExpandedEdge {
-    static let contentMaxWidth: CGFloat = 62
-    static let safeInset: CGFloat = 14
-
     case leading
     case trailing
 
     var alignment: Alignment {
-        switch self {
-        case .leading:
-            return .leading
-        case .trailing:
-            return .trailing
-        }
+        self == .leading ? .leading : .trailing
+    }
+
+    var horizontalAlignment: HorizontalAlignment {
+        self == .leading ? .leading : .trailing
     }
 
     var paddingEdges: Edge.Set {
-        switch self {
-        case .leading:
-            return .leading
-        case .trailing:
-            return .trailing
-        }
-    }
-}
-
-private struct RelativeIslandMetric: View {
-    var label: String
-    var date: Date
-    var clockText: String? = nil
-    var countsDown: Bool
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(label)
-                .font(.caption2)
-                .foregroundStyle(Color.rightTrainActivitySecondaryText)
-            valueText
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel)
-        .accessibilityValue(accessibilityValue)
-    }
-
-    @ViewBuilder
-    private var valueText: some View {
-        if countsDown {
-            MinuteRelativeText(date: date)
-                .contentTransition(.numericText(countsDown: true))
-                .metricTextStyle()
-        } else if let clockText, !clockText.isEmpty {
-            Text(clockText)
-                .metricTextStyle()
-        } else {
-            MinuteRelativeText(date: date)
-                .contentTransition(.numericText(countsDown: false))
-                .metricTextStyle()
-        }
-    }
-
-    private var accessibilityLabel: String {
-        switch label {
-        case "Best":
-            return "Best departure"
-        case "Arr":
-            return "Arrival"
-        default:
-            return "Departure"
-        }
-    }
-
-    private var accessibilityValue: String {
-        let relative = RelativeDateTimeFormatter()
-        relative.unitsStyle = .full
-        let relativeText = relative.localizedString(for: date, relativeTo: Date())
-        if let clockText, !clockText.isEmpty {
-            return "\(relativeText), \(clockText)"
-        }
-        return relativeText
-    }
-}
-
-private extension View {
-    func metricTextStyle() -> some View {
-        self
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(Color.rightTrainActivityText)
-            .monospacedDigit()
-            .lineLimit(1)
-            .minimumScaleFactor(0.58)
-            .allowsTightening(true)
+        self == .leading ? .leading : .trailing
     }
 }
 
@@ -3438,27 +2479,13 @@ struct MinuteRelativeText: View {
     var suffix: String = ""
 
     var body: some View {
-        TimelineView(.everyMinute) { context in
-            Text(prefix + Self.durationText(from: date, now: context.date) + suffix)
-        }
-    }
-
-    static func durationText(from date: Date, now: Date) -> String {
-        let totalMinutes = max(0, Int(abs(date.timeIntervalSince(now)) / 60))
-        if totalMinutes == 0 {
-            return "less than a min"
-        }
-        let hours = totalMinutes / 60
-        let minutes = totalMinutes % 60
-        var parts: [String] = []
-        if hours > 0 { parts.append("\(hours) hr") }
-        if minutes > 0 { parts.append("\(minutes) min") }
-        return parts.joined(separator: " ")
+        // Live Activities are archived snapshots, so TimelineView never
+        // re-renders between pushes. The system date format keeps ticking.
+        Text("\(prefix)\(Text(.currentDate, format: .offset(to: date, allowedFields: [.hour, .minute], sign: .never)))\(suffix)")
     }
 }
 
 private struct StatusBadge: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
 
     var text: String
     var kind: RightTrainLiveActivityAttributes.StatusKind
@@ -3495,7 +2522,6 @@ private struct StatusBadge: View {
             if severeDelay || kind == .cancelled || kind == .missed || kind == .atRisk {
                 Image(systemName: kind.symbolName)
                     .imageScale(.small)
-                    .symbolEffect(.pulse, options: .repeating, isActive: severeDelay && !reduceMotion)
             }
             Text(displayText(for: value))
         }
@@ -3518,7 +2544,6 @@ private struct StatusBadge: View {
         Image(systemName: kind.symbolName)
             .font(.caption2.weight(.bold))
             .foregroundStyle(tint)
-            .symbolEffect(.pulse, options: .repeating, isActive: severeDelay && !reduceMotion)
             .frame(width: 10, height: 10)
             .padding(5)
             .background(tint.opacity(backgroundOpacity), in: Circle())
@@ -3594,45 +2619,10 @@ private struct PlatformBadge: View {
     }
 }
 
-private struct DeparturePlatformChip: View {
-    var platform: String
-
-    var body: some View {
-        VStack(spacing: 1) {
-            Text("Plat")
-                .font(.caption2.weight(.semibold))
-                .foregroundStyle(Color.rightTrainActivitySecondaryText)
-                .lineLimit(1)
-            Text(platform)
-                .font(.title3.weight(.bold))
-                .foregroundStyle(Color.rightTrainActivityText)
-                .lineLimit(1)
-                .minimumScaleFactor(0.55)
-        }
-        .frame(width: 54, height: 54)
-        .background(Color.rightTrainActivityAccent.opacity(0.14), in: RoundedRectangle(cornerRadius: 7))
-        .overlay {
-            RoundedRectangle(cornerRadius: 7)
-                .stroke(Color.rightTrainActivityAccent.opacity(0.38), lineWidth: 1)
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel)
-    }
-
-    private var accessibilityLabel: String {
-        platform.uppercased() == "TBC" ? "Departure platform to be confirmed" : "Departure platform \(platform)"
-    }
-}
-
 private struct StatusGlyph: View {
-    @Environment(\.accessibilityReduceMotion) private var reduceMotion
-
     var kind: RightTrainLiveActivityAttributes.StatusKind
     var delayMinutes: Int? = nil
-
-    private var severeDelay: Bool {
-        (delayMinutes ?? 0) >= 15 && (kind == .delayed || kind == .atRisk || kind == .unreported || kind == .notReported)
-    }
+    var showsText = true
 
     private var tint: Color {
         kind.tint(delayMinutes: delayMinutes ?? 0)
@@ -3640,24 +2630,33 @@ private struct StatusGlyph: View {
 
     var body: some View {
         ViewThatFits(in: .horizontal) {
-            HStack(spacing: 2) {
-                Image(systemName: kind.symbolName)
-                    .imageScale(.medium)
-                    .symbolEffect(.pulse, options: .repeating, isActive: severeDelay && !reduceMotion)
-                Text(kind.compactText)
-                    .font(.caption2.weight(.bold))
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.58)
-                    .allowsTightening(true)
+            if showsText {
+                HStack(spacing: 3) {
+                    Image(systemName: kind.symbolName)
+                        .imageScale(.medium)
+                    Text(glyphText)
+                        .font(.caption.weight(.semibold))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.58)
+                        .allowsTightening(true)
+                }
             }
 
             Image(systemName: kind.symbolName)
                 .imageScale(.medium)
-                .symbolEffect(.pulse, options: .repeating, isActive: severeDelay && !reduceMotion)
         }
         .foregroundStyle(tint)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
+    }
+
+    /// "+18" says more than "Late" in the same width.
+    private var glyphText: String {
+        if kind == .delayed, let delayMinutes, delayMinutes > 0 {
+            return "+\(delayMinutes)"
+        }
+        return kind.compactText
     }
 
     private var accessibilityLabel: String {
@@ -3703,6 +2702,28 @@ private extension RightTrainLiveActivityAttributes.ContentState {
         return "\(max(legCount - 1, 0)) \(max(legCount - 1, 0) == 1 ? "change" : "changes")"
     }
 
+    func nextConnection(
+        after train: RightTrainLiveActivityAttributes.ContentState.Train
+    ) -> (current: RightTrainLiveActivityAttributes.ContentState.Train, next: RightTrainLiveActivityAttributes.ContentState.Train)? {
+        guard let index = trains.firstIndex(where: { $0.serviceID == train.serviceID }),
+              index + 1 < trains.count else {
+            return nil
+        }
+        return (trains[index], trains[index + 1])
+    }
+
+    var changeCountText: String {
+        let changes = max((windowTrainCount ?? trains.count) - 1, 0)
+        switch changes {
+        case 0:
+            return "Direct"
+        case 1:
+            return "1 change"
+        default:
+            return "\(changes) changes"
+        }
+    }
+
     var itineraryHeaderSubtitle: AttributedString {
         var subtitle = AttributedString()
         func append(_ text: String, color: Color = .rightTrainActivitySecondaryText) {
@@ -3715,11 +2736,20 @@ private extension RightTrainLiveActivityAttributes.ContentState {
             append(" · ")
         }
 
-        if let duration = itineraryDurationText {
-            append(duration)
+        let legCount = windowTrainCount ?? trains.count
+        if resolvedPhase.isOnboard, let index = currentLegIndex, legCount > 1 {
+            append("Train \(index + 1) of \(legCount)")
+            if let operatorText = activeItineraryTrain?.operatorDisplayText {
+                appendSeparatorIfNeeded()
+                append(operatorText)
+            }
+        } else {
+            if let duration = itineraryDurationText {
+                append(duration)
+            }
+            appendSeparatorIfNeeded()
+            append(changeCountText)
         }
-        appendSeparatorIfNeeded()
-        append(compactItinerarySummaryText)
         if delayMinutes > 0 {
             appendSeparatorIfNeeded()
             append("+\(delayMinutes) min", color: .rightTrainActivityLate)
@@ -3728,28 +2758,16 @@ private extension RightTrainLiveActivityAttributes.ContentState {
     }
 
     var itineraryIslandSubtitle: String {
-        if statusKind == .good {
-            return compactItinerarySummaryText
-        }
-        return statusText
+        changeCountText
     }
 
     var windowIslandSubtitle: String? {
         if let platformChange = activePlatformChange {
             return "Platform \(platformChange.currentPlatform) · was \(platformChange.previousPlatform)"
         }
-        if statusKind == .good,
-           recommendedTrain?.statusKind == .good {
-            return nil
-        }
-        if let value = nonEmpty(nextUpdateText) {
-            return value
-        }
-        if let train = recommendedTrain,
-           let value = nonEmpty(train.statusText) {
-            return value
-        }
-        return nonEmpty(statusText)
+        // Status and countdown live in the bottom row; repeating them
+        // here only crowds the island.
+        return recommendedTrain?.operatorDisplayText
     }
 
     var itineraryConnectionFooterText: String {
@@ -3772,7 +2790,15 @@ private extension RightTrainLiveActivityAttributes.ContentState {
             return value
         }
         if statusKind == .cancelled || train.statusKind == .cancelled {
-            return nonEmpty(nextUpdateText) ?? "Service cancelled"
+            // The hero already reads "Cancelled"; only add a line that
+            // tells the traveller something new, such as the next option.
+            guard let value = nonEmpty(nextUpdateText) else {
+                return nil
+            }
+            if train.statusKind == .cancelled, value.localizedCaseInsensitiveContains("cancel") {
+                return nil
+            }
+            return value
         }
         let delay = max(delayMinutes, train.delayMinutes)
         if delay > 0 {
@@ -3903,7 +2929,7 @@ private extension RightTrainLiveActivityAttributes.ContentState {
         case "All trains departed":
             return "Done"
         case "All trains cancelled":
-            return "Cncl"
+            return "Cancelled"
         default:
             return "None"
         }
@@ -4029,40 +3055,6 @@ private extension RightTrainLiveActivityAttributes.StatusKind {
         }
     }
 
-    var usesSevereInnerStroke: Bool {
-        self == .cancelled || self == .missed
-    }
-
-    /// Delayed / at-risk states get a subtle 1pt ring to reinforce the amber surface.
-    var usesModerateInnerStroke: Bool {
-        self == .delayed || self == .atRisk || self == .unreported || self == .notReported
-    }
-
-    /// Opacity of the status tint layer inside the dark activity card.
-    /// Higher values = more saturated status colour for more urgent states.
-    var activitySurfaceOpacity: Double {
-        switch self {
-        case .good, .arrived:        return 0.28
-        case .delayed, .unreported, .notReported: return 0.34
-        case .atRisk:                return 0.40
-        case .cancelled, .missed:    return 0.52
-        case .departed, .unknown:    return 0.10
-        }
-    }
-
-    /// Color passed to `.activityBackgroundTint()` for Lock Screen and
-    /// watch-family supplemental activities. Matches the card surface so
-    /// the system pill echoes the status at first glance.
-    var activityBackgroundTintColor: Color {
-        switch self {
-        case .good, .arrived:        return .rightTrainActivityGood.opacity(0.30)
-        case .delayed, .unreported, .notReported: return .rightTrainActivityLate.opacity(0.38)
-        case .atRisk:                return .rightTrainActivityLate.opacity(0.44)
-        case .cancelled, .missed:    return .rightTrainActivityDanger.opacity(0.56)
-        case .departed, .unknown:    return .rightTrainActivityBackground
-        }
-    }
-
     var symbolName: String {
         switch self {
         case .good:
@@ -4118,23 +3110,23 @@ private extension RightTrainLiveActivityAttributes.StatusKind {
     var compactText: String {
         switch self {
         case .good:
-            return "OK"
+            return "On time"
         case .arrived:
-            return "Arr"
+            return "Arrived"
         case .delayed:
             return "Late"
         case .atRisk:
-            return "Risk"
+            return "At risk"
         case .missed:
-            return "Miss"
+            return "Missed"
         case .cancelled:
-            return "Cncl"
+            return "Cancelled"
         case .departed:
-            return "Dep"
+            return "Departed"
         case .unreported, .notReported:
-            return "Rpt"
+            return "No report"
         case .unknown:
-            return "Chk"
+            return "Checking"
         }
     }
 
@@ -4238,17 +3230,11 @@ struct LiveActivityLayoutProbe: View {
     }
 
     private var leadingMetricLabel: String {
-        if activityKind == .train, selectedTrain?.isOnboard == true {
-            return "Arr"
-        }
-        return activityKind == .window ? "Best" : "Dep"
+        activityKind == .train && selectedTrain?.isOnboard == true ? "Arrives" : "Departs"
     }
 
     private var platformMetricLabel: String {
-        if activityKind == .train, selectedTrain?.isOnboard == true {
-            return "Arr plat"
-        }
-        return "Dep plat"
+        "Platform"
     }
 
     private var dynamicIslandCompact: some View {
@@ -4266,7 +3252,7 @@ struct LiveActivityLayoutProbe: View {
             if let platformChange = state.activePlatformChange {
                 CompactPlatformChangeText(change: platformChange)
             } else if activityKind == .train, selectedTrain?.isOnboard == true, let platform {
-                CompactPlatformText(platform: platform, fullLabel: "Arr", accessibilityPrefix: "Arrival platform")
+                CompactPlatformText(platform: platform, accessibilityPrefix: "Arrival platform")
             } else if statusKind != .good {
                 StatusGlyph(kind: statusKind, delayMinutes: delayMinutes)
             } else if let platform {
