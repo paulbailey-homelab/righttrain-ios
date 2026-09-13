@@ -543,9 +543,7 @@ private struct ActiveItineraryLegList: View {
                 }
             }
         }
-        .padding(.horizontal, 12)
-        .padding(.vertical, 6)
-        .background(Color.rightTrainInsetFill, in: RoundedRectangle(cornerRadius: RTRadius.chip))
+        .padding(.horizontal, 4)
         .lightSurfaceForeground()
     }
 }

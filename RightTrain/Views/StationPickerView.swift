@@ -28,26 +28,46 @@ struct StationPickerView: View {
     var body: some View {
         @Bindable var viewModel = viewModel
 
-        return ScrollView {
-            VStack(alignment: .leading, spacing: RTSpacing.sectionGap) {
-                header
-
+        return List {
+            Section {
                 Picker("Station picker source", selection: $viewModel.activeChoice) {
                     ForEach(StationPickerSource.allCases) { source in
                         Text(source.title).tag(source)
                     }
                 }
                 .pickerStyle(.segmented)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
                 .accessibilityHint("Choose how to find a station.")
-
-                sourceContent
             }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(.horizontal, RTSpacing.pageHorizontal)
-            .padding(.vertical, RTSpacing.pageVertical)
-            .lightSurfaceForeground()
+            .listSectionSpacing(.compact)
+
+            if let station = viewModel.context.previousSelection {
+                Section("Current \(viewModel.context.selectionRole.fieldTitle.lowercased())") {
+                    StationPickerStationRow(station: station, showsChevron: false) {
+                        select(station)
+                    }
+                }
+            }
+
+            sourceContent
+
+            if let validationMessage = viewModel.validationMessage {
+                Section {
+                    Label(validationMessage, systemImage: "exclamationmark.triangle.fill")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(Color.rightTrainDanger)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .listRowBackground(Color.clear)
+                }
+            }
         }
-        .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
+        .listStyle(.insetGrouped)
+        // The system search field renders as Liquid Glass; typing always
+        // switches to the Search source.
+        .searchable(text: queryBinding, prompt: "Station name or code")
+        .textInputAutocapitalization(.characters)
+        .autocorrectionDisabled()
         .navigationTitle(viewModel.context.selectionRole.title)
         .navigationBarTitleDisplayMode(.inline)
         .toolbar {
@@ -74,14 +94,6 @@ struct StationPickerView: View {
         }
     }
 
-    private var header: some View {
-        VStack(alignment: .leading, spacing: RTSpacing.compact) {
-            if let station = viewModel.context.previousSelection {
-                StationPickerSelectedSummary(role: viewModel.context.selectionRole, station: station)
-            }
-        }
-    }
-
     @ViewBuilder
     private var sourceContent: some View {
         switch viewModel.activeChoice {
@@ -94,40 +106,30 @@ struct StationPickerView: View {
         }
     }
 
+    @ViewBuilder
     private var searchContent: some View {
-        VStack(alignment: .leading, spacing: RTSpacing.compact) {
-            TextField("Station name or code", text: queryBinding)
-                .textInputAutocapitalization(.characters)
-                .autocorrectionDisabled()
-                .padding(.horizontal, RTSpacing.compact)
-                .frame(minHeight: 52)
-                .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.chip))
-                .overlay {
-                    RoundedRectangle(cornerRadius: RTRadius.chip)
-                        .stroke(Color.rightTrainInkFaint, lineWidth: 1)
-                }
-                .accessibilityLabel("\(viewModel.context.selectionRole.fieldTitle) station search")
-
-            if viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).count < 2 {
-                StateMessage(
-                    title: "Type at least two characters",
-                    message: "Use a station name or three-letter station code.",
-                    symbolName: "magnifyingglass"
-                )
-            } else {
-                resultList(stations: viewModel.searchResults)
-            }
+        if viewModel.query.trimmingCharacters(in: .whitespacesAndNewlines).count < 2 {
+            StateMessage(
+                title: "Search for a station",
+                message: "Type at least two characters of a station name or three-letter code.",
+                symbolName: "magnifyingglass"
+            )
+        } else {
+            resultSection(stations: viewModel.searchResults, title: "Results")
         }
     }
 
+    @ViewBuilder
     private var favouritesContent: some View {
-        VStack(alignment: .leading, spacing: RTSpacing.compact) {
+        Group {
             if viewModel.favouriteRows.isEmpty {
                 stateMessageFromLoadingState
             } else {
-                ForEach(viewModel.favouriteRows) { favourite in
-                    StationPickerFavouriteRow(favourite: favourite) {
-                        select(favourite.candidate)
+                Section("Favourites") {
+                    ForEach(viewModel.favouriteRows) { favourite in
+                        StationPickerFavouriteRow(favourite: favourite) {
+                            select(favourite.candidate)
+                        }
                     }
                 }
             }
@@ -138,51 +140,33 @@ struct StationPickerView: View {
     }
 
     private var nearestContent: some View {
-        VStack(alignment: .leading, spacing: RTSpacing.compact) {
-            resultList(stations: viewModel.nearestResults)
-        }
-        .task {
-            await viewModel.loadNearest()
-        }
+        resultSection(stations: viewModel.nearestResults, title: "Nearest stations")
+            .task {
+                await viewModel.loadNearest()
+            }
     }
 
     @ViewBuilder
-    private func resultList(stations: [StationSuggestion]) -> some View {
+    private func resultSection(stations: [StationSuggestion], title: String) -> some View {
         if viewModel.loadingState == .loading {
-            HStack(spacing: RTSpacing.small) {
-                ProgressView()
-                    .controlSize(.small)
-                Text("Loading stations")
-                    .font(.subheadline.weight(.semibold))
+            Section {
+                HStack(spacing: RTSpacing.small) {
+                    ProgressView()
+                        .controlSize(.small)
+                    Text("Loading stations")
+                        .foregroundStyle(.secondary)
+                }
             }
-            .padding(RTSpacing.cardPadding)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
         } else if stations.isEmpty {
             stateMessageFromLoadingState
         } else {
-            VStack(spacing: 0) {
+            Section(title) {
                 ForEach(stations) { station in
                     StationPickerStationRow(station: station) {
                         select(station)
                     }
-                    if station.id != stations.last?.id {
-                        Divider()
-                    }
                 }
             }
-            .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
-            .overlay {
-                RoundedRectangle(cornerRadius: RTRadius.card)
-                    .stroke(Color.rightTrainInkFaint, lineWidth: 1)
-            }
-        }
-
-        if let validationMessage = viewModel.validationMessage {
-            Label(validationMessage, systemImage: "exclamationmark.triangle.fill")
-                .font(.footnote.weight(.semibold))
-                .foregroundStyle(Color.rightTrainDanger)
-                .fixedSize(horizontal: false, vertical: true)
         }
     }
 
@@ -223,6 +207,9 @@ struct StationPickerView: View {
             viewModel.query
         } set: { newValue in
             viewModel.query = newValue
+            if !newValue.isEmpty, viewModel.activeChoice != .search {
+                viewModel.activeChoice = .search
+            }
         }
     }
 
@@ -233,34 +220,9 @@ struct StationPickerView: View {
     }
 }
 
-private struct StationPickerSelectedSummary: View {
-    var role: StationPickerSelectionRole
-    var station: StationSuggestion
-
-    var body: some View {
-        HStack(spacing: RTSpacing.compact) {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Current \(role.fieldTitle.lowercased())")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                Text(station.displayName)
-                    .font(.headline)
-            }
-            Spacer(minLength: RTSpacing.small)
-            CRSBadge(crs: station.crs)
-        }
-        .padding(RTSpacing.cardPadding)
-        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(Color.rightTrainInkFaint, lineWidth: 1)
-        }
-        .accessibilityElement(children: .combine)
-    }
-}
-
 private struct StationPickerStationRow: View {
     var station: StationSuggestion
+    var showsChevron = true
     var action: () -> Void
 
     var body: some View {
@@ -268,23 +230,21 @@ private struct StationPickerStationRow: View {
             HStack(spacing: RTSpacing.compact) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(station.displayName)
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(Color.rightTrainInk)
+                        .foregroundStyle(.primary)
                     if let distance = station.distanceMeters {
-                        HStack(spacing: RTSpacing.small) {
-                            Text(distanceText(distance))
-                        }
-                        .font(.caption)
-                        .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
+                        Text(distanceText(distance))
+                            .font(.caption)
+                            .foregroundStyle(.secondary)
                     }
                 }
                 Spacer(minLength: RTSpacing.small)
                 CRSBadge(crs: station.crs)
-                Image(systemName: "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.rightTrainInk.opacity(0.42))
+                if showsChevron {
+                    Image(systemName: "chevron.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
             }
-            .padding(RTSpacing.cardPadding)
             .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
@@ -310,11 +270,10 @@ private struct StationPickerFavouriteRow: View {
             HStack(spacing: RTSpacing.compact) {
                 VStack(alignment: .leading, spacing: 4) {
                     Text(favourite.displayLabel)
-                        .font(.caption.weight(.semibold))
+                        .font(.footnote.weight(.semibold))
                         .foregroundStyle(Color.rightTrainActionInk)
                     Text(favourite.candidate.displayName)
-                        .font(.body.weight(.semibold))
-                        .foregroundStyle(Color.rightTrainInk)
+                        .foregroundStyle(.primary)
                     if let unavailableReason = favourite.unavailableReason {
                         Text(unavailableReason)
                             .font(.caption)
@@ -325,13 +284,8 @@ private struct StationPickerFavouriteRow: View {
                 Spacer(minLength: RTSpacing.small)
                 CRSBadge(crs: favourite.crs)
             }
-            .padding(RTSpacing.cardPadding)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
-            .overlay {
-                RoundedRectangle(cornerRadius: RTRadius.card)
-                    .stroke(favourite.unavailableReason == nil ? Color.rightTrainInkFaint : Color.rightTrainDanger.opacity(0.35), lineWidth: 1)
-            }
+            .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .disabled(favourite.unavailableReason != nil)
@@ -345,11 +299,9 @@ private struct CRSBadge: View {
 
     var body: some View {
         Text(crs.uppercased())
-            .font(.caption.weight(.bold))
-            .foregroundStyle(Color.rightTrainActionInk)
-            .padding(.horizontal, 8)
-            .padding(.vertical, 5)
-            .background(Color.rightTrainActionInk.opacity(0.10), in: Capsule())
+            .font(.footnote.weight(.semibold))
+            .monospaced()
+            .foregroundStyle(.secondary)
             .accessibilityLabel("Station code \(crs.uppercased())")
     }
 }
@@ -360,22 +312,10 @@ private struct StateMessage: View {
     var symbolName: String
 
     var body: some View {
-        VStack(alignment: .leading, spacing: RTSpacing.small) {
-            Label(title, systemImage: symbolName)
-                .font(.subheadline.weight(.semibold))
-            Text(message)
-                .font(.footnote)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
+        Section {
+            ContentUnavailableView(title, systemImage: symbolName, description: Text(message))
+                .listRowBackground(Color.clear)
         }
-        .padding(RTSpacing.cardPadding)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(Color.rightTrainInkFaint, lineWidth: 1)
-        }
-        .accessibilityElement(children: .combine)
     }
 }
 

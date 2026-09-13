@@ -1,4 +1,6 @@
 import Foundation
+import StoreKit
+import os
 
 protocol APIClienting {
     func createDeviceChallenge() async throws -> DeviceChallengeResponse
@@ -1089,12 +1091,57 @@ struct APIClient {
 
 extension APIClient: APIClienting {}
 
+/// Which App Store environment this build's purchases live in, sent to the
+/// API so it verifies transactions against the right Apple endpoint.
+///
+/// Resolved from `AppTransaction` (the sandbox receipt URL it replaces was
+/// deprecated in iOS 18). The lookup can be slow or never return (e.g. on a
+/// simulator with no App Store account), so requests never wait for it: they
+/// read the cached value, defaulting to "production" until the background
+/// lookup finishes. Call `prepare()` at launch to start it early.
 enum StoreKitClientEnvironment {
-    static func current(bundle: Bundle = .main) -> String {
-        if bundle.appStoreReceiptURL?.lastPathComponent == "sandboxReceipt" {
-            return "sandbox"
+    private struct State {
+        var resolved: String?
+        var isResolving = false
+    }
+
+    private static let state = OSAllocatedUnfairLock(initialState: State())
+
+    static func current() -> String {
+        prepare()
+        return state.withLock { $0.resolved } ?? "production"
+    }
+
+    static func prepare() {
+        let shouldStart = state.withLock { state -> Bool in
+            guard state.resolved == nil, !state.isResolving else { return false }
+            state.isResolving = true
+            return true
         }
-        return "production"
+        guard shouldStart else { return }
+
+        Task.detached(priority: .utility) {
+            let environment = await resolve()
+            state.withLock { state in
+                state.resolved = environment
+                state.isResolving = false
+            }
+        }
+    }
+
+    /// nil when the lookup failed (e.g. offline), so a later request retries.
+    private static func resolve() async -> String? {
+        guard let result = try? await AppTransaction.shared else {
+            return nil
+        }
+        let transaction: AppTransaction
+        switch result {
+        case .verified(let value), .unverified(let value, _):
+            transaction = value
+        }
+        // Xcode-signed builds previously had no sandbox receipt, so they keep
+        // reporting production as before.
+        return transaction.environment == .sandbox ? "sandbox" : "production"
     }
 }
 

@@ -31,7 +31,6 @@ struct AccountPrivacyControlsView: View {
             } footer: {
                 Text(exportStatusText ?? "The export contains account preferences, linked-device categories, and retained-record explanations. It excludes access tokens, raw device identifiers, notification tokens, and credential material.")
             }
-            .listRowBackground(Color.rightTrainPaperCream)
 
             if let export = authViewModel.accountExport {
                 exportActions(export)
@@ -40,9 +39,6 @@ struct AccountPrivacyControlsView: View {
         }
         .navigationTitle("Export data")
         .navigationBarTitleDisplayMode(.inline)
-        .scrollContentBackground(.hidden)
-        .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
-        .lightSurfaceForeground()
     }
 
     private func generateExport() {
@@ -86,7 +82,6 @@ struct AccountPrivacyControlsView: View {
         } footer: {
             Text("Share or save this JSON export for your records.")
         }
-        .listRowBackground(Color.rightTrainPaperCream)
     }
 
     private func exportSummary(_ export: AccountExportResponse) -> some View {
@@ -115,7 +110,6 @@ struct AccountPrivacyControlsView: View {
             } header: {
                 Label("Export Summary", systemImage: "checklist")
             }
-            .listRowBackground(Color.rightTrainPaperCream)
 
             if let retainedRecords = export.retainedRecords, !retainedRecords.isEmpty {
                 Section {
@@ -135,7 +129,6 @@ struct AccountPrivacyControlsView: View {
                 } header: {
                     Label("Retained Records", systemImage: "archivebox")
                 }
-                .listRowBackground(Color.rightTrainPaperCream)
             }
         }
     }

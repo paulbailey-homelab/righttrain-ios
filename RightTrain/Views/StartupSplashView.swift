@@ -66,14 +66,7 @@ struct StartupSplashView: View {
                 RightTrainRouteMark()
                     .frame(width: 64, height: 64)
                     .frame(width: 82, height: 82)
-                    .background(
-                        Color.rightTrainPaperCream,
-                        in: RoundedRectangle(cornerRadius: RTRadius.live, style: .continuous)
-                    )
-                    .overlay {
-                        RoundedRectangle(cornerRadius: RTRadius.live, style: .continuous)
-                            .stroke(Color.rightTrainInkFaint, lineWidth: 1)
-                    }
+                    .glassEffect(.regular, in: .rect(cornerRadius: RTRadius.live))
                     .scaleEffect(isPulsing ? 1.04 : 1)
 
                 VStack(spacing: RTSpacing.small) {

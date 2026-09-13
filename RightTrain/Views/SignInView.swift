@@ -104,12 +104,8 @@ struct SignInView: View {
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(.horizontal, RTSpacing.cardPadding)
-        .padding(.vertical, RTSpacing.compact)
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(Color.rightTrainInkFaint, lineWidth: 1)
-        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .rtCard(padding: RTSpacing.cardPadding)
         .accessibilityElement(children: .combine)
     }
 }

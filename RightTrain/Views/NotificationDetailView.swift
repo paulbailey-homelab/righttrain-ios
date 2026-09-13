@@ -78,37 +78,6 @@ private struct NotificationDetailContentView: View {
                           nextRecommendation.journey.serviceId != affectedRecommendation?.journey.serviceId {
                     notificationTrainSection(title: "Current recommendation", recommendation: nextRecommendation)
                 }
-
-                if isRecommendedDeparted {
-                    VStack(spacing: RTSpacing.listItem) {
-                        if let serviceID = data.departedTrainServiceId ?? data.departedRecommendation?.journey.serviceId {
-                            Button {
-                                completeNotificationAction {
-                                    await appCoordinator.pinDepartedTrain(serviceID: serviceID, windowID: detail.windowSubscriptionId)
-                                }
-                            } label: {
-                                Label("Pin this journey", systemImage: "pin")
-                                    .frame(maxWidth: .infinity)
-                            }
-                        .buttonStyle(.borderedProminent)
-                        .controlSize(.large)
-                    }
-
-                        Button {
-                            completeNotificationAction {
-                                await appCoordinator.monitorNextBestAfterDepartedTrain(
-                                    serviceID: data.departedTrainServiceId ?? data.departedRecommendation?.journey.serviceId,
-                                    windowID: detail.windowSubscriptionId
-                                )
-                            }
-                        } label: {
-                            Label("Keep search pinned", systemImage: "arrow.forward.circle")
-                                .frame(maxWidth: .infinity)
-                        }
-                        .buttonStyle(.bordered)
-                        .controlSize(.large)
-                    }
-                }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .padding(.horizontal, RTSpacing.pageHorizontal)
@@ -116,22 +85,58 @@ private struct NotificationDetailContentView: View {
             .lightSurfaceForeground()
         }
         .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
+        .safeAreaBar(edge: .bottom) {
+            if isRecommendedDeparted {
+                departedActions
+            }
+        }
         .navigationTitle("Notification")
         .navigationBarTitleDisplayMode(.inline)
     }
 
+    /// The decision this notification asks for, floating above the details
+    /// on Liquid Glass: pin the departed train, or keep watching the search.
+    private var departedActions: some View {
+        GlassEffectContainer(spacing: RTSpacing.small) {
+            VStack(spacing: RTSpacing.small) {
+                if let serviceID = data.departedTrainServiceId ?? data.departedRecommendation?.journey.serviceId {
+                    FloatingPrimaryAction {
+                        completeNotificationAction {
+                            await appCoordinator.pinDepartedTrain(serviceID: serviceID, windowID: detail.windowSubscriptionId)
+                        }
+                    } label: {
+                        Label("Pin this journey", systemImage: "pin")
+                    }
+                }
+
+                Button {
+                    completeNotificationAction {
+                        await appCoordinator.monitorNextBestAfterDepartedTrain(
+                            serviceID: data.departedTrainServiceId ?? data.departedRecommendation?.journey.serviceId,
+                            windowID: detail.windowSubscriptionId
+                        )
+                    }
+                } label: {
+                    Label("Keep search pinned", systemImage: "arrow.forward.circle")
+                        .font(.body.weight(.semibold))
+                        .frame(maxWidth: .infinity)
+                }
+                .buttonStyle(.glass)
+                .controlSize(.extraLarge)
+                .padding(.horizontal, RTSpacing.pageHorizontal + 4)
+                .padding(.bottom, RTSpacing.small)
+            }
+        }
+    }
+
+    // The header already states what changed, so the panel only explains why
+    // it matters and what to do.
     private var notificationActionPanel: some View {
         VStack(alignment: .leading, spacing: RTSpacing.compact) {
-            MetricView(label: "What changed", value: whatChangedText)
             MetricView(label: "Why it matters", value: whyItMattersText)
             NextActionCallout(text: nextActionText, tone: notificationTone)
         }
-        .padding(RTSpacing.cardPadding)
-        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(notificationTone.color.opacity(0.28), lineWidth: 1)
-        }
+        .rtCard()
         .lightSurfaceForeground()
         .accessibilityElement(children: .combine)
     }
@@ -270,8 +275,9 @@ private struct NotificationDetailContentView: View {
         ]
         return VStack(alignment: .leading, spacing: RTSpacing.listItem) {
             Text(title)
-                .font(.caption.weight(.semibold))
+                .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
+                .padding(.horizontal, RTSpacing.cardPadding)
 
             VStack(alignment: .leading, spacing: RTSpacing.small) {
                 HStack(alignment: .firstTextBaseline, spacing: RTSpacing.small) {
@@ -292,13 +298,8 @@ private struct NotificationDetailContentView: View {
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)
-            .padding(RTSpacing.cardPadding)
-            .background(Color.rightTrainSurface, in: RoundedRectangle(cornerRadius: RTRadius.card))
+            .rtCard()
             .lightSurfaceForeground()
-            .overlay {
-                RoundedRectangle(cornerRadius: RTRadius.card)
-                    .stroke(Color.rightTrainBorder, lineWidth: 1)
-            }
         }
     }
 

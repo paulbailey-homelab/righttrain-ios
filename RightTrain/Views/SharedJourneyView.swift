@@ -151,12 +151,7 @@ struct SharedJourneyView: View {
                                 .foregroundStyle(.secondary)
                         }
                     }
-                    .padding(RTSpacing.cardPadding)
-                    .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
-                    .overlay {
-                        RoundedRectangle(cornerRadius: RTRadius.card)
-                            .stroke(presentation.statusTone.color.opacity(RTOpacity.faint), lineWidth: 1)
-                    }
+                    .rtCard()
                 }
 
                 if let disruptions = journey.disruptions, !disruptions.isEmpty {
@@ -176,8 +171,6 @@ struct SharedJourneyView: View {
                     sharedLegsSection(legs)
                 }
 
-                sharedLinkActions(journey)
-
                 Text("Link expires \(SharedJourneyFormatting.timeText(journey.expiresAt)).")
                     .font(.caption)
                     .foregroundStyle(.secondary)
@@ -188,6 +181,9 @@ struct SharedJourneyView: View {
             .lightSurfaceForeground()
         }
         .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
+        .safeAreaBar(edge: .bottom) {
+            sharedLinkActions(journey)
+        }
         .navigationTitle("Shared Journey")
         .navigationBarTitleDisplayMode(.inline)
     }
@@ -211,50 +207,43 @@ struct SharedJourneyView: View {
                     }
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(RTSpacing.compact)
-                .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
-                .overlay {
-                    RoundedRectangle(cornerRadius: RTRadius.card)
-                        .stroke(tone.color.opacity(0.20), lineWidth: 1)
-                }
+                .rtCard(padding: RTSpacing.compact)
             }
         }
     }
 
+    /// Open/Install float above the shared journey on Liquid Glass; opening
+    /// in the app is the tinted primary action.
     private func sharedLinkActions(_ journey: PublicJourneyShare) -> some View {
-        VStack(spacing: RTSpacing.listItem) {
-            if let appURL = URL(string: journey.appUrl) {
-                Link(destination: appURL) {
-                    Label("Open in RightTrain", systemImage: "arrow.up.forward.app")
-                        .font(.system(size: 16, weight: .semibold))
-                        .foregroundStyle(Color.rightTrainOnAccent)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: RTSize.buttonHeight)
-                        .background(Color.rightTrainActionInk, in: RoundedRectangle(cornerRadius: RTRadius.button))
+        GlassEffectContainer(spacing: RTSpacing.small) {
+            HStack(spacing: RTSpacing.small) {
+                if let appStoreURL = journey.appStoreUrl.flatMap(URL.init(string:)) {
+                    Link(destination: appStoreURL) {
+                        Label("Install", systemImage: "arrow.down.app")
+                            .font(.body.weight(.semibold))
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.glass)
                 }
-                .buttonStyle(.plain)
-            }
-            if let appStoreURL = journey.appStoreUrl.flatMap(URL.init(string:)) {
-                Link(destination: appStoreURL) {
-                    Label("Install RightTrain", systemImage: "arrow.down.app")
-                        .frame(maxWidth: .infinity)
+                if let appURL = URL(string: journey.appUrl) {
+                    Link(destination: appURL) {
+                        Label("Open in RightTrain", systemImage: "arrow.up.forward.app")
+                            .font(.body.weight(.semibold))
+                            .foregroundStyle(Color.rightTrainOnAccent)
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.glassProminent)
+                    .layoutPriority(1)
                 }
-                .buttonStyle(.bordered)
-                .controlSize(.large)
-                .tint(Color.rightTrainActionInk)
             }
+            .controlSize(.extraLarge)
+            .padding(.horizontal, RTSpacing.pageHorizontal + 4)
+            .padding(.bottom, RTSpacing.small)
         }
     }
 
     private func sharedUnavailableState(title: String, message: String, symbolName: String) -> some View {
-        EmptyStateView(
-            title: title,
-            message: message,
-            symbolName: symbolName,
-            tint: .rightTrainActionInk
-        )
-        .frame(maxWidth: .infinity, maxHeight: .infinity)
-        .padding(.horizontal, RTSpacing.pageHorizontal)
+        ContentUnavailableView(title, systemImage: symbolName, description: Text(message))
         .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
         .navigationTitle("Shared Journey")
         .navigationBarTitleDisplayMode(.inline)
