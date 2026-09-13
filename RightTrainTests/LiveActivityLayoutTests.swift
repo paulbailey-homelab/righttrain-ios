@@ -247,7 +247,7 @@ final class LiveActivityLayoutTests: XCTestCase {
                 XCTAssertEqual(state.platformChange?.currentPlatform, "12")
                 XCTAssertEqual(state.statusKind, .atRisk)
             case .windowStaleData:
-                XCTAssertEqual(state.statusText, "Live data stale")
+                XCTAssertEqual(state.statusText, "Update delayed")
                 XCTAssertEqual(state.statusKind, .unreported)
                 XCTAssertTrue(state.updatedAtText.contains("18"))
             case .windowOffline:
@@ -571,7 +571,7 @@ final class LiveActivityLayoutTests: XCTestCase {
             now: now
         )
 
-        XCTAssertEqual(content.routeContextText, "EUS to MAN")
+        XCTAssertEqual(content.routeContextText, "Caledonian Sleeper")
         XCTAssertEqual(content.platformText, "Platform 12 · was 2")
         XCTAssertEqual(
             JourneyFormatting.accessibilityStatusLabel(
