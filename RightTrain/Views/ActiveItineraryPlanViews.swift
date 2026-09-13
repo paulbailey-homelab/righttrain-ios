@@ -266,14 +266,15 @@ struct ActiveItineraryView: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             ActiveItineraryCard {
-                ActiveItineraryHeader(presentation: presentation)
-
                 if presentation.phase == .atOrigin {
                     atOriginBanner
                 }
 
                 selectedJourneySection(now: context.date)
             }
+        }
+        .background {
+            ActiveItineraryHeader(presentation: presentation)
         }
         .onAppear {
             expandSelectedItineraryIfNeeded()
@@ -311,7 +312,7 @@ struct ActiveItineraryView: View {
                         }
                         .buttonStyle(.plain)
                         .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.rightTrainPaperCream)
+                        .foregroundStyle(Color.rightTrainOnAccent)
                         .frame(maxWidth: .infinity)
                         .frame(height: 44)
                         .background(Color.rightTrainActionInk, in: Capsule())
@@ -483,13 +484,9 @@ private struct ActiveItineraryPlanHeroCard: View {
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
         }
-        .padding(RTSpacing.cardPadding)
-        .background(emphasized ? Color.rightTrainActionInk.opacity(0.10) : Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
+        .padding(RTSpacing.compact)
+        .background(emphasized ? Color.rightTrainActionInk.opacity(0.10) : Color.rightTrainInsetFill, in: RoundedRectangle(cornerRadius: RTRadius.chip + 2, style: .continuous))
         .lightSurfaceForeground()
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(emphasized ? Color.rightTrainActionInk.opacity(0.24) : Color.rightTrainInkFaint, lineWidth: 1)
-        }
     }
 
     private var detailLine: String {
@@ -553,7 +550,7 @@ private struct ActiveItineraryLegList: View {
         }
         .padding(.horizontal, 12)
         .padding(.vertical, 6)
-        .background(Color.rightTrainSurfaceCream, in: RoundedRectangle(cornerRadius: RTRadius.chip))
+        .background(Color.rightTrainInsetFill, in: RoundedRectangle(cornerRadius: RTRadius.chip))
         .lightSurfaceForeground()
     }
 }

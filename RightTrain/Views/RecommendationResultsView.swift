@@ -6,6 +6,8 @@ struct SearchPinSummary {
     var kind: PinKind
 }
 
+/// Direct-train search results, rendered as inset-grouped list sections.
+/// Host inside a `List`.
 struct RecommendationResultsView: View {
     var response: DirectWindowRecommendationResponse
     var summary: SearchPinSummary
@@ -21,110 +23,51 @@ struct RecommendationResultsView: View {
         let top    = recommendations.first { isTopRecommendation($0) }
         let others = recommendations.filter { !isTopRecommendation($0) }
 
-        VStack(alignment: .leading, spacing: RTSpacing.sectionGap) {
-            if recommendations.isEmpty {
+        if recommendations.isEmpty {
+            Section {
                 EmptyStateView(
                     title: "No direct trains found",
                     message: "Try widening the departure window or switching to routes with changes."
                 )
-            } else {
-                searchPinHeader(recommendationCount: recommendations.count)
+                .listRowInsets(EdgeInsets())
+            }
+        } else {
+            Section {
+                SearchResultsHeader(
+                    summary: summary,
+                    detailText: "\(summary.windowText) · \(recommendations.count) direct \(recommendations.count == 1 ? "train" : "trains")"
+                )
+            }
+            .listSectionSpacing(.compact)
 
-                // Top recommendation with a status rail.
-                if let top {
-                    SearchDirectJourneyCard(
+            if let top {
+                Section {
+                    SearchDirectJourneyRow(
                         recommendation: top,
                         emphasized: true,
                         isPinned: isJourneyPinned(top),
                         pinJourney: { await toggleJourneyPin(top) }
                     )
+                } header: {
+                    Text("Recommended")
                 }
+            }
 
-                // Remaining direct trains in a shared container.
-                if !others.isEmpty {
-                    VStack(alignment: .leading, spacing: RTSpacing.compact) {
-                        Text("Other direct trains")
-                            .font(.caption.weight(.semibold))
-                            .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
-
-                        VStack(alignment: .leading, spacing: 0) {
-                            ForEach(Array(others.enumerated()), id: \.element.id) { index, rec in
-                                SearchDirectJourneyCard(
-                                    recommendation: rec,
-                                    emphasized: false,
-                                    isPinned: isJourneyPinned(rec),
-                                    pinJourney: { await toggleJourneyPin(rec) },
-                                    inContainer: true
-                                )
-
-                                if index < others.count - 1 {
-                                    Divider()
-                                        .background(Color.rightTrainInkFaint)
-                                        .padding(.leading, RTSpacing.cardPadding + 4)
-                                }
-                            }
-                        }
-                        .background(Color.rightTrainPaperCream)
-                        .lightSurfaceForeground()
-                        .overlay {
-                            RoundedRectangle(cornerRadius: RTRadius.card)
-                                .stroke(Color.rightTrainInkFaint, lineWidth: 1)
-                        }
-                        .clipShape(RoundedRectangle(cornerRadius: RTRadius.card))
+            if !others.isEmpty {
+                Section {
+                    ForEach(others) { rec in
+                        SearchDirectJourneyRow(
+                            recommendation: rec,
+                            emphasized: false,
+                            isPinned: isJourneyPinned(rec),
+                            pinJourney: { await toggleJourneyPin(rec) }
+                        )
                     }
-                }
-
-                // If top is nil (all trains at same rank), fall back to showing all
-                if top == nil {
-                    LazyVStack(alignment: .leading, spacing: RTSpacing.listItem) {
-                        ForEach(recommendations) { rec in
-                            SearchDirectJourneyCard(
-                                recommendation: rec,
-                                emphasized: false,
-                                isPinned: isJourneyPinned(rec),
-                                pinJourney: { await toggleJourneyPin(rec) }
-                            )
-                        }
-                    }
+                } header: {
+                    Text(top == nil ? "Direct trains" : "Other direct trains")
                 }
             }
         }
-    }
-
-    private func searchPinHeader(recommendationCount: Int) -> some View {
-        VStack(alignment: .leading, spacing: RTSpacing.small) {
-            HStack(alignment: .firstTextBaseline, spacing: RTSpacing.small) {
-                Text("DIRECT TRAINS")
-                    .font(RTFont.eyebrow)
-                    .tracking(1.6)
-                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
-
-                Spacer(minLength: RTSpacing.small)
-
-                Text(summary.windowText)
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
-                    .monospacedDigit()
-                    .lineLimit(1)
-            }
-
-            HStack(alignment: .center, spacing: RTSpacing.listItem) {
-                Text(summary.routeTitle)
-                    .font(.system(size: 22, weight: .bold))
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Spacer(minLength: 8)
-
-                SearchPinButton(
-                    recommendationCount: recommendationCount,
-                    action: pinWindow
-                )
-            }
-        }
-        .accessibilityElement(children: .contain)
-        .accessibilityLabel("\(summary.routeTitle), direct trains between \(summary.windowText)")
-        .accessibilityHint("Creates a Search Pin for \(recommendationCount) direct trains in this departure range.")
     }
 
     private func isTopRecommendation(_ recommendation: DirectWindowRecommendation) -> Bool {
@@ -137,26 +80,38 @@ struct RecommendationResultsView: View {
     }
 }
 
-private struct SearchPinButton: View {
+/// Route title and window summary shown as the first, background-less list row.
+private struct SearchResultsHeader: View {
+    var summary: SearchPinSummary
+    var detailText: String
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 2) {
+            Text(summary.routeTitle)
+                .font(.title3.weight(.bold))
+                .fixedSize(horizontal: false, vertical: true)
+            Text(detailText)
+                .font(.subheadline)
+                .foregroundStyle(.secondary)
+                .monospacedDigit()
+        }
+        .listRowInsets(EdgeInsets(top: 4, leading: RTSpacing.cardPadding, bottom: 0, trailing: RTSpacing.cardPadding))
+        .listRowBackground(Color.clear)
+        .accessibilityElement(children: .combine)
+    }
+}
+
+/// Toolbar button that turns the whole search into a Search Pin.
+struct SearchPinToolbarButton: View {
     var recommendationCount: Int
     var action: () async -> Void
 
     var body: some View {
         Button {
-            Task {
-                await action()
-            }
+            Task { await action() }
         } label: {
-            Label("Pin search", systemImage: "pin.circle")
-                .font(.caption.weight(.semibold))
-                .lineLimit(1)
-                .padding(.horizontal, 10)
-                .frame(height: 34)
+            Label("Pin Search", systemImage: "pin")
         }
-        .buttonStyle(.plain)
-        .foregroundStyle(Color.rightTrainActionInk)
-        .background(Color.rightTrainActionInk.opacity(0.13), in: Capsule())
-        .accessibilityLabel("Pin search")
         .accessibilityHint("Creates a Search Pin for \(recommendationCount) direct trains in this departure range.")
     }
 }
@@ -176,51 +131,53 @@ struct ItineraryResultsView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
-            if itineraries.isEmpty {
+        if itineraries.isEmpty {
+            Section {
                 EmptyStateView(
                     title: "No trains found",
                     message: "Try adjusting your departure time or widening the departure window."
                 )
-            } else {
-                itinerarySearchHeader
+                .listRowInsets(EdgeInsets())
+            }
+        } else {
+            let top = itineraries.first { isTopItinerary($0) }
+            let others = itineraries.filter { !isTopItinerary($0) }
 
-                Text("Routes with changes")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
+            Section {
+                SearchResultsHeader(
+                    summary: summary,
+                    detailText: "\(summary.windowText) · \(itineraries.count) \(itineraries.count == 1 ? "route" : "routes")"
+                )
+            }
+            .listSectionSpacing(.compact)
 
-                LazyVStack(alignment: .leading, spacing: RTSpacing.listItem) {
-                    ForEach(itineraries) { itinerary in
-                        SearchItineraryJourneyCard(
-                            itinerary: itinerary,
-                            emphasized: isTopItinerary(itinerary),
-                            isPinned: isJourneyPinned(itinerary),
-                            pinJourney: {
-                                await toggleJourneyPin(itinerary)
-                            }
-                        )
-                    }
+            if let top {
+                Section {
+                    SearchItineraryJourneyRow(
+                        itinerary: top,
+                        emphasized: true,
+                        isPinned: isJourneyPinned(top),
+                        pinJourney: { await toggleJourneyPin(top) }
+                    )
+                } header: {
+                    Text("Recommended")
                 }
             }
-        }
-    }
 
-    private var itinerarySearchHeader: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            Text(summary.routeTitle)
-                .font(.headline)
-                .fixedSize(horizontal: false, vertical: true)
-            Text("\(summary.windowText) · \(itineraries.count) \(itineraries.count == 1 ? "route" : "routes")")
-                .font(.caption)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(RTSpacing.cardPadding)
-        .background(Color.rightTrainHighlight.opacity(0.75), in: RoundedRectangle(cornerRadius: RTRadius.card))
-        .lightSurfaceForeground()
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(Color.rightTrainActionInk.opacity(0.35), lineWidth: 1)
+            if !others.isEmpty {
+                Section {
+                    ForEach(others) { itinerary in
+                        SearchItineraryJourneyRow(
+                            itinerary: itinerary,
+                            emphasized: false,
+                            isPinned: isJourneyPinned(itinerary),
+                            pinJourney: { await toggleJourneyPin(itinerary) }
+                        )
+                    }
+                } header: {
+                    Text(top == nil ? "Routes with changes" : "Other routes")
+                }
+            }
         }
     }
 
@@ -232,99 +189,155 @@ struct ItineraryResultsView: View {
     }
 }
 
-private struct SearchDirectJourneyCard: View {
+// MARK: - Result rows
+
+/// Icon + footnote status text with tight spacing (a list `Label` reserves a
+/// wide icon column that looks detached inside a compact row).
+private struct StatusIconText: View {
+    var text: String
+    var systemImage: String
+    var color: Color
+
+    var body: some View {
+        HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Image(systemName: systemImage)
+                .accessibilityHidden(true)
+            Text(text)
+                .lineLimit(2)
+        }
+        .font(.footnote)
+        .foregroundStyle(color)
+    }
+}
+
+/// Departure-board style row: times, duration/operator, platform, pin toggle,
+/// and a status line only when something is worth reading.
+private struct SearchResultRowLayout<Status: View>: View {
+    var departure: JourneyTimeDisplay
+    var arrival: JourneyTimeDisplay
+    var subtitle: String
+    var platformLabel: String
+    var platformValue: String
+    var platformExpected: Bool
+    var isPinned: Bool
+    var pinHint: String
+    var unpinHint: String
+    var pinJourney: () async -> Void
+    @ViewBuilder var status: () -> Status
+
+    var body: some View {
+        HStack(alignment: .center, spacing: RTSpacing.compact) {
+            VStack(alignment: .leading, spacing: 3) {
+                HStack(alignment: .firstTextBaseline, spacing: 6) {
+                    timeText(departure)
+                    Image(systemName: "arrow.right")
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                        .accessibilityHidden(true)
+                    timeText(arrival)
+                }
+
+                Text(subtitle)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+
+                status()
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            VStack(alignment: .trailing, spacing: 0) {
+                Text(platformLabel)
+                    .font(.caption2.weight(.medium))
+                    .foregroundStyle(.secondary)
+                Text(platformValue)
+                    .font(.title3.weight(.semibold))
+                    .italic(platformExpected)
+                    .monospacedDigit()
+                    .lineLimit(1)
+            }
+            .fixedSize()
+            .accessibilityElement(children: .combine)
+
+            PinJourneyIconButton(
+                isPinned: isPinned,
+                pinHint: pinHint,
+                unpinHint: unpinHint,
+                action: pinJourney
+            )
+        }
+        .padding(.vertical, 2)
+        .accessibilityElement(children: .contain)
+    }
+
+    private func timeText(_ display: JourneyTimeDisplay) -> some View {
+        let current = display.currentText ?? display.scheduledText
+        let changed = display.currentText != nil && display.currentText != display.scheduledText
+        return HStack(alignment: .firstTextBaseline, spacing: 4) {
+            Text(current)
+                .font(.title3.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(changed ? Color.rightTrainAmber : Color.primary)
+            if changed {
+                Text(display.scheduledText)
+                    .font(.footnote)
+                    .monospacedDigit()
+                    .strikethrough()
+                    .foregroundStyle(.secondary)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+}
+
+private struct SearchDirectJourneyRow: View {
     var recommendation: DirectWindowRecommendation
     var emphasized: Bool
     var isPinned: Bool
     var pinJourney: () async -> Void
-    /// When true the card is rendered as a plain row inside a shared container
-    /// (no card chrome of its own, left strip indicates status).
-    var inContainer: Bool = false
 
     private var journey: JourneyResult { recommendation.journey }
 
-    /// Tone of this specific recommendation, used to tint the left-edge strip.
-    private var statusTone: StatusPill.Tone {
-        ActiveWindowPresentation.statusDisplay(for: recommendation).tone
-    }
-
-    private var stripColor: Color {
-        switch statusTone {
-        case .red:    return .rightTrainBadBg
-        case .amber:  return .rightTrainWarnBg
-        default:      return .rightTrainGoodBg
-        }
-    }
-
     var body: some View {
-        VStack(alignment: .leading, spacing: 10) {
-            HStack(alignment: .top, spacing: RTSpacing.listItem) {
-                VStack(alignment: .leading, spacing: 4) {
-                    Text("\(JourneyFormatting.departureText(journey)) → \(JourneyFormatting.arrivalText(journey))")
-                        .font(emphasized ? .title3.weight(.semibold) : .headline)
-                        .monospacedDigit()
-                        .fixedSize(horizontal: false, vertical: true)
+        let platform = JourneyFormatting.platformText(journey)
+        let hasPlatform = !["", "-", "TBC"].contains(platform.trimmingCharacters(in: .whitespaces).uppercased())
+        let expected = hasPlatform && !JourneyFormatting.departurePlatformConfirmed(journey)
 
-                    Text(JourneyFormatting.durationText(journey))
-                        .font(.caption.weight(.medium))
-                        .foregroundStyle(.secondary)
-
-                    if let operatorText = JourneyFormatting.operatorSummaryText(journey) {
-                        Text(operatorText)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
-                }
-
-                Spacer(minLength: 6)
-
-                VStack(alignment: .trailing, spacing: 8) {
-                    if !inContainer {
-                        StatusPill(text: emphasized ? "Best option" : "Alternative \(recommendation.rank)", tone: .accent)
-                    }
-                    PinJourneyIconButton(
-                        isPinned: isPinned,
-                        pinHint: "Pins this train as your current Journey Pin.",
-                        unpinHint: "Unpins this train and returns to watching the search.",
-                        action: pinJourney
-                    )
-                }
-            }
-
-            LazyVGrid(columns: metricColumns, alignment: .leading, spacing: 8) {
-                SearchTimeMetricView(label: "Dep", display: JourneyFormatting.departureDisplay(journey))
-                SearchTimeMetricView(label: "Arr", display: JourneyFormatting.arrivalDisplay(journey))
-                MetricView(label: "Platform", value: JourneyFormatting.platformMetricText(journey))
-            }
-
-            DisruptionLine(journey: journey, score: recommendation.score)
-                .lineLimit(1)
-                .minimumScaleFactor(0.82)
-
-            if let reasonText {
+        SearchResultRowLayout(
+            departure: JourneyFormatting.departureDisplay(journey),
+            arrival: JourneyFormatting.arrivalDisplay(journey),
+            subtitle: subtitle,
+            platformLabel: expected ? "Exp. plat" : "Platform",
+            platformValue: hasPlatform ? platform : "TBC",
+            platformExpected: expected,
+            isPinned: isPinned,
+            pinHint: "Pins this train as your current Journey Pin.",
+            unpinHint: "Unpins this train and returns to watching the search.",
+            pinJourney: pinJourney
+        ) {
+            if ActiveWindowPresentation.heroStatusDisplay(for: recommendation) != nil {
+                DisruptionLine(journey: journey, score: recommendation.score)
+                    .font(.footnote)
+                    .lineLimit(2)
+            } else if emphasized, let reasonText {
                 Text(reasonText)
-                    .font(.caption)
-                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
+                    .font(.footnote)
+                    .foregroundStyle(Color.rightTrainActionInk)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(RTSpacing.compact)
-        .padding(.leading, inContainer ? 4 : 0)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .modifier(SearchCardChrome(
-            emphasized: emphasized,
-            inContainer: inContainer,
-            stripColor: stripColor
-        ))
-        .accessibilityElement(children: .contain)
     }
 
-    private var metricColumns: [GridItem] {
-        [GridItem(.adaptive(minimum: emphasized ? 92 : 78), spacing: 8, alignment: .leading)]
+    private var subtitle: String {
+        let duration = JourneyFormatting.durationText(journey)
+            .replacingOccurrences(of: "Scheduled ", with: "")
+        return [duration, JourneyFormatting.operatorSummaryText(journey)]
+            .compactMap { $0 }
+            .joined(separator: " · ")
     }
+
     private var reasonText: String? {
         recommendation.score.reasons?
             .map { $0.trimmingCharacters(in: .whitespacesAndNewlines) }
@@ -333,173 +346,44 @@ private struct SearchDirectJourneyCard: View {
     }
 }
 
-private struct SearchTimeMetricView: View {
-    var label: String
-    var display: JourneyTimeDisplay
-
-    private var primaryText: String {
-        display.currentText ?? display.scheduledText
-    }
-
-    private var secondaryText: String? {
-        guard let current = display.currentText, current != display.scheduledText else {
-            return nil
-        }
-        return "was \(display.scheduledText)"
-    }
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 3) {
-            Text(label)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-
-            Text(primaryText)
-                .font(.subheadline.weight(.semibold))
-                .monospacedDigit()
-                .lineLimit(1)
-
-            if let secondaryText {
-                Text(secondaryText)
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
-                    .monospacedDigit()
-                    .lineLimit(1)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(label)
-        .accessibilityValue(accessibilityValue)
-    }
-
-    private var accessibilityValue: String {
-        if let secondaryText {
-            return "\(primaryText), \(secondaryText)"
-        }
-        return primaryText
-    }
-}
-
-/// Applies the right background/border/foreground treatment to a search result card.
-private struct SearchCardChrome: ViewModifier {
-    var emphasized: Bool
-    var inContainer: Bool
-    var stripColor: Color
-
-    func body(content: Content) -> some View {
-        if emphasized {
-            // Top recommendation uses the same neutral card system with a status rail.
-            content
-                .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
-                .lightSurfaceForeground()
-                .overlay {
-                    RoundedRectangle(cornerRadius: RTRadius.card)
-                        .stroke(Color.rightTrainActionInk.opacity(0.28), lineWidth: 1)
-                }
-                .overlay(alignment: .leading) {
-                    Rectangle()
-                        .fill(stripColor)
-                        .frame(width: 4)
-                        .clipShape(.rect(
-                            topLeadingRadius: RTRadius.card,
-                            bottomLeadingRadius: RTRadius.card,
-                            bottomTrailingRadius: 0,
-                            topTrailingRadius: 0
-                        ))
-                }
-        } else if inContainer {
-            // Inside the other-direct-trains container — plain row + left strip
-            content
-                .overlay(alignment: .leading) {
-                    Rectangle()
-                        .fill(stripColor)
-                        .frame(width: 4)
-                }
-        } else {
-            // Standalone non-emphasized card (fallback)
-            content
-                .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
-                .lightSurfaceForeground()
-                .overlay {
-                    RoundedRectangle(cornerRadius: RTRadius.card)
-                        .stroke(Color.rightTrainInkFaint, lineWidth: 1)
-                }
-                .overlay(alignment: .leading) {
-                    Rectangle()
-                        .fill(stripColor)
-                        .frame(width: 4)
-                        .clipShape(.rect(
-                            topLeadingRadius: RTRadius.card,
-                            bottomLeadingRadius: RTRadius.card,
-                            bottomTrailingRadius: 0,
-                            topTrailingRadius: 0
-                        ))
-                }
-        }
-    }
-}
-
-private struct SearchItineraryJourneyCard: View {
+private struct SearchItineraryJourneyRow: View {
     var itinerary: ItineraryRecommendation
     var emphasized: Bool
     var isPinned: Bool
     var pinJourney: () async -> Void
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: RTSpacing.listItem) {
-                VStack(alignment: .leading, spacing: 3) {
-                    Text("\(ItineraryFormatting.departureText(itinerary)) → \(ItineraryFormatting.arrivalText(itinerary))")
-                        .font(emphasized ? .title3.weight(.semibold) : .headline)
-                        .monospacedDigit()
-                        .fixedSize(horizontal: false, vertical: true)
-                    Text(compactSummaryText)
-                        .font(.subheadline)
-                        .foregroundStyle(.secondary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
-                }
+        let platform = ItineraryFormatting.firstLegPlatformText(itinerary)
+        let hasPlatform = !["", "-", "TBC"].contains(platform.trimmingCharacters(in: .whitespaces).uppercased())
+        let expected = hasPlatform && !ItineraryFormatting.firstLegPlatformConfirmed(itinerary)
 
-                Spacer(minLength: 6)
-
-                StatusPill(text: emphasized ? "Recommended" : "Alternative \(itinerary.rank)", tone: .accent)
-                PinJourneyIconButton(
-                    isPinned: isPinned,
-                    pinHint: "Pins this route as your current Journey Pin.",
-                    unpinHint: "Unpins this journey.",
-                    action: pinJourney
-                )
+        SearchResultRowLayout(
+            departure: JourneyTimeDisplay(scheduledText: ItineraryFormatting.departureText(itinerary), isDelayed: false),
+            arrival: JourneyTimeDisplay(scheduledText: ItineraryFormatting.arrivalText(itinerary), isDelayed: false),
+            subtitle: compactSummaryText,
+            platformLabel: expected ? "Exp. plat" : "Platform",
+            platformValue: hasPlatform ? platform : "TBC",
+            platformExpected: expected,
+            isPinned: isPinned,
+            pinHint: "Pins this route as your current Journey Pin.",
+            unpinHint: "Unpins this journey.",
+            pinJourney: pinJourney
+        ) {
+            if itinerary.score.changeCount > 0 {
+                StatusIconText(text: connectionRiskText, systemImage: connectionIcon, color: connectionTone.color)
+                    .fontWeight(.medium)
             }
-
-            LazyVGrid(columns: metricColumns, alignment: .leading, spacing: 8) {
-                MetricView(label: "Dep", value: ItineraryFormatting.departureText(itinerary))
-                MetricView(label: "Arr", value: ItineraryFormatting.arrivalText(itinerary))
-                MetricView(label: "First action", value: firstActionText)
-                MetricView(label: "Connection", value: connectionRiskText)
-            }
-
-            ItineraryStatusLine(itinerary: itinerary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.82)
-
-            if let reasonText {
+            if let status = ItineraryFormatting.anomalousStatusDisplay(itinerary),
+               !status.text.localizedCaseInsensitiveContains("connection") {
+                StatusIconText(text: status.text, systemImage: status.icon, color: status.tone.color)
+            } else if emphasized, let reasonText {
                 Text(reasonText)
-                    .font(.caption)
-                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
+                    .font(.footnote)
+                    .foregroundStyle(Color.rightTrainActionInk)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
             }
         }
-        .padding(12)
-        .background(emphasized ? Color.rightTrainHighlight : Color.rightTrainBackground, in: RoundedRectangle(cornerRadius: RTRadius.card))
-        .lightSurfaceForeground()
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(emphasized ? Color.rightTrainActionInk.opacity(0.5) : Color.rightTrainBorder, lineWidth: 1)
-        }
-        .accessibilityElement(children: .contain)
     }
 
     private var compactSummaryText: String {
@@ -516,41 +400,40 @@ private struct SearchItineraryJourneyCard: View {
         return parts.joined(separator: " · ")
     }
 
-    private var changeMarginText: String {
-        guard itinerary.score.changeCount > 0 else {
-            return "Direct route"
-        }
-        let margin = itinerary.score.minimumConnectionMarginMinutes
-        if margin < 0 {
-            return "\(abs(margin)) min short"
-        }
-        return "\(margin) min to change"
+    private var connectionStatus: String {
+        itinerary.connections.first?.risk.status ?? ""
     }
 
-    private var metricColumns: [GridItem] {
-        [GridItem(.adaptive(minimum: emphasized ? 104 : 86), spacing: 8, alignment: .leading)]
+    private var connectionTone: StatusPill.Tone {
+        switch connectionStatus {
+        case "missed": return .red
+        case "at_risk", "tight": return .amber
+        default: return .green
+        }
     }
 
-    private var firstActionText: String {
-        "Platform \(ItineraryFormatting.firstLegPlatformText(itinerary))"
+    private var connectionIcon: String {
+        switch connectionStatus {
+        case "missed": return "xmark.octagon.fill"
+        case "at_risk", "tight": return "exclamationmark.triangle.fill"
+        default: return "arrow.triangle.branch"
+        }
     }
 
     private var connectionRiskText: String {
-        guard itinerary.score.changeCount > 0 else {
-            return "Direct"
-        }
         guard let connection = itinerary.connections.first else {
-            return changeMarginText
+            let margin = itinerary.score.minimumConnectionMarginMinutes
+            return margin < 0 ? "\(abs(margin)) min short to change" : "\(margin) min to change"
         }
         switch connection.risk.status {
         case "missed":
-            return "Missed at \(connection.atCrs)"
+            return "Connection missed at \(connection.atCrs)"
         case "at_risk":
-            return "At risk · \(max(connection.expectedMarginMinutes, 0)) min"
+            return "Connection at risk · \(max(connection.expectedMarginMinutes, 0)) min"
         case "tight":
-            return "Tight · \(connection.expectedMarginMinutes) min"
+            return "Tight connection · \(connection.expectedMarginMinutes) min"
         default:
-            return changeMarginText
+            return "\(connection.expectedMarginMinutes) min to change"
         }
     }
 
@@ -593,12 +476,12 @@ private struct PinIconButton: View {
             }
         } label: {
             Image(systemName: systemImage)
-                .font(.subheadline.weight(.semibold))
+                .font(.body.weight(.semibold))
                 .frame(width: RTSize.tapTarget, height: RTSize.tapTarget)
+                .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
+        .buttonStyle(.borderless)
         .foregroundStyle(Color.rightTrainActionInk)
-        .background(Color.rightTrainActionInk.opacity(isSelected ? 0.2 : 0.13), in: Circle())
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(hint)
         .accessibilityAddTraits(isSelected ? .isSelected : [])

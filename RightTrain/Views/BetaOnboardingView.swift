@@ -47,10 +47,10 @@ struct BetaOnboardingView: View {
     }
 
     private var expandedBanner: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: 10) {
             HStack(alignment: .firstTextBaseline, spacing: 12) {
                 Label("Beta live guidance", systemImage: "testtube.2")
-                    .font(.headline)
+                    .font(.subheadline.weight(.semibold))
                 Spacer(minLength: 12)
                 Button {
                     isDismissed = true
@@ -64,7 +64,7 @@ struct BetaOnboardingView: View {
             }
 
             Text("RightTrain is in beta. Treat it as live guidance: useful for action-needed changes, still secondary to station boards and operator advice.")
-                .font(.subheadline)
+                .font(.footnote)
                 .foregroundStyle(.secondary)
 
             VStack(alignment: .leading, spacing: RTSpacing.listItem) {
@@ -120,15 +120,15 @@ private struct BetaGuidanceRow: View {
     var body: some View {
         HStack(alignment: .top, spacing: RTSpacing.listItem) {
             Image(systemName: systemImage)
-                .font(.subheadline.weight(.semibold))
+                .font(.footnote.weight(.semibold))
                 .foregroundStyle(Color.rightTrainActionInk)
-                .frame(width: 20)
+                .frame(width: 18)
 
             VStack(alignment: .leading, spacing: 2) {
                 Text(title)
-                    .font(.subheadline.weight(.semibold))
+                    .font(.footnote.weight(.semibold))
                 Text(message)
-                    .font(.footnote)
+                    .font(.caption)
                     .foregroundStyle(.secondary)
                     .fixedSize(horizontal: false, vertical: true)
             }

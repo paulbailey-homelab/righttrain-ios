@@ -3,139 +3,99 @@ import SwiftUI
 
 struct WindowSetupView: View {
     @Environment(WindowSetupViewModel.self) private var viewModel
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var onStationFieldEditingBegan: (ContentScrollTarget) -> Void = { _ in }
     var openStationPicker: (StationPickerSelectionRole) -> Void = { _ in }
     var showSearchResults: () -> Void = {}
 
+    /// 30 min to 6 h in 30 min steps — the range the backend accepts.
+    private static let windowOptions = Array(stride(from: 30, through: 360, by: 30))
+
     var body: some View {
         @Bindable var viewModel = viewModel
-        return VStack(alignment: .leading, spacing: RTSpacing.compact) {
-            setupHeader
-            JourneySetupIntentPicker(
-                selection: viewModel.activeSetupIntent,
-                isEnabled: { intent in
-                    intent != .connectionSensitive || viewModel.canUseMultiLegRouting
-                },
-                onSelect: { viewModel.selectSetupIntent($0) }
-            )
-            routeModeSummary
+        return Form {
+            Section {
+                Picker("Trip type", selection: intentSelection) {
+                    ForEach(availableIntents) { intent in
+                        Text(intent.shortTitle).tag(intent)
+                    }
+                }
+                .pickerStyle(.segmented)
+                .listRowInsets(EdgeInsets())
+                .listRowBackground(Color.clear)
+                .accessibilityHint(viewModel.setupIntentContent.detailText)
+            } footer: {
+                Text(intentFooterText)
+            }
 
-            VStack(alignment: .leading, spacing: RTSpacing.compact) {
-                StationPickerEntryRow(
-                    title: "From",
-                    station: viewModel.origin,
-                    placeholder: "Choose origin"
-                ) {
+            Section {
+                StationFormRow(title: "From", station: viewModel.origin, placeholder: "Choose origin") {
                     onStationFieldEditingBegan(.originStationField)
                     openStationPicker(.origin)
                 }
                 .id(ContentScrollTarget.originStationField)
-                .frame(maxWidth: .infinity)
 
-                StationPickerEntryRow(
-                    title: "To",
-                    station: viewModel.destination,
-                    placeholder: "Choose destination"
-                ) {
+                StationFormRow(title: "To", station: viewModel.destination, placeholder: "Choose destination") {
                     onStationFieldEditingBegan(.destinationStationField)
                     openStationPicker(.destination)
                 }
                 .id(ContentScrollTarget.destinationStationField)
-                .frame(maxWidth: .infinity)
             }
 
-            VStack(alignment: .leading, spacing: RTSpacing.listItem) {
+            Section {
                 DatePicker("Depart after", selection: $viewModel.departureStart, in: Date()..., displayedComponents: [.date, .hourAndMinute])
-                    .datePickerStyle(.compact)
 
-                rangeHeader
-
-                Slider(value: windowMinutesSliderValue, in: 30...360, step: 30) {
-                    Text("Departure window")
-                } minimumValueLabel: {
-                    Text("30m")
-                } maximumValueLabel: {
-                    Text("6h")
+                Picker("Departure window", selection: windowMinutesSelection) {
+                    ForEach(Self.windowOptions, id: \.self) { minutes in
+                        Text(windowRangeText(minutes)).tag(minutes)
+                    }
                 }
-                .accessibilityValue(windowRangeText(viewModel.windowMinutes))
+                .pickerStyle(.menu)
+                .sensoryFeedback(.selection, trigger: viewModel.windowMinutes)
+            } footer: {
+                Text("RightTrain compares trains leaving within this window.")
             }
-            .sensoryFeedback(.selection, trigger: viewModel.windowMinutes)
 
-            searchJourneysButton
-                .controlSize(.large)
+            Section {
+                searchJourneysButton
+                    .listRowInsets(EdgeInsets())
+                    .listRowBackground(Color.clear)
+            }
         }
-        .rtCard()
-        .lightSurfaceForeground()
+        .contentMargins(.top, RTSpacing.small, for: .scrollContent)
         .tint(Color.rightTrainActionInk)
         .task {
             await viewModel.loadAppCapabilities()
         }
     }
 
-    private var setupHeader: some View {
-        let intent = viewModel.setupIntentContent
-        return VStack(alignment: .leading, spacing: 6) {
-            HStack {
-                StatusPill(text: intent.title, tone: .accent)
-                Spacer()
-                Label("Manual setup", systemImage: "slider.horizontal.3")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.dim))
-            }
-
-            Text(intent.detailText)
-                .font(.subheadline)
-                .foregroundStyle(.secondary)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    private var routeModeSummary: some View {
-        HStack(alignment: .firstTextBaseline) {
-            Text("Route type")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-            Spacer(minLength: RTSpacing.small)
-            Text(viewModel.routeModeTitle(viewModel.searchMode))
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(Color.rightTrainActionInk)
-        }
-        .accessibilityElement(children: .combine)
-    }
-
-    @ViewBuilder
-    private var rangeHeader: some View {
-        if dynamicTypeSize.prefersExpandedLayout {
-            VStack(alignment: .leading, spacing: 4) {
-                Text("Departure window")
-                rangeReadout
-            }
-        } else {
-            HStack(alignment: .firstTextBaseline) {
-                Text("Departure window")
-                Spacer(minLength: 12)
-                rangeReadout
-            }
+    private var availableIntents: [JourneySetupIntent] {
+        JourneySetupIntent.allCases.filter { intent in
+            intent != .connectionSensitive
+                || viewModel.canUseMultiLegRouting
+                || viewModel.activeSetupIntent == intent
         }
     }
 
-    private var rangeReadout: some View {
-        Text(windowRangeText(viewModel.windowMinutes))
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(Color.rightTrainActionInk)
-            .contentTransition(.numericText())
-            .fixedSize(horizontal: false, vertical: true)
-            .accessibilityHidden(true)
-    }
-
-    private var windowMinutesSliderValue: Binding<Double> {
+    private var intentSelection: Binding<JourneySetupIntent> {
         Binding {
-            Double(viewModel.windowMinutes)
+            viewModel.activeSetupIntent
+        } set: { intent in
+            viewModel.selectSetupIntent(intent)
+        }
+    }
+
+    private var intentFooterText: String {
+        if viewModel.canUseMultiLegRouting {
+            return viewModel.setupIntentContent.detailText
+        }
+        return "\(viewModel.setupIntentContent.detailText) Routes with changes aren't available yet."
+    }
+
+    private var windowMinutesSelection: Binding<Int> {
+        Binding {
+            viewModel.windowMinutes
         } set: { newValue in
-            let snapped = Int((newValue / 30).rounded()) * 30
-            let clamped = WindowSetupViewModel.normalizedWindowMinutes(snapped)
+            let clamped = WindowSetupViewModel.normalizedWindowMinutes(newValue)
             guard viewModel.windowMinutes != clamped else { return }
             viewModel.windowMinutes = clamped
         }
@@ -145,10 +105,7 @@ struct WindowSetupView: View {
         Button {
             Task { await searchJourneys() }
         } label: {
-            HStack {
-                Text(viewModel.setupIntentContent.primaryActionText)
-                Image(systemName: "arrow.right")
-            }
+            Text(viewModel.setupIntentContent.primaryActionText)
         }
         .buttonStyle(.rtPrimary)
         .accessibilityHint("Searches journeys in the selected departure range.")
@@ -174,138 +131,47 @@ struct WindowSetupView: View {
     }
 }
 
-private struct JourneySetupIntentPicker: View {
-    var selection: JourneySetupIntent
-    var isEnabled: (JourneySetupIntent) -> Bool
-    var onSelect: (JourneySetupIntent) -> Void
+/// A form row that opens the station picker: label on the left, the chosen
+/// station (or placeholder) and its CRS code on the right, with a chevron —
+/// the native Settings-style navigation row.
+struct StationFormRow: View {
+    var title: String
+    var station: StationSuggestion?
+    var placeholder: String
+    var action: () -> Void
 
     var body: some View {
-        HStack(spacing: 4) {
-            ForEach(JourneySetupIntent.allCases) { intent in
-                Button {
-                    onSelect(intent)
-                } label: {
-                    VStack(spacing: 4) {
-                        Image(systemName: symbol(for: intent))
-                            .font(.caption.weight(.bold))
-                        Text(intent.shortTitle)
-                            .font(.caption.weight(.semibold))
-                            .lineLimit(1)
-                            .minimumScaleFactor(0.84)
-                    }
-                    .frame(maxWidth: .infinity)
-                    .frame(height: 44)
+        Button(action: action) {
+            HStack(spacing: RTSpacing.small) {
+                Text(title)
+                    .foregroundStyle(.primary)
+                    .frame(minWidth: 44, alignment: .leading)
+                Spacer(minLength: RTSpacing.small)
+                if let station {
+                    Text(station.displayName)
+                        .foregroundStyle(.primary)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.82)
+                    Text(station.crs.uppercased())
+                        .font(.footnote.weight(.semibold))
+                        .monospaced()
+                        .foregroundStyle(.secondary)
+                } else {
+                    Text(placeholder)
+                        .foregroundStyle(.secondary)
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(foregroundStyle(for: intent))
-                .background(backgroundStyle(for: intent), in: RoundedRectangle(cornerRadius: RTRadius.chip))
-                .disabled(!isEnabled(intent))
-                .accessibilityLabel(intent.title)
-                .accessibilityValue(selection == intent ? "Selected" : "")
-                .accessibilityHint(isEnabled(intent) ? intent.detailText : "Routes with changes are not available yet.")
+                Image(systemName: "chevron.right")
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
             }
+            .contentShape(Rectangle())
         }
-        .padding(4)
-        .background(Color.rightTrainSurfaceCream, in: RoundedRectangle(cornerRadius: RTRadius.chip + 4))
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.chip + 4)
-                .stroke(Color.rightTrainInkFaint, lineWidth: 1)
-        }
-    }
-
-    private func symbol(for intent: JourneySetupIntent) -> String {
-        switch intent {
-        case .routineCommute:
-            return "calendar.badge.clock"
-        case .oneOffDirect:
-            return "arrow.right"
-        case .connectionSensitive:
-            return "arrow.triangle.branch"
-        }
-    }
-
-    private func foregroundStyle(for intent: JourneySetupIntent) -> Color {
-        if selection == intent {
-            return Color.rightTrainSurfaceCream
-        }
-        if isEnabled(intent) {
-            return Color.rightTrainInk
-        }
-        return Color.rightTrainInk.opacity(0.36)
-    }
-
-    private func backgroundStyle(for intent: JourneySetupIntent) -> Color {
-        selection == intent ? Color.rightTrainInk : Color.clear
-    }
-}
-
-private struct RouteModePicker: View {
-    var selection: JourneySearchMode
-    var titleForMode: (JourneySearchMode) -> String
-    var isEnabled: (JourneySearchMode) -> Bool
-    var onSelect: (JourneySearchMode) -> Void
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            Text("Route type")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-
-            HStack(spacing: 4) {
-                ForEach(JourneySearchMode.allCases) { mode in
-                    Button {
-                        onSelect(mode)
-                    } label: {
-                        Text(titleForMode(mode))
-                            .font(isEnabled(mode) ? .subheadline.weight(.semibold) : .caption.weight(.semibold))
-                            .lineLimit(isEnabled(mode) ? 1 : 2)
-                            .multilineTextAlignment(.center)
-                            .frame(maxWidth: .infinity)
-                            .frame(height: 44)
-                            .padding(.horizontal, 8)
-                    }
-                    .buttonStyle(.plain)
-                    .foregroundStyle(foregroundStyle(for: mode))
-                    .background(backgroundStyle(for: mode), in: RoundedRectangle(cornerRadius: RTRadius.chip))
-                    .disabled(!isEnabled(mode))
-                    .allowsHitTesting(isEnabled(mode))
-                    .accessibilityValue(selection == mode ? "Selected" : "")
-                    .accessibilityHint(isEnabled(mode) ? "" : "Routes with changes are not available yet.")
-                }
-            }
-            .padding(4)
-            .background(Color.rightTrainSurfaceCream, in: RoundedRectangle(cornerRadius: RTRadius.chip + 4))
-            .overlay {
-                RoundedRectangle(cornerRadius: RTRadius.chip + 4)
-                    .stroke(Color.rightTrainInkFaint, lineWidth: 1)
-            }
-
-            if !isEnabled(.anyRoute) {
-                Text("Routes with changes are not available yet.")
-                    .font(.caption2)
-                    .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .accessibilityHint("Choose whether to search direct trains only or all routes including changes.")
-    }
-
-    private func foregroundStyle(for mode: JourneySearchMode) -> Color {
-        if selection == mode {
-            return Color.rightTrainSurfaceCream
-        }
-        if isEnabled(mode) {
-            return Color.rightTrainInk
-        }
-        return Color.rightTrainInk.opacity(0.36)
-    }
-
-    private func backgroundStyle(for mode: JourneySearchMode) -> Color {
-        if selection == mode {
-            return Color.rightTrainInk
-        }
-        return Color.clear
+        .buttonStyle(.plain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityAddTraits(.isButton)
+        .accessibilityLabel(title)
+        .accessibilityValue(station.map { "\($0.displayName), \($0.crs.uppercased())" } ?? "No station selected")
+        .accessibilityHint("Opens station picker.")
     }
 }
 

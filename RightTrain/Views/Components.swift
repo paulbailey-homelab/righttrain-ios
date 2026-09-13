@@ -2,10 +2,10 @@ import SwiftUI
 
 // MARK: - Card container
 
-/// The standard card wrapper: paper background, hairline border, card radius.
-/// Use this instead of hand-rolling padding + background + overlay so cards
-/// stay consistent (it replaced five slightly-different copies). A status
-/// surface tints the border; neutral keeps the standard hairline.
+/// The standard card wrapper: a grouped-content background with the same
+/// continuous corner radius as inset-grouped list sections, and no border —
+/// the background contrast does the separation, as in native iOS lists.
+/// A status surface adds a soft tinted outline so live state stays visible.
 struct RTCardModifier: ViewModifier {
     var surface: RTSurface = .neutral
     var padding: CGFloat = RTSpacing.cardPadding
@@ -14,10 +14,12 @@ struct RTCardModifier: ViewModifier {
     func body(content: Content) -> some View {
         content
             .padding(padding)
-            .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: radius))
+            .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: radius, style: .continuous))
             .overlay {
-                RoundedRectangle(cornerRadius: radius)
-                    .stroke(surface == .neutral ? Color.rightTrainBorder : surface.softBorder, lineWidth: 1)
+                if surface != .neutral {
+                    RoundedRectangle(cornerRadius: radius, style: .continuous)
+                        .stroke(surface.softBorder, lineWidth: 1)
+                }
             }
     }
 }
@@ -38,31 +40,31 @@ extension View {
 // on a screen; secondary sits beside or under it; anything quieter uses a
 // plain tinted text button. Don't hand-roll filled pills.
 
-/// Primary action: filled dark-green pill, full width.
+/// Primary action: filled accent button, full width (system large prominent
+/// button proportions).
 struct RTPrimaryButtonStyle: ButtonStyle {
+    @Environment(\.isEnabled) private var isEnabled
+
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 16, weight: .semibold))
+            .font(.body.weight(.semibold))
             .frame(maxWidth: .infinity)
-            .frame(height: RTSize.buttonHeight)
-            .foregroundStyle(Color.rightTrainSurfaceCream)
-            .background(Color.rightTrainSuccess, in: RoundedRectangle(cornerRadius: RTRadius.button))
-            .opacity(configuration.isPressed ? 0.85 : 1)
+            .frame(minHeight: RTSize.buttonHeight)
+            .foregroundStyle(Color.rightTrainOnAccent)
+            .background(Color.rightTrainSuccess, in: RoundedRectangle(cornerRadius: RTRadius.button, style: .continuous))
+            .opacity(isEnabled ? (configuration.isPressed ? 0.8 : 1) : 0.4)
     }
 }
 
-/// Secondary action: ink outline pill, full width.
+/// Secondary action: tinted fill, full width (system bordered button look).
 struct RTSecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
-            .font(.system(size: 16, weight: .semibold))
+            .font(.body.weight(.semibold))
             .frame(maxWidth: .infinity)
-            .frame(height: RTSize.buttonHeight)
-            .foregroundStyle(Color.rightTrainInk)
-            .overlay {
-                RoundedRectangle(cornerRadius: RTRadius.button)
-                    .stroke(Color.rightTrainInk.opacity(RTOpacity.faint), lineWidth: 1)
-            }
+            .frame(minHeight: RTSize.buttonHeight)
+            .foregroundStyle(Color.rightTrainActionInk)
+            .background(Color.rightTrainActionInk.opacity(0.14), in: RoundedRectangle(cornerRadius: RTRadius.button, style: .continuous))
             .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }
@@ -182,7 +184,7 @@ struct LiveGlancePanel: View {
             }
 
             Text(content.routeTitle)
-                .font(.title2.weight(.bold))
+                .font(.title3.weight(.bold))
                 .lineLimit(2)
                 .fixedSize(horizontal: false, vertical: true)
 
@@ -202,11 +204,7 @@ struct LiveGlancePanel: View {
             NextActionCallout(text: content.nextActionText, tone: content.statusTone)
         }
         .padding(RTSpacing.cardPadding)
-        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(content.statusTone.color.opacity(0.28), lineWidth: 1)
-        }
+        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
         .lightSurfaceForeground()
         .accessibilityElement(children: .combine)
         .accessibilityLabel(accessibilityLabel)
@@ -311,22 +309,17 @@ struct RTStatusPill: View {
     var surface: RTSurface
 
     var body: some View {
-        HStack(spacing: 5) {
+        HStack(spacing: 6) {
             Circle()
                 .fill(surface.accent)
-                .frame(width: 6, height: 6)
+                .frame(width: 8, height: 8)
                 .accessibilityHidden(true)
 
-            Text(statusText.uppercased())
-                .font(RTFont.eyebrow)
-                .tracking(1.5)
-                .foregroundStyle(surface.ink)
+            Text(statusText)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(surface.accent)
                 .lineLimit(1)
         }
-        .padding(.horizontal, 10)
-        .padding(.vertical, 6)
-        .background(surface.softFill, in: Capsule())
-        .overlay { Capsule().stroke(surface.softBorder, lineWidth: 1) }
         .contentTransition(.numericText())
         .accessibilityLabel(statusText)
     }
@@ -429,58 +422,23 @@ struct PinnedObjectHeader<ActionContent: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: RTSpacing.listItem) {
-                VStack(alignment: .leading, spacing: 5) {
-                    Text(title)
-                        .font(.headline)
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-
-                    if !summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
-                        Text(summary)
-                            .font(.caption)
-                            .foregroundStyle(.secondary)
-                            .lineLimit(2)
-                            .fixedSize(horizontal: false, vertical: true)
-                    }
+        VStack(alignment: .leading, spacing: 6) {
+            HStack(alignment: .firstTextBaseline, spacing: RTSpacing.small) {
+                if showsKindBadge {
+                    PinBadge(kind: kind)
+                        .fixedSize(horizontal: true, vertical: false)
                 }
 
-                VStack(alignment: .trailing, spacing: 8) {
-                    if showsKindBadge {
-                        PinBadge(kind: kind)
-                            .fixedSize(horizontal: true, vertical: false)
-                    }
-
-                    if let primaryAction {
-                        pinnedPrimaryAction(primaryAction)
-                    }
-
-                    if showsActionMenu {
-                        Menu {
-                            actionContent()
-                        } label: {
-                            Image(systemName: "ellipsis.circle")
-                                .font(.subheadline.weight(.semibold))
-                                .frame(width: RTSize.tapTarget, height: RTSize.tapTarget)
-                        }
-                        .buttonStyle(.bordered)
-                        .buttonBorderShape(.circle)
-                        .accessibilityLabel("More Pin actions")
-                    }
-                }
-            }
-
-            HStack(alignment: .firstTextBaseline, spacing: 8) {
                 if let statusText,
                    !statusText.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
                     StatusPill(text: statusText, tone: statusTone)
                 }
 
+                Spacer(minLength: 0)
+
                 if let updatedAt {
                     Text("Updated \(MinuteRelative.text(for: updatedAt, now: now)) ago")
-                        .font(.caption2.weight(.medium))
+                        .font(.caption.weight(.medium))
                         .foregroundStyle(.secondary)
                         .monospacedDigit()
                         .contentTransition(.numericText())
@@ -488,36 +446,74 @@ struct PinnedObjectHeader<ActionContent: View>: View {
                         .accessibilityValue(relativeAccessibilityText(for: updatedAt))
                 }
             }
+
+            Text(title)
+                .font(.title3.weight(.bold))
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+
+            if !summary.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty {
+                Text(summary)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
         }
         .accessibilityElement(children: .contain)
-    }
-
-    private func pinnedPrimaryAction(_ primaryAction: PinnedHeaderPrimaryAction) -> some View {
-        Button(role: primaryAction.role) {
-            primaryAction.action()
-        } label: {
-            Label(primaryAction.title, systemImage: primaryAction.systemImage)
-                .font(.caption.weight(.semibold))
-                .lineLimit(1)
-                .minimumScaleFactor(0.82)
-        }
-        .buttonStyle(.plain)
-        .foregroundStyle(.primary)
-        .padding(.horizontal, 10)
-        .padding(.vertical, 7)
-        .background(Color.primary.opacity(0.10), in: Capsule())
-        .overlay {
-            Capsule()
-                .stroke(Color.primary.opacity(RTOpacity.faint), lineWidth: 1)
-        }
-        .disabled(primaryAction.isDisabled)
-        .accessibilityHint(primaryAction.accessibilityHint ?? "")
+        .pinnedActionsToolbar(primaryAction: primaryAction, showsMenu: showsActionMenu, menuContent: actionContent)
     }
 
     private func relativeAccessibilityText(for date: Date) -> String {
         let formatter = RelativeDateTimeFormatter()
         formatter.unitsStyle = .full
         return formatter.localizedString(for: date, relativeTo: now)
+    }
+}
+
+/// Puts a Pin's actions in the navigation bar as a single "More" menu, the
+/// way native apps expose per-screen actions, instead of floating capsules in
+/// the content. The primary action (usually a destructive Unpin) comes last.
+struct PinnedActionsToolbar<MenuContent: View>: ViewModifier {
+    var primaryAction: PinnedHeaderPrimaryAction?
+    var showsMenu: Bool
+    var menuContent: () -> MenuContent
+
+    func body(content: Content) -> some View {
+        content.toolbar {
+            if primaryAction != nil || showsMenu {
+                ToolbarItem(placement: .topBarTrailing) {
+                    Menu {
+                        if showsMenu {
+                            menuContent()
+                        }
+                        if let primaryAction {
+                            Button(role: primaryAction.role) {
+                                primaryAction.action()
+                            } label: {
+                                Label(primaryAction.title, systemImage: primaryAction.systemImage)
+                            }
+                            .disabled(primaryAction.isDisabled)
+                            .accessibilityHint(primaryAction.accessibilityHint ?? "")
+                        }
+                    } label: {
+                        Label("Pin actions", systemImage: "ellipsis.circle")
+                    }
+                    .accessibilityLabel("More Pin actions")
+                }
+            }
+        }
+    }
+}
+
+extension View {
+    func pinnedActionsToolbar<MenuContent: View>(
+        primaryAction: PinnedHeaderPrimaryAction?,
+        showsMenu: Bool,
+        @ViewBuilder menuContent: @escaping () -> MenuContent
+    ) -> some View {
+        modifier(PinnedActionsToolbar(primaryAction: primaryAction, showsMenu: showsMenu, menuContent: menuContent))
     }
 }
 
@@ -629,20 +625,23 @@ struct EmptyStateView: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 12) {
+        VStack(spacing: 8) {
             if let symbolName {
                 Image(systemName: symbolName)
-                    .font(.system(size: 44, weight: .semibold))
+                    .font(.system(size: 40, weight: .regular))
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(tint)
+                    .padding(.bottom, 4)
                     .accessibilityHidden(true)
             }
 
             Text(title)
-                .font(.title3.weight(.bold))
+                .font(.title3.weight(.semibold))
+                .multilineTextAlignment(.center)
             Text(message)
                 .font(.subheadline)
                 .foregroundStyle(.secondary)
+                .multilineTextAlignment(.center)
                 .fixedSize(horizontal: false, vertical: true)
 
             if let primaryAction {
@@ -655,19 +654,15 @@ struct EmptyStateView: View {
                             .frame(maxWidth: .infinity)
                     }
                 }
-                .buttonStyle(.borderedProminent)
-                .controlSize(.large)
-                .padding(.top, 2)
+                .buttonStyle(.rtPrimary)
+                .padding(.top, 8)
             }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(RTSpacing.cardPadding)
-        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
+        .frame(maxWidth: .infinity)
+        .padding(.horizontal, RTSpacing.cardPadding)
+        .padding(.vertical, 28)
+        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
         .lightSurfaceForeground()
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(Color.rightTrainBorder, lineWidth: 1)
-        }
         .accessibilityElement(children: .combine)
     }
 }

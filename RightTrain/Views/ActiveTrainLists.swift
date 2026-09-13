@@ -544,7 +544,7 @@ struct StatusFirstTrainRow: View {
 
                 Text("→")
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(surface.faint)
+                    .foregroundStyle(.tertiary)
                     .padding(.top, 2)
                     .accessibilityHidden(true)
 
@@ -558,25 +558,25 @@ struct StatusFirstTrainRow: View {
             HStack(alignment: .center, spacing: 6) {
                 if let status = rowStatus {
                     Text(status.text)
-                        .font(.caption.weight(.semibold))
-                        .foregroundStyle(surface.dim)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(status.tone.color)
                         .lineLimit(1)
                         .minimumScaleFactor(0.8)
                 }
 
                 Text(compactPlatform)
                     .italic(isExpectedPlatform)
-                    .font(.caption.weight(.bold))
-                    .foregroundStyle(surface.ink)
-                    .padding(.horizontal, 7)
-                    .frame(height: 22)
-                    .background(surface.softFill, in: Capsule())
-                    .overlay { Capsule().stroke(surface.softBorder, lineWidth: 1) }
+                    .font(.footnote.weight(.semibold))
+                    .monospacedDigit()
+                    .foregroundStyle(.primary)
+                    .frame(minWidth: 26, minHeight: 24)
+                    .padding(.horizontal, 4)
+                    .background(Color.rightTrainInsetFill, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
                     .lineLimit(1)
 
                 Image(systemName: "chevron.right")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(surface.faint)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
                     .accessibilityHidden(true)
             }
             .layoutPriority(1)
@@ -616,8 +616,8 @@ struct StatusFirstTrainRow: View {
     /// remain distinguishable regardless of which surface this row lives on.
     private var dotColor: Color {
         switch rowStatus?.tone {
-        case .red:   return .rightTrainBadAccent
-        case .amber: return .rightTrainWarnAccent
+        case .red:   return .rightTrainDanger
+        case .amber: return .rightTrainAmber
         default:     return surface.accent
         }
     }

@@ -12,11 +12,9 @@ struct ItineraryOnLegView: View {
 
     var body: some View {
         ActiveItineraryCard(
-            borderColor: approachingInterchange ? Color.rightTrainAmber.opacity(RTOpacity.secondary) : Color.rightTrainInkFaint,
-            borderWidth: approachingInterchange ? 2 : 1
+            borderColor: approachingInterchange ? Color.rightTrainAmber.opacity(RTOpacity.secondary) : Color.clear,
+            borderWidth: approachingInterchange ? 2 : 0
         ) {
-            ActiveItineraryHeader(presentation: presentation, recoveryFromCrs: presentation.recoveryFromCrs)
-
             if approachingInterchange {
                 approachingBanner
             }
@@ -42,12 +40,15 @@ struct ItineraryOnLegView: View {
                 }
                 .buttonStyle(.plain)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Color.rightTrainPaperCream)
+                .foregroundStyle(Color.rightTrainOnAccent)
                 .frame(maxWidth: .infinity)
                 .frame(height: 44)
                 .background(Color.rightTrainActionInk, in: Capsule())
                 .accessibilityIdentifier("active-itinerary-board-onward-leg")
             }
+        }
+        .background {
+            ActiveItineraryHeader(presentation: presentation, recoveryFromCrs: presentation.recoveryFromCrs)
         }
     }
 
@@ -123,7 +124,7 @@ struct ItineraryOnLegView: View {
                 }
                 .padding(12)
                 .frame(maxWidth: .infinity, alignment: .leading)
-                .background(Color.rightTrainSurfaceCream, in: RoundedRectangle(cornerRadius: RTRadius.chip))
+                .background(Color.rightTrainInsetFill, in: RoundedRectangle(cornerRadius: RTRadius.chip))
                 .lightSurfaceForeground()
             }
             .buttonStyle(.plain)
@@ -155,7 +156,7 @@ struct ItineraryOnLegView: View {
             }
         }
         .padding(12)
-        .background(Color.rightTrainBackground, in: RoundedRectangle(cornerRadius: RTRadius.chip))
+        .background(Color.rightTrainInsetFill, in: RoundedRectangle(cornerRadius: RTRadius.chip))
         .lightSurfaceForeground()
         // Interchange risk must reach VoiceOver as text — the pill colour
         // alone is not a status signal.
@@ -213,7 +214,7 @@ struct ItineraryOnLegView: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.rightTrainSurfaceCream, in: RoundedRectangle(cornerRadius: RTRadius.chip))
+            .background(Color.rightTrainInsetFill, in: RoundedRectangle(cornerRadius: RTRadius.chip))
             .lightSurfaceForeground()
         }
         .buttonStyle(.plain)
@@ -277,12 +278,13 @@ struct ItineraryOnFinalLegView: View {
 
     var body: some View {
         ActiveItineraryCard {
-            ActiveItineraryHeader(presentation: presentation)
-
             if let leg = itinerary.currentLeg {
                 arrivalCard(leg)
                 finalLegNextStep(leg)
             }
+        }
+        .background {
+            ActiveItineraryHeader(presentation: presentation)
         }
     }
 
@@ -341,7 +343,7 @@ struct ItineraryOnFinalLegView: View {
             }
             .padding(12)
             .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.rightTrainSurfaceCream, in: RoundedRectangle(cornerRadius: RTRadius.chip))
+            .background(Color.rightTrainInsetFill, in: RoundedRectangle(cornerRadius: RTRadius.chip))
             .lightSurfaceForeground()
         }
         .buttonStyle(.plain)

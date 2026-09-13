@@ -33,25 +33,25 @@ struct ActiveItineraryHeader: View {
     var recoveryFromCrs: String?
 
     var body: some View {
-        PinnedObjectHeader(
-            kind: .journey,
-            showsKindBadge: false,
-            showsActionMenu: recoveryFromCrs != nil,
-            title: presentation.routeTitle,
-            summary: presentation.subtitleText,
-            statusText: presentation.headerStatusText,
-            statusTone: presentation.headerStatusTone,
-            primaryAction: PinnedHeaderPrimaryAction(
-                title: "Unpin",
-                systemImage: "pin.slash",
-                role: .destructive,
-                accessibilityHint: "Removes this Journey Pin.",
-                isDisabled: isDeleting,
-                action: { confirmation = .unpin }
-            )
-        ) {
-            menuActions
-        }
+        // The live glance panel above the card already shows route, status
+        // and freshness, so this header contributes only the navigation-bar
+        // actions and their confirmations. Attach it with `.background`.
+        Color.clear
+            .frame(width: 0, height: 0)
+            .accessibilityHidden(true)
+            .pinnedActionsToolbar(
+                primaryAction: PinnedHeaderPrimaryAction(
+                    title: "Unpin Journey",
+                    systemImage: "pin.slash",
+                    role: .destructive,
+                    accessibilityHint: "Removes this Journey Pin.",
+                    isDisabled: isDeleting,
+                    action: { confirmation = .unpin }
+                ),
+                showsMenu: recoveryFromCrs != nil
+            ) {
+                menuActions
+            }
         .disabled(isDeleting)
         .confirmationDialog("Not on this journey?", isPresented: recoveryConfirmationPresented, titleVisibility: .visible) {
             Button("Replan from current station", role: .destructive) {
@@ -125,13 +125,13 @@ struct ActiveItineraryHeader: View {
 }
 
 struct ActiveItineraryCard<Content: View>: View {
-    var borderColor = Color.rightTrainInkFaint
-    var borderWidth: CGFloat = 1
+    var borderColor = Color.clear
+    var borderWidth: CGFloat = 0
     private let content: () -> Content
 
     init(
-        borderColor: Color = Color.rightTrainInkFaint,
-        borderWidth: CGFloat = 1,
+        borderColor: Color = Color.clear,
+        borderWidth: CGFloat = 0,
         @ViewBuilder content: @escaping () -> Content
     ) {
         self.borderColor = borderColor
@@ -144,11 +144,13 @@ struct ActiveItineraryCard<Content: View>: View {
             content()
         }
         .padding(RTSpacing.cardPadding)
-        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
+        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
         .lightSurfaceForeground()
         .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(borderColor, lineWidth: borderWidth)
+            if borderWidth > 0 {
+                RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous)
+                    .stroke(borderColor, lineWidth: borderWidth)
+            }
         }
     }
 }
