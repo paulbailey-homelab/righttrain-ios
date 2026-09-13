@@ -36,12 +36,17 @@ extension View {
 
 // MARK: - Button hierarchy
 
-// The app's three button levels. Primary is the single most important action
-// on a screen; secondary sits beside or under it; anything quieter uses a
-// plain tinted text button. Don't hand-roll filled pills.
+// The app's button levels. Primary is the single most important action on a
+// screen; secondary sits beside or under it; anything quieter uses a plain
+// tinted text button. Don't hand-roll filled pills.
+//
+// Liquid Glass split: these two styles are for buttons that live IN content
+// (inside cards and lists) — solid capsule fills, matching the system capsule
+// shape language. Controls that float ABOVE content (bottom action bars,
+// overlays) use `FloatingPrimaryAction` / `.glassProminent` instead. Never put
+// glass inside content or glass on glass.
 
-/// Primary action: filled accent button, full width (system large prominent
-/// button proportions).
+/// Primary in-content action: filled accent capsule, full width.
 struct RTPrimaryButtonStyle: ButtonStyle {
     @Environment(\.isEnabled) private var isEnabled
 
@@ -51,12 +56,12 @@ struct RTPrimaryButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .frame(minHeight: RTSize.buttonHeight)
             .foregroundStyle(Color.rightTrainOnAccent)
-            .background(Color.rightTrainSuccess, in: RoundedRectangle(cornerRadius: RTRadius.button, style: .continuous))
+            .background(Color.rightTrainSuccess, in: Capsule())
             .opacity(isEnabled ? (configuration.isPressed ? 0.8 : 1) : 0.4)
     }
 }
 
-/// Secondary action: tinted fill, full width (system bordered button look).
+/// Secondary in-content action: tinted capsule fill, full width.
 struct RTSecondaryButtonStyle: ButtonStyle {
     func makeBody(configuration: Configuration) -> some View {
         configuration.label
@@ -64,7 +69,7 @@ struct RTSecondaryButtonStyle: ButtonStyle {
             .frame(maxWidth: .infinity)
             .frame(minHeight: RTSize.buttonHeight)
             .foregroundStyle(Color.rightTrainActionInk)
-            .background(Color.rightTrainActionInk.opacity(0.14), in: RoundedRectangle(cornerRadius: RTRadius.button, style: .continuous))
+            .background(Color.rightTrainActionInk.opacity(0.14), in: Capsule())
             .opacity(configuration.isPressed ? 0.7 : 1)
     }
 }
@@ -75,6 +80,29 @@ extension ButtonStyle where Self == RTPrimaryButtonStyle {
 
 extension ButtonStyle where Self == RTSecondaryButtonStyle {
     static var rtSecondary: RTSecondaryButtonStyle { RTSecondaryButtonStyle() }
+}
+
+/// The screen's primary action floating above scrolling content on tinted
+/// Liquid Glass. Place it in `.safeAreaBar(edge: .bottom)` so content scrolls
+/// beneath it with the system scroll-edge effect.
+struct FloatingPrimaryAction<Label: View>: View {
+    var action: () -> Void
+    @ViewBuilder var label: () -> Label
+
+    var body: some View {
+        Button(action: action) {
+            label()
+                .font(.body.weight(.semibold))
+                // White on the bright dark-mode green is too low-contrast;
+                // match the in-content primary button's on-accent colour.
+                .foregroundStyle(Color.rightTrainOnAccent)
+                .frame(maxWidth: .infinity)
+        }
+        .buttonStyle(.glassProminent)
+        .controlSize(.extraLarge)
+        .padding(.horizontal, RTSpacing.pageHorizontal + 4)
+        .padding(.bottom, RTSpacing.small)
+    }
 }
 
 // MARK: - Adaptive operator name

@@ -6,7 +6,7 @@ Native SwiftUI iPhone app shell for the RightTrain TestFlight beta.
 
 - Xcode project: `ios/RightTrain/RightTrain.xcodeproj`
 - Scheme: `RightTrain`
-- Minimum iOS: 17.0
+- Minimum iOS: 26.0
 - Release API base URL: `https://api.righttrain.app`
 - Debug API base URL: `https://clearsignal-api.lan.dreamshake.net`
 

@@ -51,6 +51,9 @@ struct ContentView: View {
             }
         }
         .animation(reduceMotion ? nil : .easeInOut(duration: 0.18), value: authViewModel.isSignedIn)
+        // App-wide accent, so glass controls outside the tab view (sign-in,
+        // shared journeys) tint green rather than system blue.
+        .tint(Color.rightTrainActionInk)
         .overlay {
             LoadingOverlay(isVisible: operationState.isLoading)
         }
@@ -118,36 +121,136 @@ extension View {
 
 private struct MainTabView: View {
     @Environment(AppCoordinator.self) private var appCoordinator
+    @Environment(ActiveWindowViewModel.self) private var activeWindowViewModel
 
     var body: some View {
         @Bindable var appCoordinator = appCoordinator
 
         return TabView(selection: $appCoordinator.selectedTab) {
-            ActiveTabView()
-                .tabItem {
-                    Label("Pinned", systemImage: "pin.fill")
-                }
-                .tag(AppTab.active)
+            Tab("Pinned", systemImage: "pin.fill", value: AppTab.active) {
+                ActiveTabView()
+            }
 
-            CommuteRoutinesView()
-                .tabItem {
-                    Label("Commutes", systemImage: "calendar.badge.clock")
-                }
-                .tag(AppTab.commutes)
+            Tab("Commutes", systemImage: "calendar.badge.clock", value: AppTab.commutes) {
+                CommuteRoutinesView()
+            }
 
-            PlanTabView()
-                .tabItem {
-                    Label("Plan", systemImage: "magnifyingglass")
-                }
-                .tag(AppTab.plan)
+            Tab("Plan", systemImage: "magnifyingglass", value: AppTab.plan) {
+                PlanTabView()
+            }
 
-            SettingsTabView()
-                .tabItem {
-                    Label("Settings", systemImage: "person.crop.circle")
-                }
-                .tag(AppTab.settings)
+            Tab("Settings", systemImage: "person.crop.circle", value: AppTab.settings) {
+                SettingsTabView()
+            }
         }
         .tint(Color.rightTrainActionInk)
+        .tabBarMinimizeBehavior(.onScrollDown)
+        .pinnedJourneyAccessory(isEnabled: showsPinnedAccessory) {
+            appCoordinator.selectedTab = .active
+        }
+    }
+
+    private var showsPinnedAccessory: Bool {
+        activeWindowViewModel.hasActiveJourney && appCoordinator.selectedTab != .active
+    }
+}
+
+private extension View {
+    /// While a journey is pinned, keep it glanceable from every other tab in
+    /// the Liquid Glass accessory above the tab bar. Hiding the accessory
+    /// needs iOS 26.1; on 26.0 it is omitted rather than shown empty.
+    @ViewBuilder
+    func pinnedJourneyAccessory(isEnabled: Bool, openPinned: @escaping () -> Void) -> some View {
+        if #available(iOS 26.1, *) {
+            tabViewBottomAccessory(isEnabled: isEnabled) {
+                PinnedJourneyAccessory(openPinned: openPinned)
+            }
+        } else {
+            self
+        }
+    }
+}
+
+/// Compact live summary of the pinned journey for the tab view bottom
+/// accessory. Shows countdown/status and platform; tapping opens Pinned.
+private struct PinnedJourneyAccessory: View {
+    @Environment(ActiveWindowViewModel.self) private var activeWindowViewModel
+    @Environment(\.tabViewBottomAccessoryPlacement) private var placement
+    var openPinned: () -> Void
+
+    var body: some View {
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            if let summary = summary(now: context.date) {
+                Button(action: openPinned) {
+                    HStack(spacing: RTSpacing.small) {
+                        Image(systemName: "tram.fill")
+                            .foregroundStyle(summary.tone.color)
+                            .accessibilityHidden(true)
+
+                        if placement == .inline {
+                            Text(summary.headline)
+                                .font(.footnote.weight(.semibold))
+                                .monospacedDigit()
+                                .lineLimit(1)
+                        } else {
+                            VStack(alignment: .leading, spacing: 0) {
+                                Text(summary.headline)
+                                    .font(.subheadline.weight(.semibold))
+                                    .monospacedDigit()
+                                    .lineLimit(1)
+                                Text(summary.detail)
+                                    .font(.caption)
+                                    .foregroundStyle(.secondary)
+                                    .lineLimit(1)
+                            }
+                            Spacer(minLength: RTSpacing.small)
+                            Text(summary.platform)
+                                .font(.subheadline.weight(.semibold))
+                                .monospacedDigit()
+                                .lineLimit(1)
+                        }
+                    }
+                    .padding(.horizontal, RTSpacing.cardPadding)
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityElement(children: .combine)
+                .accessibilityLabel("Pinned journey: \(summary.headline), \(summary.detail), \(summary.platform)")
+                .accessibilityHint("Opens the Pinned tab.")
+            }
+        }
+    }
+
+    private struct Summary {
+        var headline: String
+        var detail: String
+        var platform: String
+        var tone: StatusPill.Tone
+    }
+
+    private func summary(now: Date) -> Summary? {
+        if let itinerary = activeWindowViewModel.activeItinerary {
+            let glance = ActiveItineraryPresentation(itinerary: itinerary).liveGlanceContent(now: now)
+            return Summary(
+                headline: glance.statusText,
+                detail: glance.routeTitle,
+                platform: glance.platformText,
+                tone: glance.statusTone
+            )
+        }
+        guard let window = activeWindowViewModel.activeWindow else {
+            return nil
+        }
+        let presentation = ActiveWindowPresentation(window: window, now: now)
+        let recommendation = presentation.heroRecommendation
+        let countdown = ActiveWindowPresentation.countdown(for: recommendation, now: now)
+        let platform = ActiveWindowPresentation.platformDisplay(for: recommendation.journey)
+        return Summary(
+            headline: countdown.text,
+            detail: presentation.routeTitle,
+            platform: JourneyFormatting.platformStateText(primary: platform.primary, confirmed: platform.confirmed),
+            tone: countdown.tone
+        )
     }
 }
 
@@ -454,7 +557,7 @@ private struct LoadingOverlay: View {
                     .controlSize(.large)
                     .tint(Color.rightTrainActionInk)
                     .padding(22)
-                    .background(.thinMaterial, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
+                    .glassEffect(.regular, in: .rect(cornerRadius: 22))
                     .accessibilityLabel("Loading")
             }
         }
