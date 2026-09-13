@@ -37,8 +37,6 @@ struct JourneyDetailView: View {
                 .scrollBounceBehavior(.always, axes: .vertical)
                 .scrollIndicators(.visible)
                 .statusSurface(surface)
-                .toolbarBackground(surface.bg, for: .navigationBar)
-                .toolbarBackground(.visible, for: .navigationBar)
             } else if didAttemptInitialLoad {
                 EmptyStateView(
                     title: "Journey unavailable",
@@ -58,7 +56,7 @@ struct JourneyDetailView: View {
         }
         .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
         .lightSurfaceForeground()
-        .navigationTitle("")
+        .navigationTitle("Journey")
         .navigationBarTitleDisplayMode(.inline)
         .task(id: identity) {
             await refreshDetailPeriodically()
@@ -160,12 +158,7 @@ struct JourneyDetailView: View {
                 JourneyDetailFreshnessBadge(text: detailFreshnessText(detail), surface: surface)
             }
 
-            VStack(alignment: .leading, spacing: 5) {
-                Text("JOURNEY DETAILS")
-                    .font(RTFont.eyebrow)
-                    .tracking(1.6)
-                    .foregroundStyle(surface.dim)
-
+            VStack(alignment: .leading, spacing: 4) {
                 Text("\(detail.originName) to \(detail.destinationName)")
                     .font(.title2.weight(.bold))
                     .foregroundStyle(surface.ink)
@@ -173,7 +166,7 @@ struct JourneyDetailView: View {
                     .fixedSize(horizontal: false, vertical: true)
 
                 Text(operatorSummaryText(detail))
-                    .font(.subheadline.weight(.semibold))
+                    .font(.subheadline)
                     .foregroundStyle(surface.dim)
                     .lineLimit(2)
                     .fixedSize(horizontal: false, vertical: true)
@@ -187,7 +180,7 @@ struct JourneyDetailView: View {
                 prefersStackedLayout: dynamicTypeSize.prefersExpandedLayout
             )
         }
-        .rtCard(surface, padding: RTSpacing.cardPadding, radius: RTRadius.heroCard)
+        .rtCard(padding: RTSpacing.cardPadding, radius: RTRadius.heroCard)
         .accessibilityElement(children: .contain)
     }
 
@@ -209,18 +202,16 @@ struct JourneyDetailView: View {
                 .fixedSize(horizontal: false, vertical: true)
         }
         .padding(RTSpacing.compact)
-        .background(surface.softFill, in: RoundedRectangle(cornerRadius: RTRadius.card))
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(surface.softBorder, lineWidth: 1)
-        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .background(surface.softFill, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
     }
 
     private func callingPointsSection(_ detail: JourneyDetail, surface: RTSurface, now: Date) -> some View {
-        VStack(alignment: .leading, spacing: RTSpacing.listItem) {
+        VStack(alignment: .leading, spacing: RTSpacing.small) {
             Text("Calling points")
-                .font(.headline)
-                .foregroundStyle(surface.ink)
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(.secondary)
+                .padding(.horizontal, RTSpacing.cardPadding)
 
             LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(detail.stops.enumerated()), id: \.element.id) { index, stop in
@@ -248,12 +239,8 @@ struct JourneyDetailView: View {
             }
             .padding(.horizontal, RTSpacing.cardPadding)
             .padding(.vertical, RTSpacing.small)
-            .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card))
+            .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
             .lightSurfaceForeground()
-            .overlay {
-                RoundedRectangle(cornerRadius: RTRadius.card)
-                    .stroke(Color.rightTrainInkFaint, lineWidth: 1)
-            }
         }
     }
 
@@ -397,11 +384,7 @@ private struct JourneyDetailTimeStrip: View {
             JourneyDetailPlatformLine(text: platform, surface: surface)
         }
         .padding(RTSpacing.compact)
-        .background(surface.softFill, in: RoundedRectangle(cornerRadius: RTRadius.card))
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.card)
-                .stroke(surface.softBorder, lineWidth: 1)
-        }
+        .background(Color.rightTrainInsetFill, in: RoundedRectangle(cornerRadius: RTRadius.chip + 2, style: .continuous))
     }
 
     private func timePoint(
@@ -448,12 +431,9 @@ private struct JourneyDetailPlatformLine: View {
         }
         .labelStyle(.titleAndIcon)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, RTSpacing.small)
-        .padding(.vertical, 9)
-        .background(Color.rightTrainPaperCream.opacity(0.78), in: RoundedRectangle(cornerRadius: RTRadius.chip))
-        .overlay {
-            RoundedRectangle(cornerRadius: RTRadius.chip)
-                .stroke(surface.faint, lineWidth: 1)
+        .padding(.top, RTSpacing.small)
+        .overlay(alignment: .top) {
+            Divider()
         }
         .accessibilityLabel(text)
     }

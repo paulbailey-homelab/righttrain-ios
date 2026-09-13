@@ -142,36 +142,51 @@ struct StationFormRow: View {
 
     var body: some View {
         Button(action: action) {
-            HStack(spacing: RTSpacing.small) {
-                Text(title)
+            StationFormLabel(title: title, station: station, placeholder: placeholder)
+                .contentShape(Rectangle())
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Opens station picker.")
+    }
+}
+
+/// Content of a station form row. Pass `showsChevron: false` inside a
+/// `NavigationLink`, which draws its own disclosure indicator.
+struct StationFormLabel: View {
+    var title: String
+    var station: StationSuggestion?
+    var placeholder: String
+    var showsChevron = true
+
+    var body: some View {
+        HStack(spacing: RTSpacing.small) {
+            Text(title)
+                .foregroundStyle(.primary)
+                .frame(minWidth: 44, alignment: .leading)
+            Spacer(minLength: RTSpacing.small)
+            if let station {
+                Text(station.displayName)
                     .foregroundStyle(.primary)
-                    .frame(minWidth: 44, alignment: .leading)
-                Spacer(minLength: RTSpacing.small)
-                if let station {
-                    Text(station.displayName)
-                        .foregroundStyle(.primary)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.82)
-                    Text(station.crs.uppercased())
-                        .font(.footnote.weight(.semibold))
-                        .monospaced()
-                        .foregroundStyle(.secondary)
-                } else {
-                    Text(placeholder)
-                        .foregroundStyle(.secondary)
-                }
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+                Text(station.crs.uppercased())
+                    .font(.footnote.weight(.semibold))
+                    .monospaced()
+                    .foregroundStyle(.secondary)
+            } else {
+                Text(placeholder)
+                    .foregroundStyle(.secondary)
+            }
+            if showsChevron {
                 Image(systemName: "chevron.right")
                     .font(.footnote.weight(.semibold))
                     .foregroundStyle(.tertiary)
             }
-            .contentShape(Rectangle())
         }
-        .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
         .accessibilityAddTraits(.isButton)
         .accessibilityLabel(title)
         .accessibilityValue(station.map { "\($0.displayName), \($0.crs.uppercased())" } ?? "No station selected")
-        .accessibilityHint("Opens station picker.")
     }
 }
 

@@ -310,12 +310,7 @@ struct ActiveItineraryView: View {
                             Label("I'm on this train", systemImage: "checkmark.circle.fill")
                                 .frame(maxWidth: .infinity)
                         }
-                        .buttonStyle(.plain)
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.rightTrainOnAccent)
-                        .frame(maxWidth: .infinity)
-                        .frame(height: 44)
-                        .background(Color.rightTrainActionInk, in: Capsule())
+                        .buttonStyle(.rtPrimary)
                         .accessibilityIdentifier("active-itinerary-board-first-leg")
                     }
                 }
