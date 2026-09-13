@@ -535,10 +535,6 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
     }
 
     private func observePushToStartTokenUpdates(tokenRegistration: LiveActivityTokenRegistrationContext) async {
-        guard #available(iOS 17.2, *) else {
-            return
-        }
-
         if let token = Activity<RightTrainLiveActivityAttributes>.pushToStartToken {
             Self.storePushToStartToken(token)
             await Self.registerPushToStartToken(token, tokenRegistration: tokenRegistration)
@@ -635,7 +631,7 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
     private static func registerStoredPushToStartToken(tokenRegistration: LiveActivityTokenRegistrationContext) async {
         if let token = storedPushToStartToken() {
             await registerPushToStartTokenHex(token, tokenRegistration: tokenRegistration)
-        } else if #available(iOS 17.2, *), let token = Activity<RightTrainLiveActivityAttributes>.pushToStartToken {
+        } else if let token = Activity<RightTrainLiveActivityAttributes>.pushToStartToken {
             storePushToStartToken(token)
             await registerPushToStartToken(token, tokenRegistration: tokenRegistration)
         }

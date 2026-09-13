@@ -54,14 +54,11 @@ struct WindowSetupView: View {
             } footer: {
                 Text("RightTrain compares trains leaving within this window.")
             }
-
-            Section {
-                searchJourneysButton
-                    .listRowInsets(EdgeInsets())
-                    .listRowBackground(Color.clear)
-            }
         }
         .contentMargins(.top, RTSpacing.small, for: .scrollContent)
+        .safeAreaBar(edge: .bottom) {
+            searchJourneysButton
+        }
         .tint(Color.rightTrainActionInk)
         .task {
             await viewModel.loadAppCapabilities()
@@ -102,12 +99,11 @@ struct WindowSetupView: View {
     }
 
     private var searchJourneysButton: some View {
-        Button {
+        FloatingPrimaryAction {
             Task { await searchJourneys() }
         } label: {
             Text(viewModel.setupIntentContent.primaryActionText)
         }
-        .buttonStyle(.rtPrimary)
         .accessibilityHint("Searches journeys in the selected departure range.")
     }
 

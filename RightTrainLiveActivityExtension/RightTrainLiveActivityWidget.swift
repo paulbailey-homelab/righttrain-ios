@@ -620,11 +620,7 @@ private struct CompactPlatformChangeText: View {
 
 private extension ActivityConfiguration {
     func rightTrainSupplementalActivityFamilies() -> some WidgetConfiguration {
-        if #available(iOS 18.0, *) {
-            return supplementalActivityFamilies([.small, .medium])
-        } else {
-            return self
-        }
+        supplementalActivityFamilies([.small, .medium])
     }
 }
 
@@ -632,14 +628,7 @@ private struct ActivityContentView: View {
     var context: ActivityViewContext<RightTrainLiveActivityAttributes>
 
     var body: some View {
-        if #available(iOS 18.0, *) {
-            ActivityFamilyContentView(context: context)
-        } else {
-            StandardActivityContentView(
-                state: context.state,
-                activityKind: context.attributes.activityKind
-            )
-        }
+        ActivityFamilyContentView(context: context)
     }
 }
 

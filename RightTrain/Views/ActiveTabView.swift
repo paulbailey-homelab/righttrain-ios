@@ -195,10 +195,12 @@ struct ActiveTabView: View {
                 },
                 accessibilityLabel: trainAccessibilityLabel(for: recommendation)
             )
-            .rtCard()
+            // Floats over the scrolling Pinned content, so it is a glass
+            // control surface rather than a content card.
+            .padding(RTSpacing.cardPadding)
+            .glassEffect(.regular, in: .rect(cornerRadius: 28))
             .padding(.horizontal, RTSpacing.pageHorizontal)
             .padding(.vertical, RTSpacing.small)
-            .background(.bar)
             .accessibilitySortPriority(10)
         }
     }

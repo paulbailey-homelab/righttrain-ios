@@ -45,9 +45,13 @@ struct ConnectivityStatusBanner: View {
                 }
             }
             .foregroundStyle(content.foreground)
+            .padding(.horizontal, RTSpacing.cardPadding)
+            .padding(.vertical, RTSpacing.small + 2)
+            // Floats above the app as a Liquid Glass capsule; failures and
+            // offline state tint the glass so they read as status at a glance.
+            .glassEffect(content.glass, in: .capsule)
             .padding(.horizontal, RTSpacing.pageHorizontal)
-            .padding(.vertical, RTSpacing.small)
-            .background(content.background)
+            .padding(.vertical, RTSpacing.xs)
         }
     }
 
@@ -63,7 +67,7 @@ struct ConnectivityStatusBanner: View {
                 detail: detail,
                 systemImage: "exclamationmark.triangle.fill",
                 foreground: .white,
-                background: Color.rightTrainDanger,
+                tint: Color.rightTrainDanger,
                 dismissAction: { journeyMutationQueue.clearFailed() },
                 retryAction: retryableCount > 0 ? {
                     journeyMutationQueue.retryFailed()
@@ -77,7 +81,7 @@ struct ConnectivityStatusBanner: View {
                 detail: "\(changeText(journeyMutationQueue.pendingCount)) pending.",
                 systemImage: "arrow.triangle.2.circlepath",
                 foreground: .primary,
-                background: Color.rightTrainHighlight
+                tint: nil
             )
         }
         if connectivityService.backendUnavailable {
@@ -94,7 +98,7 @@ struct ConnectivityStatusBanner: View {
                 detail: detail,
                 systemImage: "wifi.slash",
                 foreground: .white,
-                background: Color.rightTrainDanger
+                tint: Color.rightTrainDanger
             )
         }
         if connectivityService.looksPatchy {
@@ -104,7 +108,7 @@ struct ConnectivityStatusBanner: View {
                 detail: journeyMutationQueue.pendingCount > 0 ? "\(changeText(journeyMutationQueue.pendingCount)) queued." : nil,
                 systemImage: "antenna.radiowaves.left.and.right",
                 foreground: .primary,
-                background: Color.rightTrainAmber.opacity(0.28)
+                tint: Color.rightTrainAmber.opacity(0.6)
             )
         }
         if journeyMutationQueue.pendingCount > 0 {
@@ -113,7 +117,7 @@ struct ConnectivityStatusBanner: View {
                 detail: "\(changeText(journeyMutationQueue.pendingCount)) queued.",
                 systemImage: "clock.arrow.circlepath",
                 foreground: .primary,
-                background: Color.rightTrainSurface
+                tint: nil
             )
         }
         return nil
@@ -129,7 +133,13 @@ private struct ConnectivityBannerContent {
     var detail: String?
     var systemImage: String
     var foreground: Color
-    var background: Color
+    /// Glass tint; nil keeps plain regular glass for informational states.
+    var tint: Color?
     var dismissAction: (() -> Void)?
     var retryAction: (() -> Void)?
+
+    var glass: Glass {
+        guard let tint else { return .regular }
+        return .regular.tint(tint)
+    }
 }
