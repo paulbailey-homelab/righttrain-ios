@@ -456,8 +456,6 @@ struct JourneyStopRow: View {
         HStack(alignment: .top, spacing: 12) {
             JourneyTimelineMarker(
                 isCurrent: isCurrent,
-                isBetweenAfter: isBetweenAfter,
-                betweenProgress: betweenProgress,
                 isPassed: isPassed,
                 isFirst: isFirst,
                 isLast: isLast
@@ -492,7 +490,42 @@ struct JourneyStopRow: View {
             JourneyStopTimeView(timing: timing)
                 .layoutPriority(2)
         }
+        // The between-stops dot travels from this stop's marker towards the
+        // next row's, drawing into the row gap rather than stretching this
+        // row (a fixed minimum height left a hole under one-line stops).
+        .overlay(alignment: .topLeading) {
+            if isBetweenAfter {
+                GeometryReader { proxy in
+                    Circle()
+                        .fill(Color.rightTrainBlue)
+                        .frame(width: 18, height: 18)
+                        .overlay {
+                            Circle()
+                                .stroke(Color.rightTrainPaperCream, lineWidth: 3)
+                        }
+                        .shadow(color: Color.rightTrainBlue.opacity(0.28), radius: 8, y: 4)
+                        .position(
+                            x: Self.markerCenterX,
+                            y: Self.markerCenterY + (proxy.size.height + Self.rowGap) * bufferedProgress
+                        )
+                }
+                .accessibilityHidden(true)
+            }
+        }
         .accessibilityElement(children: .combine)
+    }
+
+    /// Centre of the 24pt-wide marker column and of a 10pt stop circle with
+    /// its 4pt top padding.
+    private static let markerCenterX: CGFloat = 12
+    private static let markerCenterY: CGFloat = 9
+    /// Space between rows: callers pad each row by 10pt top and bottom.
+    private static let rowGap: CGFloat = 20
+    private static let segmentBuffer = 0.16
+
+    private var bufferedProgress: Double {
+        let clamped = min(max(betweenProgress, 0), 1)
+        return Self.segmentBuffer + (clamped * (1 - (Self.segmentBuffer * 2)))
     }
 
     private var stopDisplayName: String {
@@ -540,11 +573,7 @@ struct JourneyStopRow: View {
 }
 
 struct JourneyTimelineMarker: View {
-    private let segmentBuffer = 0.16
-
     var isCurrent: Bool
-    var isBetweenAfter: Bool
-    var betweenProgress: Double
     var isPassed: Bool
     var isFirst: Bool
     var isLast: Bool
@@ -561,25 +590,9 @@ struct JourneyTimelineMarker: View {
                 .shadow(color: isCurrent ? Color.rightTrainBlue.opacity(0.28) : .clear, radius: 8, y: 4)
                 .padding(.top, isCurrent ? 0 : 4)
 
-            if isBetweenAfter {
-                Circle()
-                    .fill(Color.rightTrainBlue)
-                    .frame(width: 18, height: 18)
-                    .overlay {
-                        Circle()
-                            .stroke(Color.rightTrainPaperCream, lineWidth: 3)
-                    }
-                    .shadow(color: Color.rightTrainBlue.opacity(0.28), radius: 8, y: 4)
-                    .padding(.top, CGFloat(5 + (bufferedProgress * 40)))
-            }
         }
-        .frame(minWidth: 24, idealWidth: 24, maxWidth: 24, minHeight: isBetweenAfter ? 64 : nil, alignment: .top)
+        .frame(minWidth: 24, idealWidth: 24, maxWidth: 24, alignment: .top)
         .accessibilityHidden(true)
-    }
-
-    private var bufferedProgress: Double {
-        let clamped = min(max(betweenProgress, 0), 1)
-        return segmentBuffer + (clamped * (1 - (segmentBuffer * 2)))
     }
 
     private var markerFill: Color {
