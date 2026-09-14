@@ -42,10 +42,14 @@ struct ActiveWindowView: View {
             isOffline: shouldPresentOfflineGlance(for: presentation.heroRecommendation)
         )
 
+        let isStale = glance.moment == .staleData || glance.moment == .offline
+
         VStack(alignment: .leading, spacing: 0) {
             statusPillRow(
                 presentation: presentation,
-                surface: surface
+                surface: surface,
+                freshnessText: showsHero ? glance.freshnessText : nil,
+                isStale: isStale
             )
             .padding(.bottom, showsHero ? RTSpacing.small : RTSpacing.compact)
 
@@ -62,6 +66,7 @@ struct ActiveWindowView: View {
                     surface: surface,
                     now: now,
                     freshnessText: glance.freshnessText,
+                    isStale: isStale,
                     loadDetail: { await loadDetail(presentation.heroRecommendation) },
                     requestUnpin: requestDeleteConfirmation
                 )
@@ -95,15 +100,30 @@ struct ActiveWindowView: View {
         }
     }
 
+    /// One line for what RightTrain is doing and how fresh the data is,
+    /// instead of separate rows around the hero.
     private func statusPillRow(
         presentation: ActiveWindowPresentation,
-        surface: RTSurface
+        surface: RTSurface,
+        freshnessText: String?,
+        isStale: Bool
     ) -> some View {
-        RTStatusPill(
-            statusText: pillStatusText(presentation: presentation),
-            surface: surface
-        )
-        .fixedSize(horizontal: true, vertical: false)
+        ViewThatFits(in: .horizontal) {
+            HStack(spacing: RTSpacing.small) {
+                statusPill(presentation: presentation, surface: surface)
+                Spacer(minLength: RTSpacing.small)
+                if let freshnessText {
+                    freshnessLabel(freshnessText, isStale: isStale)
+                }
+            }
+
+            VStack(alignment: .leading, spacing: 2) {
+                statusPill(presentation: presentation, surface: surface)
+                if let freshnessText {
+                    freshnessLabel(freshnessText, isStale: isStale)
+                }
+            }
+        }
         .frame(maxWidth: .infinity, alignment: .leading)
         .pinnedActionsToolbar(
             primaryAction: PinnedHeaderPrimaryAction(
@@ -117,6 +137,29 @@ struct ActiveWindowView: View {
             showsMenu: false
         ) {
             EmptyView()
+        }
+    }
+
+    private func statusPill(presentation: ActiveWindowPresentation, surface: RTSurface) -> some View {
+        RTStatusPill(
+            statusText: pillStatusText(presentation: presentation),
+            surface: surface
+        )
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    @ViewBuilder
+    private func freshnessLabel(_ text: String, isStale: Bool) -> some View {
+        if isStale {
+            Label(text, systemImage: "exclamationmark.triangle.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color.rightTrainAmber)
+                .lineLimit(1)
+                .fixedSize(horizontal: true, vertical: false)
+                .accessibilityLabel("Live data may be out of date. \(text)")
+        } else {
+            LiveFreshnessText(text: text)
+                .fixedSize(horizontal: true, vertical: false)
         }
     }
 

@@ -253,6 +253,8 @@ struct StatusFirstHeroBlock: View {
     var surface: RTSurface
     var now: Date
     var freshnessText: String
+    /// Old or offline data: the countdown is dimmed so it isn't read as live.
+    var isStale = false
     var loadDetail: () async -> Void
     var requestUnpin: () -> Void
 
@@ -285,30 +287,85 @@ struct StatusFirstHeroBlock: View {
     // MARK: - Countdown hero
 
     private var countdownHero: some View {
-        VStack(alignment: .leading, spacing: 0) {
-            // "Pinned train · leaves in" / "Recommended train · departed"
-            Text(countdownCaption)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.secondary)
+        VStack(alignment: .leading, spacing: 2) {
+            // The countdown and the platform are the two things to act on,
+            // so they share the top row at the same scale.
+            HStack(alignment: .lastTextBaseline, spacing: RTSpacing.compact) {
+                VStack(alignment: .leading, spacing: 0) {
+                    if let prefix = countdownPrefix {
+                        Text(prefix)
+                            .font(.subheadline.weight(.medium))
+                            .foregroundStyle(.secondary)
+                    }
 
-            // Giant countdown value (the glanceable core)
-            Text(countdownValue)
-                .font(.system(size: 56, weight: .bold, design: .rounded))
-                .foregroundStyle(surface.ink)
-                .monospacedDigit()
-                .contentTransition(.numericText(countsDown: countdown.targetDate.map { $0 > now } ?? false))
-                .lineLimit(1)
-                .minimumScaleFactor(0.44)
+                    Text(countdownValue)
+                        .font(.system(size: 56, weight: .bold, design: .rounded))
+                        .foregroundStyle(isStale ? AnyShapeStyle(.secondary) : AnyShapeStyle(surface.ink))
+                        .monospacedDigit()
+                        .contentTransition(.numericText(countsDown: countdown.targetDate.map { $0 > now } ?? false))
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.44)
+                }
+                .layoutPriority(1)
 
-            // Route context line
+                Spacer(minLength: RTSpacing.small)
+
+                platformHero
+            }
+
             Text(presentation.routeTitle)
                 .font(.subheadline.weight(.semibold))
                 .lineLimit(1)
                 .minimumScaleFactor(0.82)
-
-            LiveFreshnessText(text: heroFreshnessText)
-                .padding(.top, 2)
         }
+    }
+
+    private var platformHero: some View {
+        let value = compactPlatformValue
+        let hasKnownPlatform = value != "-" && value.uppercased() != "TBC"
+        let isExpected = hasKnownPlatform && !platform.confirmed
+        let changedFrom = hasKnownPlatform ? platform.secondary : nil
+        return VStack(alignment: .trailing, spacing: 0) {
+            Text(platformLabel(changedFrom: changedFrom, isExpected: isExpected))
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(changedFrom != nil ? Color.rightTrainAmber : .secondary)
+                .lineLimit(1)
+                .minimumScaleFactor(0.78)
+
+            HStack(alignment: .firstTextBaseline, spacing: 4) {
+                if changedFrom != nil {
+                    Image(systemName: "arrow.left.arrow.right")
+                        .font(.title3.weight(.bold))
+                        .accessibilityHidden(true)
+                }
+                Text(value)
+                    .italic(isExpected)
+                    .font(.system(size: 56, weight: .bold, design: .rounded))
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.5)
+            }
+            .foregroundStyle(platformTint(hasKnownPlatform: hasKnownPlatform, changed: changedFrom != nil))
+        }
+        .fixedSize(horizontal: true, vertical: false)
+    }
+
+    private func platformLabel(changedFrom: String?, isExpected: Bool) -> String {
+        if let changedFrom {
+            // "was 2" -> "Was platform 2"
+            return "Was platform \(changedFrom.dropFirst("was ".count))"
+        }
+        return isExpected ? "Platform · exp" : "Platform"
+    }
+
+    private func platformTint(hasKnownPlatform: Bool, changed: Bool) -> AnyShapeStyle {
+        if changed {
+            return AnyShapeStyle(Color.rightTrainAmber)
+        }
+        if !hasKnownPlatform || isStale {
+            return AnyShapeStyle(.secondary)
+        }
+        return AnyShapeStyle(surface.ink)
     }
 
     // MARK: - Time strip
@@ -321,11 +378,6 @@ struct StatusFirstHeroBlock: View {
                 .padding(.vertical, RTSpacing.compact)
 
             timeCell(label: "Arr", display: arrDisplay)
-
-            Divider()
-                .padding(.vertical, RTSpacing.compact)
-
-            platformCell
         }
         .fixedSize(horizontal: false, vertical: true)
         .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
@@ -335,28 +387,26 @@ struct StatusFirstHeroBlock: View {
         let primaryTime = display.currentText ?? display.scheduledText
         let scheduledTime: String? = display.currentText != nil ? display.scheduledText : nil
 
-        return VStack(alignment: .leading, spacing: 3) {
+        return HStack(alignment: .firstTextBaseline, spacing: RTSpacing.small) {
             Text(label)
-                .font(.caption.weight(.medium))
+                .font(.subheadline.weight(.medium))
                 .foregroundStyle(.secondary)
 
-            VStack(alignment: .leading, spacing: 1) {
-                Text(primaryTime)
-                    .font(.title3.weight(.semibold))
+            Text(primaryTime)
+                .font(.title3.weight(.semibold))
+                .monospacedDigit()
+                .contentTransition(.numericText())
+                .foregroundStyle(display.isDelayed ? Color.rightTrainAmber : surface.ink)
+                .lineLimit(1)
+
+            if let scheduled = scheduledTime {
+                Text(scheduled)
+                    .font(.subheadline.weight(.medium))
                     .monospacedDigit()
                     .contentTransition(.numericText())
-                    .foregroundStyle(surface.ink)
+                    .strikethrough(display.isDelayed, color: surface.faint)
+                    .foregroundStyle(surface.dim)
                     .lineLimit(1)
-
-                if let scheduled = scheduledTime {
-                    Text(scheduled)
-                        .font(.caption2.weight(.medium))
-                        .monospacedDigit()
-                        .contentTransition(.numericText())
-                        .strikethrough(display.isDelayed, color: surface.faint)
-                        .foregroundStyle(surface.dim)
-                        .lineLimit(1)
-                }
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -364,37 +414,7 @@ struct StatusFirstHeroBlock: View {
         .padding(.vertical, 12)
     }
 
-    private var platformCell: some View {
-        let value = compactPlatformValue
-        let hasKnownPlatform = value != "-" && value.uppercased() != "TBC"
-        let isExpected = hasKnownPlatform && !platform.confirmed
-        return VStack(alignment: .leading, spacing: 3) {
-            Text(isExpected ? "Platform · exp" : "Platform")
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
-
-            Text(value)
-                .italic(isExpected)
-                .font(.title3.weight(.semibold))
-                .foregroundStyle(hasKnownPlatform ? surface.ink : surface.dim)
-                .lineLimit(1)
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
-    }
-
     // MARK: - Helpers
-
-    /// "Pinned train · leaves in" — hero title and countdown prefix on one line.
-    private var countdownCaption: String {
-        guard let prefix = countdownPrefix else {
-            return presentation.heroTitle
-        }
-        return "\(presentation.heroTitle) · \(prefix.lowercased())"
-    }
 
     /// Splits "Leaves in 14 min" into prefix "Leaves in" / value "14 min".
     /// Handles all countdown text variants produced by ActiveWindowPresentation.countdown().

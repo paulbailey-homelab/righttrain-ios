@@ -12,34 +12,18 @@ struct BetaOnboardingView: View {
         if forceExpanded {
             expandedBanner
         } else if !isDismissed {
+            // Once the first-run banner collapses it leaves the screen; the
+            // guidance stays available from Settings instead of a chip
+            // taking a slot on Pinned.
             Group {
                 if isExpanded {
                     expandedBanner
                         .transition(reduceMotion ? .identity : .opacity.combined(with: .move(edge: .top)))
-                } else {
-                    collapsedChip
-                        .transition(reduceMotion ? .identity : .opacity)
                 }
             }
             .onAppear(perform: prepareInitialState)
             .animation(reduceMotion ? nil : .easeInOut(duration: 0.2), value: isExpanded)
         }
-    }
-
-    private var collapsedChip: some View {
-        Button {
-            isExpanded = true
-        } label: {
-            Label("Beta live guidance", systemImage: "testtube.2")
-                .font(.subheadline.weight(.semibold))
-                .lineLimit(1)
-                .padding(.horizontal, RTSpacing.compact)
-                .padding(.vertical, RTSpacing.small)
-                .foregroundStyle(Color.rightTrainActionInk)
-                .background(Color.rightTrainActionInk.opacity(0.12), in: Capsule())
-        }
-        .buttonStyle(.plain)
-        .accessibilityHint("Shows beta guidance.")
     }
 
     private var expandedBanner: some View {
@@ -48,15 +32,17 @@ struct BetaOnboardingView: View {
                 Label("Beta live guidance", systemImage: "testtube.2")
                     .font(.subheadline.weight(.semibold))
                 Spacer(minLength: 12)
-                Button {
-                    isDismissed = true
-                } label: {
-                    Image(systemName: "xmark.circle.fill")
-                        .font(.title3)
+                if !forceExpanded {
+                    Button {
+                        isDismissed = true
+                    } label: {
+                        Image(systemName: "xmark.circle.fill")
+                            .font(.title3)
+                    }
+                    .buttonStyle(.plain)
+                    .foregroundStyle(.tertiary)
+                    .accessibilityLabel("Dismiss beta guidance")
                 }
-                .buttonStyle(.plain)
-                .foregroundStyle(.tertiary)
-                .accessibilityLabel("Dismiss beta guidance")
             }
 
             Text("RightTrain is in beta. Treat it as live guidance: useful for action-needed changes, still secondary to station boards and operator advice.")

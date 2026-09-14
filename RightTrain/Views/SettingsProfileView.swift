@@ -267,6 +267,19 @@ struct SettingsProfileView: View {
                 }
             }
 
+            NavigationLink {
+                ScrollView {
+                    BetaOnboardingView(forceExpanded: true)
+                        .padding(.horizontal, RTSpacing.pageHorizontal)
+                        .padding(.vertical, RTSpacing.pageVertical)
+                }
+                .background(Color(.systemGroupedBackground))
+                .navigationTitle("Beta Guidance")
+                .navigationBarTitleDisplayMode(.inline)
+            } label: {
+                Label("Beta guidance", systemImage: "testtube.2")
+            }
+
             ShareLink(item: BetaDiagnostics.exportText()) {
                 HStack {
                     Label("Share Diagnostics", systemImage: "waveform.path.ecg")
