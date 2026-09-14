@@ -121,7 +121,17 @@ final class StationPickerViewModel {
             normalizedCRS(context.selectedCounterpartCRS) != nil
     }
 
-    var searchTaskKey: String {
+    /// Destination results are limited to stations with a direct train from
+    /// the origin; say so, or a station that needs a change just seems missing.
+    var directDestinationNote: String? {
+        guard requiresDirectDestinationEligibility,
+              let originCRS = normalizedCRS(context.selectedCounterpartCRS) else {
+            return nil
+        }
+        return "Only stations with a direct train from \(originCRS) are shown. Journeys that need a change aren't supported yet."
+    }
+
+    var sourceLoadKey: String {
         "\(activeChoice.rawValue)|\(query)|\(context.selectionRole.rawValue)|\(context.selectedCounterpartCRS ?? "")|\(context.routeMode.rawValue)"
     }
 
@@ -152,9 +162,15 @@ final class StationPickerViewModel {
             }
             try Task.checkCancellation()
             searchResults = results
-            loadingState = results.isEmpty
-                ? .empty("No station found for \(trimmed.uppercased()).")
-                : .loaded
+            if results.isEmpty {
+                if requiresDirectDestinationEligibility, let originCRS = normalizedCRS(context.selectedCounterpartCRS) {
+                    loadingState = .empty("No station matching \(trimmed.uppercased()) has a direct train from \(originCRS) in this window.")
+                } else {
+                    loadingState = .empty("No station found for \(trimmed.uppercased()).")
+                }
+            } else {
+                loadingState = .loaded
+            }
         } catch is CancellationError {
         } catch let urlError as URLError where urlError.code == .cancelled {
         } catch {
@@ -209,9 +225,12 @@ final class StationPickerViewModel {
                 ? .empty("No nearby stations were found. Search and favourites are still available.")
                 : .loaded
         } catch let error as StationLocationProviderError {
+            guard !Task.isCancelled else { return }
             nearestResults = []
             loadingState = .unavailable(error.localizedDescription)
         } catch {
+            // Leaving Nearest cancels the request; that isn't a failure to show.
+            guard !Task.isCancelled else { return }
             nearestResults = []
             loadingState = .failed("Nearest stations are unavailable. Search and favourites are still available.")
         }

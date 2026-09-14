@@ -23,6 +23,10 @@ struct WindowSetupView: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
                 .accessibilityHint(viewModel.setupIntentContent.detailText)
+            } footer: {
+                if !viewModel.canUseMultiLegRouting {
+                    Label("Direct trains only for now. Journeys that need a change aren't supported yet.", systemImage: "info.circle")
+                }
             }
             .listSectionSpacing(.compact)
 
@@ -105,7 +109,9 @@ struct WindowSetupView: View {
         FloatingPrimaryAction {
             Task { await searchJourneys() }
         } label: {
-            Text(viewModel.setupIntentContent.primaryActionText)
+            // Every search is direct while routes with changes are off, so
+            // the button says so whichever trip type is chosen.
+            Text(viewModel.canUseMultiLegRouting ? viewModel.setupIntentContent.primaryActionText : "Find direct trains")
         }
         .accessibilityHint("Searches journeys in the selected departure range.")
     }
