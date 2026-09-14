@@ -228,15 +228,6 @@ struct JourneyDetailView: View {
                         .padding(.vertical, 10)
                 }
             }
-            .background(alignment: .leading) {
-                Rectangle()
-                    .fill(Color.rightTrainInkFaint)
-                    .frame(width: 2)
-                    .padding(.leading, 11)
-                    .padding(.top, 16)
-                    .padding(.bottom, 44)
-                    .accessibilityHidden(true)
-            }
             .padding(.horizontal, RTSpacing.cardPadding)
             .padding(.vertical, RTSpacing.small)
             .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
@@ -489,6 +480,20 @@ struct JourneyStopRow: View {
 
             JourneyStopTimeView(timing: timing)
                 .layoutPriority(2)
+        }
+        // Each row draws the rail down to the next stop's marker, so the line
+        // follows the real row heights; a single rail with fixed insets fell
+        // short of the last stop once rows got shorter.
+        .background(alignment: .topLeading) {
+            if !isLast {
+                GeometryReader { proxy in
+                    Rectangle()
+                        .fill(Color.rightTrainInkFaint)
+                        .frame(width: 2, height: proxy.size.height + Self.rowGap)
+                        .offset(x: Self.markerCenterX - 1, y: Self.markerCenterY)
+                }
+                .accessibilityHidden(true)
+            }
         }
         // The between-stops dot travels from this stop's marker towards the
         // next row's, drawing into the row gap rather than stretching this
