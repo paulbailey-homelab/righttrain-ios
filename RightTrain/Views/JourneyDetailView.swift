@@ -225,7 +225,7 @@ struct JourneyDetailView: View {
                         isFirst: index == detail.stops.startIndex,
                         isLast: index == detail.stops.index(before: detail.stops.endIndex)
                     )
-                        .padding(.vertical, 8)
+                        .padding(.vertical, 10)
                 }
             }
             .background(alignment: .leading) {
@@ -383,8 +383,12 @@ private struct JourneyDetailTimeStrip: View {
 
             JourneyDetailPlatformLine(text: platform, surface: surface)
         }
-        .padding(RTSpacing.compact)
-        .background(Color.rightTrainInsetFill, in: RoundedRectangle(cornerRadius: RTRadius.chip + 2, style: .continuous))
+        // Sits directly in the overview card, divided by a hairline, rather
+        // than in a filled box inside the card.
+        .padding(.top, RTSpacing.compact)
+        .overlay(alignment: .top) {
+            Divider()
+        }
     }
 
     private func timePoint(
@@ -460,11 +464,23 @@ struct JourneyStopRow: View {
             )
 
             VStack(alignment: .leading, spacing: 4) {
-                Text(stopDisplayName)
-                    .font(.subheadline.weight(.semibold))
-                    .fixedSize(horizontal: false, vertical: true)
-                if !stopSubtitle.isEmpty {
-                    Text(stopSubtitle)
+                // The platform rides on the station line, so most stops take
+                // one line; only a delay reason adds a second.
+                HStack(alignment: .firstTextBaseline, spacing: RTSpacing.small) {
+                    Text(stopDisplayName)
+                        .font(.subheadline.weight(.semibold))
+                        .fixedSize(horizontal: false, vertical: true)
+                    if let platformText {
+                        Text(platformText)
+                            .font(.footnote.weight(.medium))
+                            .foregroundStyle(.secondary)
+                            .monospacedDigit()
+                            .fixedSize()
+                            .accessibilityLabel("Platform \(platformText.dropFirst())")
+                    }
+                }
+                if let reasonText {
+                    Text(reasonText)
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
@@ -504,19 +520,21 @@ struct JourneyStopRow: View {
         )
     }
 
-    private var stopSubtitle: String {
-        var parts: [String] = []
-        if let platform = stop.realtime?.platform ?? stop.scheduledPlatform, !platform.isEmpty {
-            parts.append("Platform \(platform)")
+    private var platformText: String? {
+        guard let platform = stop.realtime?.platform ?? stop.scheduledPlatform, !platform.isEmpty else {
+            return nil
         }
-        if let reason = stop.realtime?.reasonText, !reason.isEmpty {
-            if let location = stop.realtime?.reasonLocationName, !location.isEmpty {
-                parts.append("\(reason) near \(location)")
-            } else {
-                parts.append(reason)
-            }
+        return "P\(platform)"
+    }
+
+    private var reasonText: String? {
+        guard let reason = stop.realtime?.reasonText, !reason.isEmpty else {
+            return nil
         }
-        return parts.joined(separator: " · ")
+        if let location = stop.realtime?.reasonLocationName, !location.isEmpty {
+            return "\(reason) near \(location)"
+        }
+        return reason
     }
 
 }
