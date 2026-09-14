@@ -378,7 +378,6 @@ private struct PlanSearchResultsView: View {
             if let response = viewModel.recommendationResponse {
                 RecommendationResultsView(
                     response: response,
-                    summary: searchSummary(kind: .window),
                     pinWindow: requestPinDirectWindow,
                     isJourneyPinned: isPinnedDirectJourney,
                     toggleJourneyPin: toggleDirectJourneyPin
@@ -386,7 +385,6 @@ private struct PlanSearchResultsView: View {
             } else if let response = viewModel.journeyPlanResponse {
                 ItineraryResultsView(
                     response: response,
-                    summary: searchSummary(kind: .journey),
                     isJourneyPinned: isPinnedRouteJourney,
                     toggleJourneyPin: toggleRouteJourneyPin,
                     openLegDetail: openItineraryLegDetail
@@ -415,7 +413,10 @@ private struct PlanSearchResultsView: View {
                 }
             }
         }
-        .navigationTitle(viewModel.journeyPlanResponse != nil && viewModel.recommendationResponse == nil ? "Routes" : "Direct Trains")
+        // The route is the title so it isn't repeated as a two-line row
+        // under a generic "Direct Trains" bar.
+        .navigationTitle(resultsRouteTitle)
+        .navigationSubtitle(resultsSubtitle)
         .navigationBarTitleDisplayMode(.inline)
         .confirmationDialog("Replace current Pin?", isPresented: replaceConfirmationPresented, titleVisibility: .visible) {
             Button("Replace Pin", role: .destructive) {
@@ -514,12 +515,14 @@ private struct PlanSearchResultsView: View {
         }
     }
 
-    private func searchSummary(kind: PinKind) -> SearchPinSummary {
-        SearchPinSummary(
-            routeTitle: JourneyFormatting.routeTitle(origin: viewModel.origin?.displayName ?? "Origin", destination: viewModel.destination?.displayName ?? "Destination"),
-            windowText: searchWindowText,
-            kind: kind
-        )
+    // A full "Origin → Destination" title truncates beside the Pin button,
+    // so the destination leads and the origin moves to the subtitle.
+    private var resultsRouteTitle: String {
+        "To \(viewModel.destination?.displayName ?? "Destination")"
+    }
+
+    private var resultsSubtitle: String {
+        "From \(viewModel.origin?.displayName ?? "Origin") · \(searchWindowText)"
     }
 
     private var searchWindowText: String {
