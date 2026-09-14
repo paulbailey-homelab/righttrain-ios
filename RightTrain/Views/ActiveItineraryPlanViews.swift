@@ -115,7 +115,17 @@ struct ActiveItineraryPresentation {
         )
     }
 
-    private func routeContextText(for selected: ItineraryRecommendation) -> String? {
+    /// Matches the direct Pin: realtime older than five minutes shouldn't be
+    /// presented as live.
+    func isDataStale(now: Date = Date()) -> Bool {
+        let selected = selectedItinerary ?? itinerary.selectedItinerary
+        guard let updatedAt = latestRealtimeUpdate(in: selected) else {
+            return false
+        }
+        return now.timeIntervalSince(updatedAt) > 5 * 60
+    }
+
+    func routeContextText(for selected: ItineraryRecommendation) -> String? {
         guard selected.score.changeCount > 0 else {
             return nil
         }
@@ -224,12 +234,13 @@ struct PerspectiveActiveItineraryView: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
             let presentation = ActiveItineraryPresentation(itinerary: itinerary)
-            VStack(alignment: .leading, spacing: RTSpacing.sectionGap) {
-                LiveGlancePanel(
-                    content: presentation.liveGlanceContent(
-                        now: context.date,
-                        isOffline: isOffline
-                    )
+            VStack(alignment: .leading, spacing: RTSpacing.compact) {
+                // Status, route and freshness sit on the page like the direct
+                // Pin's hero; the phase card below carries the timings and
+                // actions, so a separate glance card would only repeat them.
+                ActiveItineraryStatusHeader(
+                    content: presentation.liveGlanceContent(now: context.date, isOffline: isOffline),
+                    isStale: isOffline || presentation.isDataStale(now: context.date)
                 )
                 phaseView
             }
@@ -247,6 +258,56 @@ struct PerspectiveActiveItineraryView: View {
             ItineraryOnLegView(itinerary: itinerary, approachingInterchange: true, loadDetail: loadDetail)
         case .onFinalLeg:
             ItineraryOnFinalLegView(itinerary: itinerary, loadDetail: loadDetail)
+        }
+    }
+}
+
+private struct ActiveItineraryStatusHeader: View {
+    var content: ActiveWindowPresentation.LiveGlanceContent
+    var isStale: Bool
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 4) {
+            ViewThatFits(in: .horizontal) {
+                HStack(spacing: RTSpacing.small) {
+                    StatusPill(text: content.statusText, tone: content.statusTone)
+                        .fixedSize(horizontal: true, vertical: false)
+                    Spacer(minLength: RTSpacing.small)
+                    freshness
+                }
+                VStack(alignment: .leading, spacing: 4) {
+                    StatusPill(text: content.statusText, tone: content.statusTone)
+                    freshness
+                }
+            }
+
+            Text(content.routeTitle)
+                .font(.title3.weight(.bold))
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.top, 2)
+
+            if let routeContextText = content.routeContextText {
+                Text(routeContextText)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .lineLimit(1)
+            }
+        }
+        .accessibilityElement(children: .combine)
+    }
+
+    @ViewBuilder
+    private var freshness: some View {
+        if isStale {
+            Label(content.freshnessText, systemImage: "exclamationmark.triangle.fill")
+                .font(.subheadline.weight(.semibold))
+                .foregroundStyle(Color.rightTrainAmber)
+                .lineLimit(1)
+                .minimumScaleFactor(0.82)
+                .accessibilityLabel("Live data may be out of date. \(content.freshnessText)")
+        } else {
+            LiveFreshnessText(text: content.freshnessText)
         }
     }
 }
@@ -393,7 +454,6 @@ private struct ActiveItineraryOptionCard: View {
                 ActiveItineraryPlanHeroCard(
                     itinerary: itinerary,
                     now: now,
-                    emphasized: emphasized,
                     isExpanded: isExpanded
                 )
             }
@@ -412,7 +472,6 @@ private struct ActiveItineraryOptionCard: View {
 private struct ActiveItineraryPlanHeroCard: View {
     var itinerary: ItineraryRecommendation
     var now: Date
-    var emphasized: Bool
     var isExpanded: Bool
 
     private var firstLeg: ItineraryLeg? {
@@ -452,11 +511,22 @@ private struct ActiveItineraryPlanHeroCard: View {
         )
     }
 
+    private var platformValue: String {
+        let value = platform.primary.trimmingCharacters(in: .whitespacesAndNewlines)
+        if value.uppercased().hasPrefix("P"), value.count > 1 {
+            return String(value.dropFirst())
+        }
+        return value.isEmpty || value == "-" ? "TBC" : value
+    }
+
+    // Sits directly in the itinerary card: a filled box inside the card was
+    // card-in-card chrome. The change and its risk are in the header and the
+    // leg list, so the detail line keeps to times.
     var body: some View {
-        VStack(alignment: .leading, spacing: 8) {
-            HStack(alignment: .top, spacing: RTSpacing.listItem) {
+        VStack(alignment: .leading, spacing: 4) {
+            HStack(alignment: .lastTextBaseline, spacing: RTSpacing.compact) {
                 Text(countdownText)
-                    .font(.title3.weight(.bold))
+                    .font(.title.weight(.bold))
                     .foregroundStyle(countdownTone.color)
                     .monospacedDigit()
                     .contentTransition(.numericText())
@@ -464,53 +534,45 @@ private struct ActiveItineraryPlanHeroCard: View {
                     .minimumScaleFactor(0.72)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                PlatformSquareChip(platform: platform)
-
-                Image(systemName: isExpanded ? "chevron.down" : "chevron.right")
-                    .font(.caption.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .padding(.top, 8)
-                    .accessibilityHidden(true)
+                VStack(alignment: .trailing, spacing: 0) {
+                    Text(platform.confirmed || platformValue == "TBC" ? "Platform" : "Platform · exp")
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                    Text(platformValue)
+                        .italic(!platform.confirmed && platformValue != "TBC")
+                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.6)
+                }
+                .fixedSize(horizontal: true, vertical: false)
             }
 
-            Text(detailLine)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(.secondary)
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
+            HStack(spacing: RTSpacing.small) {
+                Text(detailLine)
+                    .font(.subheadline)
+                    .foregroundStyle(.secondary)
+                    .monospacedDigit()
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+                Spacer(minLength: 0)
+                Label(isExpanded ? "Hide legs" : "Show legs", systemImage: isExpanded ? "chevron.up" : "chevron.down")
+                    .labelStyle(.iconOnly)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(.tertiary)
+            }
         }
-        .padding(RTSpacing.compact)
-        .background(emphasized ? Color.rightTrainActionInk.opacity(0.10) : Color.rightTrainInsetFill, in: RoundedRectangle(cornerRadius: RTRadius.chip + 2, style: .continuous))
+        .contentShape(Rectangle())
         .lightSurfaceForeground()
     }
 
     private var detailLine: String {
-        var parts = [
+        [
             "Dep \(ItineraryFormatting.departureText(itinerary))",
-            "Final arr \(ItineraryFormatting.arrivalText(itinerary))",
-            ItineraryFormatting.durationText(itinerary),
-            ItineraryFormatting.changesText(itinerary)
+            "Arr \(ItineraryFormatting.arrivalText(itinerary))",
+            ItineraryFormatting.durationText(itinerary)
         ]
-        if itinerary.score.changeCount > 0 {
-            if let connection = itinerary.connections.first {
-                parts.append(ItineraryFormatting.connectionRiskSummaryText(connection))
-            } else {
-                parts.append(changeMarginText)
-            }
-        }
-        if let status = ItineraryFormatting.anomalousStatusDisplay(itinerary),
-           !status.text.localizedCaseInsensitiveContains("connection") {
-            parts.append(status.text.trimmingCharacters(in: CharacterSet(charactersIn: ".")))
-        }
-        return parts.joined(separator: " · ")
-    }
-
-    private var changeMarginText: String {
-        let margin = itinerary.score.minimumConnectionMarginMinutes
-        if margin < 0 {
-            return "\(abs(margin)) min short"
-        }
-        return "\(margin) min to change"
+        .joined(separator: " · ")
     }
 }
 

@@ -125,17 +125,9 @@ struct ActiveItineraryHeader: View {
 }
 
 struct ActiveItineraryCard<Content: View>: View {
-    var borderColor = Color.clear
-    var borderWidth: CGFloat = 0
     private let content: () -> Content
 
-    init(
-        borderColor: Color = Color.clear,
-        borderWidth: CGFloat = 0,
-        @ViewBuilder content: @escaping () -> Content
-    ) {
-        self.borderColor = borderColor
-        self.borderWidth = borderWidth
+    init(@ViewBuilder content: @escaping () -> Content) {
         self.content = content
     }
 
@@ -146,12 +138,6 @@ struct ActiveItineraryCard<Content: View>: View {
         .padding(RTSpacing.cardPadding)
         .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
         .lightSurfaceForeground()
-        .overlay {
-            if borderWidth > 0 {
-                RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous)
-                    .stroke(borderColor, lineWidth: borderWidth)
-            }
-        }
     }
 }
 

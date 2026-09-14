@@ -35,10 +35,11 @@ struct CommuteRoutinesView: View {
     }
 
     private var scrollContent: some View {
+        // Saved commutes are what people open this tab for, so they lead;
+        // Home & Work is set once and sits below.
         List {
-            defaultsSection
-            quickAddSection
             routinesSection
+            defaultsSection
         }
         .listStyle(.insetGrouped)
     }
@@ -46,12 +47,35 @@ struct CommuteRoutinesView: View {
     @ToolbarContentBuilder
     private var addToolbarItem: some ToolbarContent {
         ToolbarItem(placement: .topBarTrailing) {
-            Button {
-                editorSheet = RoutineEditorSheet()
-            } label: {
-                Image(systemName: "plus")
+            if let homeStation, let workStation {
+                Menu {
+                    Button {
+                        editorSheet = RoutineEditorSheet(originStation: homeStation, destinationStation: workStation)
+                    } label: {
+                        Label("Home to Work", systemImage: "arrow.right")
+                    }
+                    Button {
+                        editorSheet = RoutineEditorSheet(originStation: workStation, destinationStation: homeStation)
+                    } label: {
+                        Label("Work to Home", systemImage: "arrow.left")
+                    }
+                    Button {
+                        editorSheet = RoutineEditorSheet()
+                    } label: {
+                        Label("Other Route", systemImage: "plus")
+                    }
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Add commute")
+            } else {
+                Button {
+                    editorSheet = RoutineEditorSheet()
+                } label: {
+                    Image(systemName: "plus")
+                }
+                .accessibilityLabel("Add commute")
             }
-            .accessibilityLabel("Add commute")
         }
     }
 
@@ -86,6 +110,7 @@ struct CommuteRoutinesView: View {
                     locationProvider: SystemStationLocationProvider()
                 ) { station in
                     homeStation = station
+                    saveDefaults()
                 }
             } label: {
                 StationFormLabel(title: "Home", station: homeStation, placeholder: "Choose station", showsChevron: false)
@@ -99,44 +124,28 @@ struct CommuteRoutinesView: View {
                     locationProvider: SystemStationLocationProvider()
                 ) { station in
                     workStation = station
+                    saveDefaults()
                 }
             } label: {
                 StationFormLabel(title: "Work", station: workStation, placeholder: "Choose station", showsChevron: false)
             }
-
-            Button("Save Home & Work") {
-                Task {
-                    await viewModel.updateStationDefaults(
-                        homeStation: homeStation,
-                        workStation: workStation
-                    )
-                }
-            }
-            .disabled(!hasUnsavedDefaults)
         } header: {
             Text("Home & Work")
         } footer: {
-            Text("Used as favourites in the station picker and for quick commute setup.")
+            Text("Shown first in the station picker, and in the + menu for new commutes.")
         }
     }
 
-    private var quickAddSection: some View {
-        Section {
-            Button {
-                editorSheet = RoutineEditorSheet(originStation: homeStation, destinationStation: workStation)
-            } label: {
-                Label("Home to Work", systemImage: "arrow.right")
-            }
-
-            Button {
-                editorSheet = RoutineEditorSheet(originStation: workStation, destinationStation: homeStation)
-            } label: {
-                Label("Work to Home", systemImage: "arrow.left")
-            }
-        } header: {
-            Text("New commute")
+    /// Saves as soon as a station is picked, so there's no separate Save row
+    /// that looks like placeholder text while disabled.
+    private func saveDefaults() {
+        guard hasUnsavedDefaults else { return }
+        Task {
+            await viewModel.updateStationDefaults(
+                homeStation: homeStation,
+                workStation: workStation
+            )
         }
-        .disabled(homeStation == nil || workStation == nil)
     }
 
     private var hasUnsavedDefaults: Bool {
@@ -198,15 +207,20 @@ struct CommuteRoutinesView: View {
                         }
                     }
 
-                    Text("\(viewModel.stationName(for: routine.originCrs)) → \(viewModel.stationName(for: routine.destinationCrs)) · \(routine.departureTime)")
+                    Text("\(viewModel.stationName(for: routine.originCrs)) → \(viewModel.stationName(for: routine.destinationCrs))")
                         .font(.subheadline)
                         .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
 
-                    Text("\(Text(routineStatusText(routine, isScheduledNow: isScheduledNow, isLive: isLive)).fontWeight(.semibold).foregroundStyle(statusTone.color)) · \(routineAutoPinSummary(routine))")
-                        .font(.footnote)
+                    // Window and lead time are editor details; the row keeps
+                    // to status and when it runs.
+                    Text("\(Text(routineStatusText(routine, isScheduledNow: isScheduledNow, isLive: isLive)).fontWeight(.semibold).foregroundStyle(statusTone.color)) · \(weekdayText(routine.activeWeekdays)) at \(routine.departureTime)")
+                        .font(.subheadline)
                         .foregroundStyle(.secondary)
-                        .lineLimit(2)
+                        .monospacedDigit()
+                        .lineLimit(1)
+                        .minimumScaleFactor(0.85)
                 }
                 .frame(maxWidth: .infinity, alignment: .leading)
                 .contentShape(Rectangle())
@@ -325,17 +339,17 @@ struct CommuteRoutinesView: View {
     }
 
     private func weekdayText(_ weekdays: [Int]) -> String {
-        let labels = [1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri", 6: "Sat", 7: "Sun"]
-        return weekdays.compactMap { labels[$0] }.joined(separator: ", ")
-    }
-
-    private func routineAutoPinSummary(_ routine: CommuteRoutine) -> String {
-        let autoPin = routine.autoArmEnabled
-            ? "pins \(routine.autoArmLeadMinutes)m before"
-            : nil
-        return [weekdayText(routine.activeWeekdays), "\(routine.windowMinutes)m window", autoPin]
-            .compactMap { $0 }
-            .joined(separator: " · ")
+        switch Set(weekdays) {
+        case Set(1...5):
+            return "Weekdays"
+        case Set(6...7):
+            return "Weekends"
+        case Set(1...7):
+            return "Every day"
+        default:
+            let labels = [1: "Mon", 2: "Tue", 3: "Wed", 4: "Thu", 5: "Fri", 6: "Sat", 7: "Sun"]
+            return weekdays.sorted().compactMap { labels[$0] }.joined(separator: ", ")
+        }
     }
 
     private func routineStatusText(_ routine: CommuteRoutine, isScheduledNow: Bool, isLive: Bool) -> String {

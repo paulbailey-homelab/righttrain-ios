@@ -39,6 +39,23 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
+    func testSwapStationsReversesRouteAndClearsResults() {
+        let model = makeModel()
+        let setup = model.windowSetupViewModel
+        let origin = TestFactory.station(crs: "EUS", name: "London Euston")
+        let destination = TestFactory.station(crs: "MAN", name: "Manchester Piccadilly")
+        setup.origin = origin
+        setup.destination = destination
+
+        setup.swapStations()
+
+        XCTAssertEqual(setup.origin, destination)
+        XCTAssertEqual(setup.destination, origin)
+        XCTAssertNil(setup.recommendationResponse)
+        XCTAssertNil(setup.journeyPlanResponse)
+    }
+
+    @MainActor
     func testStationPickerContextPreservesSetupState() {
         let model = makeModel()
         let setup = model.windowSetupViewModel
