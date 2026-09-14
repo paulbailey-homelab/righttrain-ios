@@ -4,6 +4,7 @@ import SwiftUI
 /// Host inside a `List`.
 struct RecommendationResultsView: View {
     var response: DirectWindowRecommendationResponse
+    var canSearchRoutesWithChanges: Bool
     var pinWindow: () async -> Void
     var isJourneyPinned: (DirectWindowRecommendation) -> Bool
     var toggleJourneyPin: (DirectWindowRecommendation) async -> Void
@@ -18,7 +19,9 @@ struct RecommendationResultsView: View {
             Section {
                 EmptyStateView(
                     title: "No direct trains found",
-                    message: "Try widening the departure window or switching to routes with changes."
+                    message: canSearchRoutesWithChanges
+                        ? "Try widening the departure window or switching to routes with changes."
+                        : "RightTrain only finds direct trains for now, so journeys that need a change won't appear. Try a wider departure window."
                 )
                 .listRowInsets(EdgeInsets())
             }

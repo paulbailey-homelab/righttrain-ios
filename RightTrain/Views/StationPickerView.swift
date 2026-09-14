@@ -40,6 +40,10 @@ struct StationPickerView: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
                 .accessibilityHint("Choose how to find a station.")
+            } footer: {
+                if let note = viewModel.directDestinationNote {
+                    Text(note)
+                }
             }
             .listSectionSpacing(.compact)
 
@@ -83,19 +87,19 @@ struct StationPickerView: View {
                 isSearchFocused = true
             }
         }
-        .task(id: viewModel.searchTaskKey) {
-            await viewModel.loadSearchIfNeeded()
-        }
-        .onChange(of: viewModel.activeChoice) { _, choice in
-            Task {
-                switch choice {
-                case .search:
-                    await viewModel.loadSearchIfNeeded()
-                case .favourites:
-                    await viewModel.loadFavourites()
-                case .nearest:
-                    await viewModel.loadNearest()
-                }
+        // One load per source change, owned by the list. Loads used to be
+        // started both here and from `.task` on the result sections; a List
+        // gives those sections a new identity whenever the loading state
+        // flips, which cancelled the nearby request and started another in
+        // a loop that ended on "Unavailable".
+        .task(id: viewModel.sourceLoadKey) {
+            switch viewModel.activeChoice {
+            case .search:
+                await viewModel.loadSearchIfNeeded()
+            case .favourites:
+                await viewModel.loadFavourites()
+            case .nearest:
+                await viewModel.loadNearest()
             }
         }
     }
@@ -140,16 +144,10 @@ struct StationPickerView: View {
                 }
             }
         }
-        .task {
-            await viewModel.loadFavourites()
-        }
     }
 
     private var nearestContent: some View {
         resultSection(stations: viewModel.nearestResults, title: "Nearest stations")
-            .task {
-                await viewModel.loadNearest()
-            }
     }
 
     @ViewBuilder

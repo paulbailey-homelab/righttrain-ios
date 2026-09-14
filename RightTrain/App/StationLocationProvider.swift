@@ -39,7 +39,7 @@ protocol StationLocationProviding: AnyObject {
 @MainActor
 final class SystemStationLocationProvider: NSObject, StationLocationProviding, CLLocationManagerDelegate {
     private let manager = CLLocationManager()
-    private var continuation: CheckedContinuation<StationSelectionLocation, Error>?
+    private var continuations: [CheckedContinuation<StationSelectionLocation, Error>] = []
 
     override init() {
         super.init()
@@ -51,13 +51,13 @@ final class SystemStationLocationProvider: NSObject, StationLocationProviding, C
         guard CLLocationManager.locationServicesEnabled() else {
             throw StationLocationProviderError.unavailable
         }
-        if let continuation {
-            continuation.resume(throwing: StationLocationProviderError.failed("A location request is already running."))
-            self.continuation = nil
-        }
+        // A second caller joins the request in flight rather than failing it.
         return try await withCheckedThrowingContinuation { continuation in
-            self.continuation = continuation
-            requestLocationAfterAuthorization()
+            let isFirstRequest = continuations.isEmpty
+            continuations.append(continuation)
+            if isFirstRequest {
+                requestLocationAfterAuthorization()
+            }
         }
     }
 
@@ -78,6 +78,10 @@ final class SystemStationLocationProvider: NSObject, StationLocationProviding, C
 
     nonisolated func locationManagerDidChangeAuthorization(_ manager: CLLocationManager) {
         Task { @MainActor in
+            // The manager reports its status as soon as it's created. Only
+            // act when someone asked for a location, or opening the picker
+            // prompts for permission before Nearest is chosen.
+            guard !continuations.isEmpty, manager.authorizationStatus != .notDetermined else { return }
             requestLocationAfterAuthorization()
         }
     }
@@ -108,12 +112,14 @@ final class SystemStationLocationProvider: NSObject, StationLocationProviding, C
     }
 
     private func finish(returning location: StationSelectionLocation) {
-        continuation?.resume(returning: location)
-        continuation = nil
+        let waiting = continuations
+        continuations = []
+        waiting.forEach { $0.resume(returning: location) }
     }
 
     private func finish(throwing error: Error) {
-        continuation?.resume(throwing: error)
-        continuation = nil
+        let waiting = continuations
+        continuations = []
+        waiting.forEach { $0.resume(throwing: error) }
     }
 }

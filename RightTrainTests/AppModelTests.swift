@@ -108,6 +108,69 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
+    func testDirectDestinationPickerExplainsDirectOnlyResults() async {
+        let apiClient = FakeAPIClient()
+        apiClient.directDestinationStationResult = .success([])
+        let viewModel = StationPickerViewModel(
+            context: StationPickerContext(
+                selectionRole: .destination,
+                routeMode: .direct,
+                selectedCounterpartCRS: "EUS",
+                departureStart: Date(),
+                windowMinutes: 120,
+                sourceSurface: .journeySetup,
+                previousSelection: nil
+            ),
+            apiClient: apiClient,
+            favourites: [],
+            locationProvider: FakeStationLocationProvider(),
+            initialQuery: "York"
+        )
+
+        await viewModel.loadSearchIfNeeded()
+
+        XCTAssertEqual(
+            viewModel.directDestinationNote,
+            "Only stations with a direct train from EUS are shown. Journeys that need a change aren't supported yet."
+        )
+        XCTAssertEqual(
+            viewModel.loadingState,
+            .empty("No station matching YORK has a direct train from EUS in this window.")
+        )
+    }
+
+    @MainActor
+    func testCancelledNearestLoadDoesNotShowFailure() async {
+        let apiClient = FakeAPIClient()
+        apiClient.nearbyStationResult = .failure(URLError(.cancelled))
+        let viewModel = StationPickerViewModel(
+            context: StationPickerContext(
+                selectionRole: .origin,
+                routeMode: .direct,
+                selectedCounterpartCRS: nil,
+                departureStart: nil,
+                windowMinutes: 120,
+                sourceSurface: .journeySetup,
+                previousSelection: nil
+            ),
+            apiClient: apiClient,
+            favourites: [],
+            locationProvider: FakeStationLocationProvider(),
+            initialChoice: .nearest
+        )
+
+        let load = Task { await viewModel.loadNearest() }
+        load.cancel()
+        await load.value
+
+        // Switching away from Nearest cancels the load; the next load owns
+        // the state, so a cancelled one must not replace it with "Unavailable".
+        if case .failed = viewModel.loadingState {
+            XCTFail("A cancelled nearest load should not report a failure")
+        }
+    }
+
+    @MainActor
     func testStationFavoritesDeduplicateByCRS() {
         let favourites = StationFavoritesProvider.favourites(
             homeStationCRS: "eus",

@@ -378,6 +378,7 @@ private struct PlanSearchResultsView: View {
             if let response = viewModel.recommendationResponse {
                 RecommendationResultsView(
                     response: response,
+                    canSearchRoutesWithChanges: viewModel.canUseMultiLegRouting,
                     pinWindow: requestPinDirectWindow,
                     isJourneyPinned: isPinnedDirectJourney,
                     toggleJourneyPin: toggleDirectJourneyPin
