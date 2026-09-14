@@ -23,9 +23,8 @@ struct WindowSetupView: View {
                 .listRowInsets(EdgeInsets())
                 .listRowBackground(Color.clear)
                 .accessibilityHint(viewModel.setupIntentContent.detailText)
-            } footer: {
-                Text(intentFooterText)
             }
+            .listSectionSpacing(.compact)
 
             Section {
                 StationFormRow(title: "From", station: viewModel.origin, placeholder: "Choose origin") {
@@ -39,6 +38,17 @@ struct WindowSetupView: View {
                     openStationPicker(.destination)
                 }
                 .id(ContentScrollTarget.destinationStationField)
+            } footer: {
+                if viewModel.canSwapStations {
+                    Button {
+                        viewModel.swapStations()
+                    } label: {
+                        Label("Swap From and To", systemImage: "arrow.up.arrow.down")
+                            .font(.footnote.weight(.semibold))
+                    }
+                    .buttonStyle(.borderless)
+                    .sensoryFeedback(.selection, trigger: viewModel.origin?.crs)
+                }
             }
 
             Section {
@@ -79,13 +89,6 @@ struct WindowSetupView: View {
         } set: { intent in
             viewModel.selectSetupIntent(intent)
         }
-    }
-
-    private var intentFooterText: String {
-        if viewModel.canUseMultiLegRouting {
-            return viewModel.setupIntentContent.detailText
-        }
-        return "\(viewModel.setupIntentContent.detailText) Routes with changes aren't available yet."
     }
 
     private var windowMinutesSelection: Binding<Int> {

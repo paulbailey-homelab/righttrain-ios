@@ -103,6 +103,15 @@ final class WindowSetupViewModel {
             }
         }
     }
+    var canSwapStations: Bool {
+        origin != nil || destination != nil
+    }
+
+    /// Reverses the route, e.g. for the journey home.
+    func swapStations() {
+        (origin, destination) = (destination, origin)
+    }
+
     var departureStart: Date = Date() {
         didSet {
             clearSearchResults()
