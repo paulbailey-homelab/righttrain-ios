@@ -37,6 +37,7 @@ struct AccountPrivacyControlsView: View {
                 exportSummary(export)
             }
         }
+        .readableContentMargins()
         .navigationTitle("Export data")
         .navigationBarTitleDisplayMode(.inline)
     }

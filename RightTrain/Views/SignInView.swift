@@ -60,6 +60,7 @@ struct SignInView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
         }
+        .readableContentMargins()
         .scrollBounceBehavior(.basedOnSize)
         .safeAreaBar(edge: .bottom) {
             VStack(spacing: RTSpacing.small) {

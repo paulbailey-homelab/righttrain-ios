@@ -51,6 +51,7 @@ struct ConnectivityStatusBanner: View {
             // offline state tint the glass so they read as status at a glance.
             .glassEffect(content.glass, in: .capsule)
             .padding(.horizontal, RTSpacing.pageHorizontal)
+            .readableWidthFrame()
             .padding(.vertical, RTSpacing.xs)
         }
     }

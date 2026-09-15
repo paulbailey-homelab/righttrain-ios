@@ -50,21 +50,25 @@ struct RightTrainLiveActivityWidget: Widget {
             } compactLeading: {
                 CompactLeadingMetric(context: context)
             } compactTrailing: {
-                let statusKind = context.state.selectedTrain?.statusKind ?? context.state.statusKind
-                if let platformChange = context.state.activePlatformChange {
-                    CompactPlatformChangeText(change: platformChange)
-                } else if let platform = compactPlatform(for: context) {
-                    CompactPlatformText(
-                        platform: platform.value,
-                        accessibilityPrefix: platform.accessibilityPrefix,
-                        highlighted: platform.highlighted
-                    )
-                } else if statusKind != .good {
-                    StatusGlyph(kind: statusKind, delayMinutes: context.state.selectedTrain?.delayMinutes ?? context.state.delayMinutes)
-                } else if let platform = departurePlatform(for: context) {
-                    CompactPlatformText(platform: platform)
-                } else {
-                    StatusGlyph(kind: statusKind, delayMinutes: context.state.selectedTrain?.delayMinutes ?? context.state.delayMinutes)
+                DynamicIslandWidthReader { isLimitedInWidth in
+                    let statusKind = context.state.selectedTrain?.statusKind ?? context.state.statusKind
+                    if let platformChange = context.state.activePlatformChange {
+                        CompactPlatformChangeText(change: platformChange, showsIcon: !isLimitedInWidth)
+                    } else if let platform = compactPlatform(for: context) {
+                        CompactPlatformText(
+                            platform: platform.value,
+                            accessibilityPrefix: platform.accessibilityPrefix,
+                            highlighted: platform.highlighted
+                        )
+                    } else if statusKind != .good {
+                        // Already falls back to its bare symbol via
+                        // ViewThatFits, keeping "+18" whenever it fits.
+                        StatusGlyph(kind: statusKind, delayMinutes: context.state.selectedTrain?.delayMinutes ?? context.state.delayMinutes)
+                    } else if let platform = departurePlatform(for: context) {
+                        CompactPlatformText(platform: platform)
+                    } else {
+                        StatusGlyph(kind: statusKind, delayMinutes: context.state.selectedTrain?.delayMinutes ?? context.state.delayMinutes)
+                    }
                 }
             } minimal: {
                 let statusKind = context.state.selectedTrain?.statusKind ?? context.state.statusKind
@@ -583,16 +587,51 @@ private struct CompactPlatformText: View {
     }
 }
 
+/// Hands compact Dynamic Island content whether the island is width-limited.
+/// From iOS 27 compact and minimal presentations also show in landscape,
+/// where they can't grow, so they drop to their narrowest form. Earlier
+/// systems only show them in portrait, which is never limited.
+private struct DynamicIslandWidthReader<Content: View>: View {
+    @ViewBuilder var content: (_ isLimitedInWidth: Bool) -> Content
+
+    var body: some View {
+        if #available(iOS 27.0, *) {
+            LimitedWidthReader(content: content)
+        } else {
+            content(false)
+        }
+    }
+
+    @available(iOS 27.0, *)
+    private struct LimitedWidthReader: View {
+        @Environment(\.isDynamicIslandLimitedInWidth) private var isLimitedInWidth
+        var content: (Bool) -> Content
+
+        var body: some View {
+            content(isLimitedInWidth)
+        }
+    }
+}
+
 private struct CompactPlatformChangeText: View {
     var change: RightTrainLiveActivityAttributes.ContentState.PlatformChange
+    /// The swap arrows are dropped when the island is width-limited; the
+    /// amber platform and the accessibility label still carry the change.
+    var showsIcon = true
 
     private var currentPlatform: String {
         compactPlatformDisplayValue(change.currentPlatform)
     }
 
     var body: some View {
-        Label(currentPlatform, systemImage: "arrow.left.arrow.right")
-        .labelStyle(.titleAndIcon)
+        Group {
+            if showsIcon {
+                Label(currentPlatform, systemImage: "arrow.left.arrow.right")
+                    .labelStyle(.titleAndIcon)
+            } else {
+                Text(currentPlatform)
+            }
+        }
         .font(.caption.weight(.semibold))
         .monospacedDigit()
         .foregroundStyle(Color.rightTrainActivityLate)

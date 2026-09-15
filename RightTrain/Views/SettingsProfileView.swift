@@ -55,6 +55,7 @@ struct SettingsProfileView: View {
             aboutSection
             dangerZoneSection
         }
+        .readableContentMargins()
         .tint(Color.rightTrainActionInk)
         .navigationTitle("Settings")
         .navigationBarTitleDisplayMode(.large)
@@ -273,6 +274,7 @@ struct SettingsProfileView: View {
                         .padding(.horizontal, RTSpacing.pageHorizontal)
                         .padding(.vertical, RTSpacing.pageVertical)
                 }
+                .readableContentMargins()
                 .background(Color(.systemGroupedBackground))
                 .navigationTitle("Beta Guidance")
                 .navigationBarTitleDisplayMode(.inline)

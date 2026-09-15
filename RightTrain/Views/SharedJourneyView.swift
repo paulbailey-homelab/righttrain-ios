@@ -180,6 +180,7 @@ struct SharedJourneyView: View {
             .padding(.vertical, RTSpacing.pageVertical)
             .lightSurfaceForeground()
         }
+        .readableContentMargins()
         .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
         .safeAreaBar(edge: .bottom) {
             sharedLinkActions(journey)

@@ -101,6 +101,7 @@ struct FloatingPrimaryAction<Label: View>: View {
         .buttonStyle(.glassProminent)
         .controlSize(.extraLarge)
         .padding(.horizontal, RTSpacing.pageHorizontal + 4)
+        .readableWidthFrame()
         .padding(.bottom, RTSpacing.small)
     }
 }

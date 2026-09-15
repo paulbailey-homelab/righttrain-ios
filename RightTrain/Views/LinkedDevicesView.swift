@@ -16,6 +16,7 @@ struct LinkedDevicesView: View {
                 Text("Labels are limited to platform, device class, app version, and recent activity. RightTrain does not show raw device identifiers here.")
             }
         }
+        .readableContentMargins()
         .navigationTitle("Linked Devices")
         .navigationBarTitleDisplayMode(.inline)
         .task {

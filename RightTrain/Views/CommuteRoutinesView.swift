@@ -41,6 +41,7 @@ struct CommuteRoutinesView: View {
             routinesSection
             defaultsSection
         }
+        .readableContentMargins()
         .listStyle(.insetGrouped)
     }
 
@@ -502,6 +503,7 @@ private struct RoutineEditorView: View {
                     Toggle("Notifications", isOn: $notificationsEnabled)
                 }
             }
+            .readableContentMargins()
             .navigationTitle(sheet.routine == nil ? "New Commute" : "Edit Commute")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

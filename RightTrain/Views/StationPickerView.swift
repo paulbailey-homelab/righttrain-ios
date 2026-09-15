@@ -67,6 +67,7 @@ struct StationPickerView: View {
                 }
             }
         }
+        .readableContentMargins()
         .listStyle(.insetGrouped)
         // Keep the search field visible (inside a tab's navigation stack the
         // automatic placement hides it until you pull down) and focus it on
