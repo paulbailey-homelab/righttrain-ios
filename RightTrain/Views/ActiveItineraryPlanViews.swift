@@ -104,6 +104,10 @@ struct ActiveItineraryPresentation {
             statusText: statusText.isEmpty ? pillText : statusText,
             statusTone: isOffline ? .amber : status.tone,
             timingText: "Dep \(ItineraryFormatting.departureText(selected)) · Arr \(ItineraryFormatting.arrivalText(selected))",
+            platform: PlatformValue(
+                ItineraryFormatting.firstLegPlatformText(selected),
+                confirmed: ItineraryFormatting.firstLegPlatformConfirmed(selected)
+            ),
             platformText: JourneyFormatting.platformStateText(
                 primary: ItineraryFormatting.firstLegPlatformText(selected),
                 confirmed: ItineraryFormatting.firstLegPlatformConfirmed(selected)
@@ -511,14 +515,6 @@ private struct ActiveItineraryPlanHeroCard: View {
         )
     }
 
-    private var platformValue: String {
-        let value = platform.primary.trimmingCharacters(in: .whitespacesAndNewlines)
-        if value.uppercased().hasPrefix("P"), value.count > 1 {
-            return String(value.dropFirst())
-        }
-        return value.isEmpty || value == "-" ? "TBC" : value
-    }
-
     // Sits directly in the itinerary card: a filled box inside the card was
     // card-in-card chrome. The change and its risk are in the header and the
     // leg list, so the detail line keeps to times.
@@ -534,18 +530,7 @@ private struct ActiveItineraryPlanHeroCard: View {
                     .minimumScaleFactor(0.72)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                VStack(alignment: .trailing, spacing: 0) {
-                    Text(platform.confirmed || platformValue == "TBC" ? "Platform" : "Platform · exp")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
-                    Text(platformValue)
-                        .italic(!platform.confirmed && platformValue != "TBC")
-                        .heroNumberFont(size: 34)
-                        .monospacedDigit()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.6)
-                }
-                .fixedSize(horizontal: true, vertical: false)
+                CaptionedPlatformTile(platform: platform.value, size: .medium)
             }
 
             HStack(spacing: RTSpacing.small) {

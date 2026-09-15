@@ -435,7 +435,7 @@ private struct UpcomingTrainRow: View {
             if let statusDisplay {
                 StatusPill(text: statusDisplay.text, tone: statusDisplay.tone)
             }
-            PlatformSquareChip(platform: platform, style: .compact)
+            PlatformTile(platform: platform.value)
             Image(systemName: "chevron.right")
                 .font(.caption2.weight(.semibold))
                 .foregroundStyle(.tertiary)
@@ -593,15 +593,7 @@ struct StatusFirstTrainRow: View {
                     .minimumScaleFactor(0.8)
             }
 
-            Text(compactPlatform)
-                .italic(isExpectedPlatform)
-                .font(.footnote.weight(.semibold))
-                .monospacedDigit()
-                .foregroundStyle(.primary)
-                .frame(minWidth: 26, minHeight: 24)
-                .padding(.horizontal, 4)
-                .background(Color.rightTrainInsetFill, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-                .lineLimit(1)
+            PlatformTile(platform: platform.value)
 
             Image(systemName: "chevron.right")
                 .font(.footnote.weight(.semibold))
@@ -645,18 +637,6 @@ struct StatusFirstTrainRow: View {
         case .amber: return .rightTrainAmber
         default:     return surface.accent
         }
-    }
-
-    private var compactPlatform: String {
-        let p = platform.primary.trimmingCharacters(in: .whitespacesAndNewlines)
-        if p.uppercased() == "TBC" || p == "-" { return p }
-        if p.uppercased().hasPrefix("P"), p.count > 1 { return String(p.dropFirst()) }
-        return p
-    }
-
-    private var isExpectedPlatform: Bool {
-        let p = compactPlatform.uppercased()
-        return p != "TBC" && p != "-" && !platform.confirmed
     }
 
     private var accessibilityText: String {

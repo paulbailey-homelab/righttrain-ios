@@ -175,9 +175,9 @@ private struct SearchResultRowLayout<Status: View>: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            // A "P4" chip instead of a stacked "Platform / 4" column keeps
-            // the times wide enough for delays.
-            PlatformSquareChip(platform: platform, style: .compact)
+            // A tile instead of a stacked "Platform / 4" column keeps the
+            // times wide enough for delays.
+            PlatformTile(platform: platform.value)
                 .fixedSize()
 
             PinJourneyIconButton(

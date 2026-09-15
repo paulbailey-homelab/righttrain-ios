@@ -70,19 +70,12 @@ struct ItineraryOnLegView: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            if let onwardPlatform {
-                VStack(alignment: .trailing, spacing: 0) {
-                    Text("Next platform")
-                        .font(.subheadline.weight(.medium))
-                        .foregroundStyle(.secondary)
-                    Text(onwardPlatform)
-                        .heroNumberFont(size: 44)
-                        .foregroundStyle(Color.rightTrainAmber)
-                        .monospacedDigit()
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.5)
-                }
-                .fixedSize(horizontal: true, vertical: false)
+            if let onward, onwardPlatform != nil {
+                CaptionedPlatformTile(
+                    platform: PlatformValue(onwardPlatform, confirmed: onward.realtimePlatformConfirmed),
+                    size: .large,
+                    role: "Next platform"
+                )
             }
         }
         .accessibilityElement(children: .combine)
@@ -334,14 +327,12 @@ struct ItineraryOnFinalLegView: View {
                             Text(ItineraryFormatting.timeText(leg.expectedArrival ?? leg.scheduledArrival))
                                 .font(.title3.weight(.semibold).monospacedDigit())
                                 .foregroundStyle(.primary)
-                            PlatformSquareChip(
-                                platform: ActiveWindowPresentation.PlatformDisplay(
-                                    primary: nonEmptyPlatform(leg.destinationRealtime?.platform) ?? nonEmptyPlatform(leg.destinationPlatform) ?? "TBC",
-                                    secondary: nil,
+                            PlatformTile(
+                                platform: PlatformValue(
+                                    leg.destinationRealtime?.platform ?? leg.destinationPlatform,
                                     confirmed: leg.destinationRealtime?.platformConfirmed == true
                                 ),
-                                style: .compact,
-                                label: "Arr"
+                                role: "Arrival platform"
                             )
                         }
                     }
@@ -353,14 +344,12 @@ struct ItineraryOnFinalLegView: View {
                             Text(ItineraryFormatting.timeText(leg.expectedArrival ?? leg.scheduledArrival))
                                 .font(.title3.weight(.semibold).monospacedDigit())
                                 .foregroundStyle(.primary)
-                            PlatformSquareChip(
-                                platform: ActiveWindowPresentation.PlatformDisplay(
-                                    primary: nonEmptyPlatform(leg.destinationRealtime?.platform) ?? nonEmptyPlatform(leg.destinationPlatform) ?? "TBC",
-                                    secondary: nil,
+                            PlatformTile(
+                                platform: PlatformValue(
+                                    leg.destinationRealtime?.platform ?? leg.destinationPlatform,
                                     confirmed: leg.destinationRealtime?.platformConfirmed == true
                                 ),
-                                style: .compact,
-                                label: "Arr"
+                                role: "Arrival platform"
                             )
                         }
                     }

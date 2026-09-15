@@ -36,6 +36,15 @@ struct ActiveWindowPresentation {
         var primary: String
         var secondary: String?
         var confirmed: Bool = false
+
+        /// The shared platform model that PlatformTile draws.
+        var value: PlatformValue {
+            PlatformValue(
+                primary,
+                confirmed: confirmed,
+                previous: secondary.map { String($0.dropFirst("was ".count)) }
+            )
+        }
     }
 
     struct CollapsedSetupState {
@@ -59,6 +68,8 @@ struct ActiveWindowPresentation {
         var statusText: String
         var statusTone: StatusPill.Tone
         var timingText: String
+        /// Drawn as a tile; `platformText` is its spoken and summary form.
+        var platform: PlatformValue = .unknown
         var platformText: String
         var nextActionText: String
         var freshnessText: String
@@ -339,6 +350,7 @@ struct ActiveWindowPresentation {
             statusText: status.text,
             statusTone: status.tone,
             timingText: JourneyFormatting.glanceTimingText(departure: departure, arrival: arrival),
+            platform: platform.value,
             platformText: JourneyFormatting.platformStateText(primary: platform.primary, secondary: platform.secondary, confirmed: platform.confirmed),
             nextActionText: JourneyFormatting.nextActionText(for: journey, platform: platform.primary, moment: moment),
             freshnessText: isOffline ? "Offline · showing saved journey data" : freshnessText(updatedAt: updatedAt, now: now)

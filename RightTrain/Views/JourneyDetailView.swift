@@ -176,7 +176,7 @@ struct JourneyDetailView: View {
             JourneyDetailTimeStrip(
                 departure: detailDepartureText(detail),
                 arrival: detailArrivalText(detail),
-                platform: detailPlatformText(detail),
+                platform: detailPlatform(detail),
                 surface: surface,
                 prefersStackedLayout: dynamicTypeSize.prefersExpandedLayout
             )
@@ -324,16 +324,11 @@ struct JourneyDetailView: View {
         return stop.timing?.current ?? stop.publicArrival ?? "TBC"
     }
 
-    private func detailPlatformText(_ detail: JourneyDetail) -> String {
-        guard !detail.stops.isEmpty else { return "Platform TBC" }
+    private func detailPlatform(_ detail: JourneyDetail) -> PlatformValue {
+        guard !detail.stops.isEmpty else { return .unknown }
         let stop = detail.stops[segmentRange(detail).origin]
-        let platform = (stop.realtime?.platform ?? stop.scheduledPlatform)?
-            .trimmingCharacters(in: .whitespacesAndNewlines)
-        guard let platform, !platform.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
-            return "Platform TBC"
-        }
         let confirmed = stop.realtime?.platform != nil && stop.realtime?.platformConfirmed == true
-        return confirmed ? "Platform \(platform)" : "Expected platform \(platform)"
+        return PlatformValue(stop.realtime?.platform ?? stop.scheduledPlatform, confirmed: confirmed)
     }
 
     private func detailFreshnessText(_ detail: JourneyDetail) -> String {
@@ -380,7 +375,7 @@ private struct JourneyDetailFreshnessBadge: View {
 private struct JourneyDetailTimeStrip: View {
     var departure: String
     var arrival: String
-    var platform: String
+    var platform: PlatformValue
     var surface: RTSurface
     var prefersStackedLayout: Bool
 
@@ -415,7 +410,7 @@ private struct JourneyDetailTimeStrip: View {
                 }
             }
 
-            JourneyDetailPlatformLine(text: platform, surface: surface)
+            JourneyDetailPlatformLine(platform: platform, surface: surface)
         }
         // Sits directly in the overview card, divided by a hairline, rather
         // than in a filled box inside the card.
@@ -452,16 +447,19 @@ private struct JourneyDetailTimeStrip: View {
 }
 
 private struct JourneyDetailPlatformLine: View {
-    var text: String
+    var platform: PlatformValue
     var surface: RTSurface
 
     var body: some View {
         Label {
-            Text(text)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(surface.ink)
-                .lineLimit(1)
-                .minimumScaleFactor(0.82)
+            HStack(spacing: RTSpacing.small) {
+                Text(platform.caption())
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(surface.ink)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.82)
+                PlatformTile(platform: platform)
+            }
         } icon: {
             Image(systemName: "tram.fill")
                 .font(.caption.weight(.bold))
@@ -473,7 +471,8 @@ private struct JourneyDetailPlatformLine: View {
         .overlay(alignment: .top) {
             Divider()
         }
-        .accessibilityLabel(text)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(platform.accessibilityLabel())
     }
 }
 
@@ -497,13 +496,9 @@ struct JourneyStopRow: View {
             )
 
             VStack(alignment: .leading, spacing: 4) {
-                // The platform rides on the station line, so most stops take
-                // one line; only a delay reason adds a second.
-                // One text so a wrapped station name keeps its platform
-                // straight after the last word instead of in a column.
-                stationText
-                    .font(.subheadline.weight(.semibold))
-                    .fixedSize(horizontal: false, vertical: true)
+                // The platform tile rides on the station line, so most stops
+                // take one line; only a delay reason adds a second.
+                stationLine
                 if let reasonText {
                     Text(reasonText)
                         .font(.caption)
@@ -594,16 +589,21 @@ struct JourneyStopRow: View {
         )
     }
 
-    private var stationText: Text {
-        guard showsPlatform,
-              let platform = stop.realtime?.platform ?? stop.scheduledPlatform,
-              !platform.isEmpty else {
-            return Text(stopDisplayName)
+    private var stationLine: some View {
+        let platform = PlatformValue(
+            stop.realtime?.platform ?? stop.scheduledPlatform,
+            confirmed: stop.realtime?.platformConfirmed == true
+        )
+        return HStack(alignment: .firstTextBaseline, spacing: RTSpacing.small) {
+            Text(stopDisplayName)
+                .font(.subheadline.weight(.semibold))
+                .fixedSize(horizontal: false, vertical: true)
+            // Unknown platforms are left off: a TBC on every calling point
+            // would drown out the ones that matter.
+            if showsPlatform, platform.number != nil {
+                PlatformTile(platform: platform)
+            }
         }
-        let platformText = Text("P\(platform)")
-            .font(.footnote.weight(.medium))
-            .foregroundStyle(.secondary)
-        return Text("\(stopDisplayName)  \(platformText)")
     }
 
     private var reasonText: String? {

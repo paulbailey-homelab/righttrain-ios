@@ -204,10 +204,7 @@ private struct PinnedJourneyAccessory: View {
                                     .lineLimit(1)
                             }
                             Spacer(minLength: RTSpacing.small)
-                            Text(summary.platform)
-                                .font(.subheadline.weight(.semibold))
-                                .monospacedDigit()
-                                .lineLimit(1)
+                            PlatformTile(platform: summary.platform)
                         }
                     }
                     .padding(.horizontal, RTSpacing.cardPadding)
@@ -215,7 +212,7 @@ private struct PinnedJourneyAccessory: View {
                 }
                 .buttonStyle(.plain)
                 .accessibilityElement(children: .combine)
-                .accessibilityLabel("Pinned journey: \(summary.headline), \(summary.detail), \(summary.platform)")
+                .accessibilityLabel("Pinned journey: \(summary.headline), \(summary.detail), \(summary.platform.accessibilityLabel())")
                 .accessibilityHint("Opens the Pinned tab.")
             }
         }
@@ -224,7 +221,7 @@ private struct PinnedJourneyAccessory: View {
     private struct Summary {
         var headline: String
         var detail: String
-        var platform: String
+        var platform: PlatformValue
         var tone: StatusPill.Tone
     }
 
@@ -234,7 +231,7 @@ private struct PinnedJourneyAccessory: View {
             return Summary(
                 headline: glance.statusText,
                 detail: glance.routeTitle,
-                platform: glance.platformText,
+                platform: glance.platform,
                 tone: glance.statusTone
             )
         }
@@ -248,7 +245,7 @@ private struct PinnedJourneyAccessory: View {
         return Summary(
             headline: countdown.text,
             detail: presentation.routeTitle,
-            platform: JourneyFormatting.platformStateText(primary: platform.primary, confirmed: platform.confirmed),
+            platform: platform.value,
             tone: countdown.tone
         )
     }

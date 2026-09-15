@@ -174,7 +174,7 @@ struct HeroTrainCard: View {
                 if let heroStatus {
                     StatusPill(text: heroStatus.text, tone: heroStatus.tone)
                 }
-                PlatformSquareChip(platform: platform, style: dynamicTypeSize > .large ? .compact : .featured)
+                PlatformTile(platform: platform.value, size: dynamicTypeSize > .large ? .small : .medium)
             }
             .fixedSize(horizontal: true, vertical: false)
             .layoutPriority(1)
@@ -335,53 +335,12 @@ struct StatusFirstHeroBlock: View {
     }
 
     private var platformHero: some View {
-        let value = compactPlatformValue
-        let hasKnownPlatform = value != "-" && value.uppercased() != "TBC"
-        let isExpected = hasKnownPlatform && !platform.confirmed
-        let changedFrom = hasKnownPlatform ? platform.secondary : nil
-        return VStack(alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .trailing, spacing: 0) {
-            Text(platformLabel(changedFrom: changedFrom, isExpected: isExpected))
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(changedFrom != nil ? Color.rightTrainAmber : .secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
-
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                if changedFrom != nil {
-                    Image(systemName: "arrow.left.arrow.right")
-                        .font(.title3.weight(.bold))
-                        .transition(.symbolEffect(.appear))
-                        .accessibilityHidden(true)
-                }
-                Text(value)
-                    .italic(isExpected)
-                    .heroNumberFont(size: 56)
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-            }
-            .foregroundStyle(platformTint(hasKnownPlatform: hasKnownPlatform, changed: changedFrom != nil))
-        }
-        .fixedSize(horizontal: true, vertical: false)
-    }
-
-    private func platformLabel(changedFrom: String?, isExpected: Bool) -> String {
-        if let changedFrom {
-            // "was 2" -> "Was platform 2"
-            return "Was platform \(changedFrom.dropFirst("was ".count))"
-        }
-        return isExpected ? "Platform · exp" : "Platform"
-    }
-
-    private func platformTint(hasKnownPlatform: Bool, changed: Bool) -> AnyShapeStyle {
-        if changed {
-            return AnyShapeStyle(Color.rightTrainAmber)
-        }
-        if !hasKnownPlatform || isStale {
-            return AnyShapeStyle(.secondary)
-        }
-        return AnyShapeStyle(surface.ink)
+        CaptionedPlatformTile(
+            platform: platform.value,
+            size: .large,
+            alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .trailing
+        )
+        .opacity(isStale ? 0.6 : 1)
     }
 
     // MARK: - Time strip
@@ -450,13 +409,6 @@ struct StatusFirstHeroBlock: View {
         if text.hasPrefix("Departed · arr ")  { return String(text.dropFirst("Departed · arr ".count)) }
         if text.hasPrefix("Departed ")        { return String(text.dropFirst("Departed ".count)) }
         return text
-    }
-
-    private var compactPlatformValue: String {
-        let p = platform.primary.trimmingCharacters(in: .whitespacesAndNewlines)
-        if p.uppercased() == "TBC" || p == "-" { return p }
-        if p.uppercased().hasPrefix("P"), p.count > 1 { return String(p.dropFirst()) }
-        return p
     }
 
     private var heroFreshnessText: String {

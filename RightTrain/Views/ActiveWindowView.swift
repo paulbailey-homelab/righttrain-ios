@@ -591,7 +591,7 @@ struct ActiveOnTrainJourneyView: View {
                 .lineLimit(1)
                 .multilineTextAlignment(.trailing)
 
-            PlatformSquareChip(platform: platform, label: nil)
+            PlatformTile(platform: platform.value, size: .medium, role: "Arrival platform")
 
             if let secondary = platform.secondary {
                 Text(secondary)
