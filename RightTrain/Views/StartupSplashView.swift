@@ -1,10 +1,10 @@
 import SwiftUI
 
-/// The RightTrain route mark (diverging grey tracks, green through-line),
-/// drawn with the same geometry as the app icon (see
-/// scripts/generate-righttrain-icons.swift) so the splash matches the brand
-/// instead of a placeholder SF Symbol. Colours are parameterised for the
-/// cream in-app context.
+/// The RightTrain route mark (a route chosen between two diverging tracks),
+/// drawn with the same geometry as the app icon: keep in step with `Mark` in
+/// scripts/generate-righttrain-icons.swift. On the neutral in-app tile the
+/// route is brand green and the tracks faint ink, where the icon puts a white
+/// route on green.
 struct RightTrainRouteMark: View {
     var trackColor: Color = .rightTrainInk.opacity(RTOpacity.faint)
     var routeColor: Color = .rightTrainSuccess
@@ -18,35 +18,34 @@ struct RightTrainRouteMark: View {
             }
 
             var upper = Path()
-            upper.move(to: p(132, 270))
-            upper.addLine(to: p(246, 270))
-            upper.addCurve(to: p(386, 386), control1: p(314, 270), control2: p(322, 386))
-            upper.addLine(to: p(728, 386))
+            upper.move(to: p(138, 280))
+            upper.addLine(to: p(238, 280))
+            upper.addCurve(to: p(378, 392), control1: p(306, 280), control2: p(314, 392))
+            upper.addLine(to: p(708, 392))
 
             var lower = Path()
-            lower.move(to: p(132, 756))
-            lower.addLine(to: p(246, 756))
-            lower.addCurve(to: p(386, 638), control1: p(314, 756), control2: p(322, 638))
-            lower.addLine(to: p(728, 638))
+            lower.move(to: p(138, 744))
+            lower.addLine(to: p(238, 744))
+            lower.addCurve(to: p(378, 632), control1: p(306, 744), control2: p(314, 632))
+            lower.addLine(to: p(708, 632))
 
-            let trackStyle = StrokeStyle(lineWidth: 48 * s, lineCap: .round, lineJoin: .round)
-            context.stroke(upper, with: .color(trackColor), style: trackStyle)
-            context.stroke(lower, with: .color(trackColor), style: trackStyle)
+            let style = StrokeStyle(lineWidth: 64 * s, lineCap: .round, lineJoin: .round)
+            context.stroke(upper, with: .color(trackColor), style: style)
+            context.stroke(lower, with: .color(trackColor), style: style)
 
             var route = Path()
-            route.move(to: p(190, 512))
-            route.addLine(to: p(878, 512))
+            route.move(to: p(188, 512))
+            route.addLine(to: p(858, 512))
 
             var arrowHead = Path()
-            arrowHead.move(to: p(842, 450))
-            arrowHead.addLine(to: p(916, 512))
-            arrowHead.addLine(to: p(842, 574))
+            arrowHead.move(to: p(814, 440))
+            arrowHead.addLine(to: p(888, 512))
+            arrowHead.addLine(to: p(814, 584))
 
-            let routeStyle = StrokeStyle(lineWidth: 50 * s, lineCap: .round, lineJoin: .round)
-            context.stroke(route, with: .color(routeColor), style: routeStyle)
-            context.stroke(arrowHead, with: .color(routeColor), style: routeStyle)
+            context.stroke(route, with: .color(routeColor), style: style)
+            context.stroke(arrowHead, with: .color(routeColor), style: style)
 
-            let dot = Path(ellipseIn: CGRect(x: 138 * s, y: 446 * s, width: 132 * s, height: 132 * s))
+            let dot = Path(ellipseIn: CGRect(x: 128 * s, y: 440 * s, width: 144 * s, height: 144 * s))
             context.fill(dot, with: .color(routeColor))
         }
         .accessibilityHidden(true)
