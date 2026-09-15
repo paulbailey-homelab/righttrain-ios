@@ -11,24 +11,21 @@ import SwiftUI
 // native app in light and dark mode. Brand identity comes from the green
 // accent only. The historical token names below (cream, paper, ink) are kept
 // so call sites compile, but they now resolve to system colours — don't
-// reintroduce fixed cream surfaces or light-only overrides. The Live Activity
-// widget manages its own fixed colours independently of this.
+// reintroduce fixed cream surfaces or light-only overrides. Green, amber and
+// red come from RightTrainPalette.swift, which the Live Activity shares; the
+// widget keeps only its own neutral text and surface colours.
 
 extension Color {
-    // On-time surface
-    static let rightTrainGoodBg     = Color("RightTrainGoodBg")
-    static let rightTrainGoodInk    = Color("RightTrainGoodInk")
-    static let rightTrainGoodAccent = Color("RightTrainGoodAccent")
-
-    // Delayed surface
-    static let rightTrainWarnBg     = Color("RightTrainWarnBg")
-    static let rightTrainWarnInk    = Color("RightTrainWarnInk")
-    static let rightTrainWarnAccent = Color("RightTrainWarnAccent")
-
-    // Cancelled surface
-    static let rightTrainBadBg      = Color("RightTrainBadBg")
-    static let rightTrainBadInk     = Color("RightTrainBadInk")
-    static let rightTrainBadAccent  = Color("RightTrainBadAccent")
+    // Status and brand colours come from the shared palette in
+    // RightTrainPalette.swift; these names are the app's roles for them.
+    /// Buttons, links, selected controls and the brand mark.
+    static let rightTrainActionInk = Color.rightTrainGood
+    /// On-time status.
+    static let rightTrainSuccess = Color.rightTrainGood
+    /// Delayed status, changed platforms, patchy or offline connection.
+    static let rightTrainAmber = Color.rightTrainLate
+    /// Cancelled status and failed changes.
+    static let rightTrainDanger = Color.rightTrainCancelled
 
     // Neutral surfaces — system semantic colours.
     /// Page background (grouped).
@@ -39,7 +36,6 @@ extension Color {
     static let rightTrainInsetFill    = Color(uiColor: .tertiarySystemFill)
     static let rightTrainInk          = Color(uiColor: .label)
     static let rightTrainInkFaint     = Color(uiColor: .separator)
-    static let rightTrainActionInk    = Color("RightTrainGoodBg")
     /// Text/icons on a filled accent background: white on the dark light-mode
     /// green, near-black on the brighter dark-mode green.
     static let rightTrainOnAccent     = Color(uiColor: UIColor { traits in
@@ -49,13 +45,7 @@ extension Color {
     // Legacy aliases — kept so existing call sites compile unchanged.
     static let rightTrainBackground = Color(uiColor: .systemGroupedBackground)
     static let rightTrainSurface    = Color(uiColor: .secondarySystemGroupedBackground)
-    static let rightTrainHighlight  = Color(uiColor: .secondarySystemGroupedBackground)
-    static let rightTrainAccent     = Color("RightTrainAccent")
     static let rightTrainBorder     = Color(uiColor: .separator)
-    static let rightTrainAmber      = Color("RightTrainAmber")        // → warn bg #D08214
-    static let rightTrainSuccess    = Color("RightTrainSuccess")      // → good bg #0E4A30
-    static let rightTrainDanger     = Color("RightTrainDanger")       // → bad bg #831F12
-    static let rightTrainBlue       = Color("RightTrainBlue")         // retired — maps to good accent
 }
 
 // MARK: - RTSurface
@@ -70,6 +60,16 @@ enum RTSurface: Equatable {
     case neutral // system   — no live state / planning / settings
 
     var isStatus: Bool { self != .neutral }
+
+    /// The status pill tone for text on this surface.
+    var pillTone: StatusPill.Tone {
+        switch self {
+        case .good: .green
+        case .warn: .amber
+        case .bad: .red
+        case .neutral: .accent
+        }
+    }
 
     var bg: Color {
         .rightTrainSurfaceCream
@@ -138,17 +138,6 @@ enum RTOpacity {
     static let tertiary: Double = 0.44
     /// Hairlines, borders, disabled states.
     static let faint: Double = 0.22
-}
-
-// MARK: - Radius tokens
-
-enum RTRadius {
-    static let chip: CGFloat     = 8
-    /// Matches inset-grouped list sections.
-    static let card: CGFloat     = 12
-    static let button: CGFloat   = 12
-    static let heroCard: CGFloat = 12
-    static let live: CGFloat     = 22
 }
 
 // MARK: - Spacing tokens

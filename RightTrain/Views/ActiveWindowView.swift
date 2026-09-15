@@ -199,9 +199,10 @@ struct ActiveWindowView: View {
     }
 
     private func statusPill(presentation: ActiveWindowPresentation, surface: RTSurface) -> some View {
-        RTStatusPill(
-            statusText: pillStatusText(presentation: presentation),
-            surface: surface
+        StatusPill(
+            text: pillStatusText(presentation: presentation),
+            tone: surface.pillTone,
+            style: .dot
         )
         .fixedSize(horizontal: true, vertical: false)
     }

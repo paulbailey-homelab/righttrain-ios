@@ -129,7 +129,7 @@ struct HeroTrainCard: View {
                 Rectangle()
                     .fill(countdown.tone.color)
                     .frame(width: 3)
-                    .clipShape(RoundedRectangle(cornerRadius: 1.5))
+                    .clipShape(Capsule())
                     .padding(.vertical, RTSpacing.compact)
                     .accessibilityHidden(true)
             }
@@ -206,7 +206,7 @@ struct HeroTrainCard: View {
         if let progress = JourneyFormatting.journeyProgress(journey, now: now) {
             VStack(alignment: .leading, spacing: 4) {
                 ProgressView(value: progress)
-                    .tint(Color.rightTrainAccent)
+                    .tint(Color.rightTrainActionInk)
             }
             .padding(.top, 2)
         }

@@ -236,7 +236,7 @@ struct ActiveTabView: View {
             // Floats over the scrolling Pinned content, so it is a glass
             // control surface rather than a content card.
             .padding(RTSpacing.cardPadding)
-            .glassEffect(.regular, in: .rect(cornerRadius: 28))
+            .glassEffect(.regular, in: .rect(cornerRadius: RTRadius.floating))
             .padding(.horizontal, RTSpacing.pageHorizontal)
             .readableWidthFrame()
             .padding(.vertical, RTSpacing.small)

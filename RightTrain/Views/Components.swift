@@ -158,7 +158,7 @@ struct SectionHeader: View {
     var body: some View {
         HStack(alignment: .top, spacing: tone == nil ? 0 : 10) {
             if let tone {
-                RoundedRectangle(cornerRadius: 1.5)
+                Capsule()
                     .fill(tone.color)
                     .frame(width: 3)
                     .padding(.vertical, 2)
@@ -303,10 +303,10 @@ struct NextActionCallout: View {
     }
 }
 
-/// Tone-based status chip for NEUTRAL (cream/paper) contexts: cards, lists,
-/// and headers. For content sitting on a coloured status surface
-/// (good/warn/bad backgrounds) use `RTStatusPill`, which derives its colours
-/// from the surface. These are the only two status pill styles.
+/// The app's one status pill. `.capsule` is a tinted chip for cards, lists
+/// and rows; `.dot` is a dot and label that leads a live hero or overview,
+/// where a chip would compete with the countdown. Tone picks the palette
+/// colour; use `RTSurface.pillTone` for text on a status surface.
 struct StatusPill: View {
     enum Tone: Equatable {
         case accent
@@ -331,45 +331,43 @@ struct StatusPill: View {
         }
     }
 
+    enum Style {
+        case capsule
+        case dot
+    }
+
     var text: String
     var tone: Tone
+    var style: Style = .capsule
 
     var body: some View {
-        Text(text)
-            .font(.caption.weight(.semibold))
-            .lineLimit(1)
-            .minimumScaleFactor(0.85)
-            .padding(.horizontal, 9)
-            .padding(.vertical, 5)
-            .foregroundStyle(tone.color)
-            .background(tone.color.opacity(0.12), in: Capsule())
-            .contentTransition(.numericText())
-            .accessibilityLabel(text)
-    }
-}
-
-/// Surface-aware live status pill — used ONLY on coloured status backgrounds
-/// (good/warn/bad surfaces, e.g. the hero block). Shows a filled accent dot +
-/// uppercase eyebrow text on a soft-fill capsule. For neutral cream/paper
-/// contexts use `StatusPill` instead.
-struct RTStatusPill: View {
-    var statusText: String
-    var surface: RTSurface
-
-    var body: some View {
-        HStack(spacing: 6) {
-            Circle()
-                .fill(surface.accent)
-                .frame(width: 8, height: 8)
-                .accessibilityHidden(true)
-
-            Text(statusText)
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(surface.accent)
-                .lineLimit(1)
+        Group {
+            switch style {
+            case .capsule:
+                Text(text)
+                    .font(.caption.weight(.semibold))
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.85)
+                    .padding(.horizontal, 9)
+                    .padding(.vertical, 5)
+                    .foregroundStyle(tone.color)
+                    .background(tone.color.opacity(0.12), in: Capsule())
+            case .dot:
+                HStack(spacing: 6) {
+                    Circle()
+                        .fill(tone.color)
+                        .frame(width: 8, height: 8)
+                        .accessibilityHidden(true)
+                    Text(text)
+                        .font(.subheadline.weight(.semibold))
+                        .foregroundStyle(tone.color)
+                        .lineLimit(1)
+                }
+            }
         }
         .contentTransition(.numericText())
-        .accessibilityLabel(statusText)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(text)
     }
 }
 

@@ -161,7 +161,7 @@ struct SharedJourneyView: View {
                         ForEach(disruptions, id: \.self) { disruption in
                             Label(disruption, systemImage: "exclamationmark.triangle.fill")
                                 .font(.subheadline.weight(.medium))
-                                .foregroundStyle(Color.rightTrainWarnInk)
+                                .foregroundStyle(Color.rightTrainInk)
                                 .fixedSize(horizontal: false, vertical: true)
                         }
                     }

@@ -149,9 +149,10 @@ struct JourneyDetailView: View {
     private func journeyOverviewCard(_ detail: JourneyDetail, surface: RTSurface) -> some View {
         VStack(alignment: .leading, spacing: RTSpacing.cardPadding) {
             HStack(alignment: .center, spacing: RTSpacing.small) {
-                RTStatusPill(
-                    statusText: JourneyFormatting.displayStatusText(detail),
-                    surface: surface
+                StatusPill(
+                    text: JourneyFormatting.displayStatusText(detail),
+                    tone: surface.pillTone,
+                    style: .dot
                 )
 
                 Spacer(minLength: RTSpacing.small)
@@ -181,7 +182,7 @@ struct JourneyDetailView: View {
                 prefersStackedLayout: dynamicTypeSize.prefersExpandedLayout
             )
         }
-        .rtCard(padding: RTSpacing.cardPadding, radius: RTRadius.heroCard)
+        .rtCard(padding: RTSpacing.cardPadding)
         .accessibilityElement(children: .contain)
     }
 
@@ -533,13 +534,13 @@ struct JourneyStopRow: View {
             if isBetweenAfter {
                 GeometryReader { proxy in
                     Circle()
-                        .fill(Color.rightTrainBlue)
+                        .fill(Color.rightTrainActionInk)
                         .frame(width: 18, height: 18)
                         .overlay {
                             Circle()
                                 .stroke(Color.rightTrainPaperCream, lineWidth: 3)
                         }
-                        .shadow(color: Color.rightTrainBlue.opacity(0.28), radius: 8, y: 4)
+                        .shadow(color: Color.rightTrainActionInk.opacity(0.28), radius: 8, y: 4)
                         .position(
                             x: Self.markerCenterX,
                             y: Self.markerCenterY + (proxy.size.height + Self.rowGap) * bufferedProgress
@@ -633,7 +634,7 @@ struct JourneyTimelineMarker: View {
                     Circle()
                         .stroke(isCurrent ? Color.rightTrainPaperCream : markerStroke, lineWidth: isCurrent ? 3 : 2)
                 }
-                .shadow(color: isCurrent ? Color.rightTrainBlue.opacity(0.28) : .clear, radius: 8, y: 4)
+                .shadow(color: isCurrent ? Color.rightTrainActionInk.opacity(0.28) : .clear, radius: 8, y: 4)
                 .padding(.top, isCurrent ? 0 : 4)
 
         }
@@ -643,7 +644,7 @@ struct JourneyTimelineMarker: View {
 
     private var markerFill: Color {
         if isCurrent {
-            return .rightTrainBlue
+            return .rightTrainActionInk
         }
         if isPassed {
             return .secondary.opacity(RTOpacity.secondary)
@@ -686,7 +687,7 @@ struct JourneyStopTimeView: View {
 
             Text(timing.current)
                 .font(.subheadline.weight(.semibold))
-                .foregroundStyle(timing.delayed ? Color.rightTrainWarnBg : Color.rightTrainInk)
+                .foregroundStyle(timing.delayed ? Color.rightTrainAmber : Color.rightTrainInk)
                 .monospacedDigit()
                 .lineLimit(1)
                 .fixedSize(horizontal: true, vertical: false)

@@ -14,17 +14,9 @@ struct SignInView: View {
 
                 Spacer(minLength: RTSpacing.sectionGap)
 
-                ZStack {
-                    RoundedRectangle(cornerRadius: RTRadius.card)
-                        .stroke(Color.rightTrainInk, lineWidth: 6)
-                    Circle()
-                        .fill(Color.rightTrainGoodBg)
-                        .frame(width: 34, height: 34)
-                }
-                .frame(width: 76, height: 76)
-                .padding(.horizontal, RTSpacing.pageHorizontal)
-                .padding(.bottom, RTSpacing.compact)
-                .accessibilityHidden(true)
+                RightTrainLogoTile(size: 76)
+                    .padding(.horizontal, RTSpacing.pageHorizontal)
+                    .padding(.bottom, RTSpacing.compact)
 
                 StatusPill(text: "Live journey guidance", tone: .green)
                     .padding(.horizontal, RTSpacing.pageHorizontal)

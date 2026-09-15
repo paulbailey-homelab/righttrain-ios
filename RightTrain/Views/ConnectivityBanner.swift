@@ -100,7 +100,7 @@ struct ConnectivityStatusBanner: View {
                 systemImage: "wifi.slash",
                 // Amber, not red: tunnels make offline routine on a train,
                 // and red stays reserved for changes that need a retry.
-                foreground: .primary,
+                foreground: .rightTrainOnAccent,
                 tint: Color.rightTrainAmber
             )
         }

@@ -1,46 +1,5 @@
 import SwiftUI
 
-// MARK: - Signal mark
-
-/// The RightTrain brand mark: a square housing with a single round signal light.
-/// Renders using `currentColor` (foregroundStyle), so it inherits the surface ink.
-struct SignalMark: View {
-    var size: CGFloat = 18
-
-    var body: some View {
-        Canvas { ctx, canvasSize in
-            let s = canvasSize.width
-            let strokeW = s * (1.6 / 22)
-            let r = s * (4.5 / 22)
-            let inset = strokeW / 2
-
-            // Square housing
-            let rect = Path(
-                roundedRect: CGRect(
-                    x: inset + s * (1.5 / 22),
-                    y: inset + s * (1.5 / 22),
-                    width: s - 2 * (inset + s * (1.5 / 22)),
-                    height: s - 2 * (inset + s * (1.5 / 22))
-                ),
-                cornerRadius: r
-            )
-            ctx.stroke(rect, with: .foreground, lineWidth: strokeW)
-
-            // Central signal circle (filled)
-            let circleR = s * (5.0 / 22)
-            let circlePath = Path(ellipseIn: CGRect(
-                x: s / 2 - circleR,
-                y: s / 2 - circleR,
-                width: circleR * 2,
-                height: circleR * 2
-            ))
-            ctx.fill(circlePath, with: .foreground)
-        }
-        .frame(width: size, height: size)
-        .accessibilityHidden(true)
-    }
-}
-
 // MARK: - App header
 
 /// Compact brand header for non-live surfaces. Active journey route, status,
@@ -54,7 +13,10 @@ struct AppHeader: View {
         HStack(alignment: .center, spacing: 6) {
             // Brand
             HStack(alignment: .center, spacing: 5) {
-                SignalMark(size: 18)
+                // Darker tracks than the icon's: faint grey vanishes at
+                // wordmark size.
+                RightTrainRouteMark(trackColor: .rightTrainInk.opacity(RTOpacity.tertiary))
+                    .frame(width: 22, height: 22)
                 Text("RightTrain")
                     .font(.system(size: 14, weight: .bold))
                     .monospacedDigit()
