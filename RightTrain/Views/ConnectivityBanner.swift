@@ -98,8 +98,10 @@ struct ConnectivityStatusBanner: View {
                 title: hasActiveJourney ? "Offline · saved journey data" : "Offline",
                 detail: detail,
                 systemImage: "wifi.slash",
-                foreground: .white,
-                tint: Color.rightTrainDanger
+                // Amber, not red: tunnels make offline routine on a train,
+                // and red stays reserved for changes that need a retry.
+                foreground: .primary,
+                tint: Color.rightTrainAmber
             )
         }
         if connectivityService.looksPatchy {
