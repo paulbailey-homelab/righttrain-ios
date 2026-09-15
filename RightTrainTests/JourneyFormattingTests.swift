@@ -1446,4 +1446,18 @@ final class JourneyFormattingTests: XCTestCase {
         XCTAssertFalse(ActiveWindowPresentation.shouldCollapseSetup(for: availablePlanWindow))
         XCTAssertFalse(ActiveWindowPresentation.shouldCollapseSetup(for: nil))
     }
+
+    func testSegmentStopRangeFindsTravellerStopsBeforeTerminus() {
+        let stops = ["KNGX", "YORK", "NWCSTLE", "EDINBUR"].enumerated().map { index, tpl in
+            JourneyStop(stopIndex: index, stopType: "IP", tpl: tpl, name: tpl)
+        }
+
+        let range = JourneyFormatting.segmentStopRange(stops, originTPL: "KNGX", destinationTPL: "NWCSTLE")
+        XCTAssertEqual(range.origin, 0)
+        XCTAssertEqual(range.destination, 2)
+
+        let fallback = JourneyFormatting.segmentStopRange(stops, originTPL: nil, destinationTPL: "UNKNOWN")
+        XCTAssertEqual(fallback.origin, 0)
+        XCTAssertEqual(fallback.destination, 3)
+    }
 }
