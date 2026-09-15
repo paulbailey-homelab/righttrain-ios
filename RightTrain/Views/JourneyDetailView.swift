@@ -159,7 +159,7 @@ struct JourneyDetailView: View {
             }
 
             VStack(alignment: .leading, spacing: 4) {
-                Text("\(detail.originName) to \(detail.destinationName)")
+                Text("\(segmentOriginName(detail)) to \(segmentDestinationName(detail))")
                     .font(.title2.weight(.bold))
                     .foregroundStyle(surface.ink)
                     .lineLimit(3)
@@ -188,6 +188,9 @@ struct JourneyDetailView: View {
         var parts = [JourneyFormatting.operatorDisplayText(detail)]
         if let coachCountText = JourneyFormatting.coachCountText(detail) {
             parts.append(coachCountText)
+        }
+        if let continuesToText = continuesToText(detail) {
+            parts.append(continuesToText)
         }
         return parts.joined(separator: " · ")
     }
@@ -223,7 +226,10 @@ struct JourneyDetailView: View {
                         betweenProgress: trainPosition.progress,
                         isPassed: stopIsPassed(at: index, trainPosition: trainPosition),
                         isFirst: index == detail.stops.startIndex,
-                        isLast: index == detail.stops.index(before: detail.stops.endIndex)
+                        isLast: index == detail.stops.index(before: detail.stops.endIndex),
+                        // Platforms matter where you board and get off; the
+                        // stops in between only need a time.
+                        showsPlatform: index == segmentRange(detail).origin || index == segmentRange(detail).destination
                     )
                         .padding(.vertical, 10)
                 }
@@ -272,18 +278,54 @@ struct JourneyDetailView: View {
         return nil
     }
 
+    /// The traveller's boarding and alighting stops within the service's
+    /// full calling pattern. A train opened from a journey often runs past
+    /// the traveller's destination, so the service's last stop is the wrong
+    /// place to read the arrival from.
+    private func segmentRange(_ detail: JourneyDetail) -> (origin: Int, destination: Int) {
+        JourneyFormatting.segmentStopRange(
+            detail.stops,
+            originTPL: identity.originTPL ?? detail.originTpl,
+            destinationTPL: identity.destinationTPL ?? detail.destinationTpl
+        )
+    }
+
+    private func segmentOriginName(_ detail: JourneyDetail) -> String {
+        guard !detail.stops.isEmpty else { return detail.originName }
+        let stop = detail.stops[segmentRange(detail).origin]
+        return JourneyFormatting.stationDisplayName(name: stop.name, fallback: stop.crs ?? stop.tpl)
+    }
+
+    private func segmentDestinationName(_ detail: JourneyDetail) -> String {
+        guard !detail.stops.isEmpty else { return detail.destinationName }
+        let stop = detail.stops[segmentRange(detail).destination]
+        return JourneyFormatting.stationDisplayName(name: stop.name, fallback: stop.crs ?? stop.tpl)
+    }
+
+    /// "Continues to Edinburgh" when the train runs beyond the traveller's stop.
+    private func continuesToText(_ detail: JourneyDetail) -> String? {
+        guard let last = detail.stops.last,
+              segmentRange(detail).destination < detail.stops.index(before: detail.stops.endIndex) else {
+            return nil
+        }
+        return "Continues to \(JourneyFormatting.stationDisplayName(name: last.name, fallback: last.crs ?? last.tpl))"
+    }
+
     private func detailDepartureText(_ detail: JourneyDetail) -> String {
-        guard let stop = detail.stops.first else { return "TBC" }
+        guard !detail.stops.isEmpty else { return "TBC" }
+        let stop = detail.stops[segmentRange(detail).origin]
         return stop.timing?.current ?? stop.publicDeparture ?? "TBC"
     }
 
     private func detailArrivalText(_ detail: JourneyDetail) -> String {
-        guard let stop = detail.stops.last else { return "TBC" }
+        guard !detail.stops.isEmpty else { return "TBC" }
+        let stop = detail.stops[segmentRange(detail).destination]
         return stop.timing?.current ?? stop.publicArrival ?? "TBC"
     }
 
     private func detailPlatformText(_ detail: JourneyDetail) -> String {
-        guard let stop = detail.stops.first else { return "Platform TBC" }
+        guard !detail.stops.isEmpty else { return "Platform TBC" }
+        let stop = detail.stops[segmentRange(detail).origin]
         let platform = (stop.realtime?.platform ?? stop.scheduledPlatform)?
             .trimmingCharacters(in: .whitespacesAndNewlines)
         guard let platform, !platform.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty else {
@@ -442,6 +484,7 @@ struct JourneyStopRow: View {
     var isPassed: Bool
     var isFirst: Bool
     var isLast: Bool
+    var showsPlatform = true
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -455,19 +498,11 @@ struct JourneyStopRow: View {
             VStack(alignment: .leading, spacing: 4) {
                 // The platform rides on the station line, so most stops take
                 // one line; only a delay reason adds a second.
-                HStack(alignment: .firstTextBaseline, spacing: RTSpacing.small) {
-                    Text(stopDisplayName)
-                        .font(.subheadline.weight(.semibold))
-                        .fixedSize(horizontal: false, vertical: true)
-                    if let platformText {
-                        Text(platformText)
-                            .font(.footnote.weight(.medium))
-                            .foregroundStyle(.secondary)
-                            .monospacedDigit()
-                            .fixedSize()
-                            .accessibilityLabel("Platform \(platformText.dropFirst())")
-                    }
-                }
+                // One text so a wrapped station name keeps its platform
+                // straight after the last word instead of in a column.
+                stationText
+                    .font(.subheadline.weight(.semibold))
+                    .fixedSize(horizontal: false, vertical: true)
                 if let reasonText {
                     Text(reasonText)
                         .font(.caption)
@@ -558,11 +593,16 @@ struct JourneyStopRow: View {
         )
     }
 
-    private var platformText: String? {
-        guard let platform = stop.realtime?.platform ?? stop.scheduledPlatform, !platform.isEmpty else {
-            return nil
+    private var stationText: Text {
+        guard showsPlatform,
+              let platform = stop.realtime?.platform ?? stop.scheduledPlatform,
+              !platform.isEmpty else {
+            return Text(stopDisplayName)
         }
-        return "P\(platform)"
+        let platformText = Text("P\(platform)")
+            .font(.footnote.weight(.medium))
+            .foregroundStyle(.secondary)
+        return Text("\(stopDisplayName)  \(platformText)")
     }
 
     private var reasonText: String? {

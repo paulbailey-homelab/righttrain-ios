@@ -566,7 +566,8 @@ struct ActiveOnTrainJourneyView: View {
                         betweenProgress: trainPosition.progress,
                         isPassed: stopIsPassed(at: entry.localIndex, trainPosition: trainPosition),
                         isFirst: entry.localIndex == 0,
-                        isLast: entry.localIndex == entries.count - 1
+                        isLast: entry.localIndex == entries.count - 1,
+                        showsPlatform: entry.localIndex == 0 || entry.localIndex == entries.count - 1
                     )
                     .padding(.vertical, 10)
                 }

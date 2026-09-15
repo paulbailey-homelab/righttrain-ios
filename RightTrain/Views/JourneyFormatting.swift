@@ -92,6 +92,16 @@ enum JourneyFormatting {
         nonEmpty(name) ?? fallback
     }
 
+    /// Indices of the traveller's boarding and alighting stops in a service's
+    /// calling pattern, falling back to the first and last stops.
+    static func segmentStopRange(_ stops: [JourneyStop], originTPL: String?, destinationTPL: String?) -> (origin: Int, destination: Int) {
+        guard !stops.isEmpty else { return (0, 0) }
+        let lastIndex = stops.index(before: stops.endIndex)
+        let origin = stops.firstIndex { $0.tpl == originTPL } ?? stops.startIndex
+        let destination = stops.indices.last { $0 >= origin && stops[$0].tpl == destinationTPL } ?? lastIndex
+        return (origin, destination)
+    }
+
     static func compactStationDisplayName(shortName: String?, name: String?, fallback: String) -> String {
         nonEmpty(shortName) ?? nonEmpty(name) ?? fallback
     }
