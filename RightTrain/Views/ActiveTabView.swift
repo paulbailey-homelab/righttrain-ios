@@ -22,6 +22,7 @@ struct ActiveTabView: View {
     @Environment(JourneyDetailViewModel.self) private var journeyDetailViewModel
     @Environment(ConnectivityService.self) private var connectivityService
     @Environment(\.scenePhase) private var scenePhase
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var routePath: [AppRoute] = []
     @State private var preparedShareItem: ShareSheetItem?
     @State private var isPreparingShare = false
@@ -42,6 +43,10 @@ struct ActiveTabView: View {
             ScrollView {
                 VStack(alignment: .leading, spacing: RTSpacing.sectionGap) {
                     activeJourneyContent
+                        // Live refreshes land outside any transaction, so
+                        // without this the numeric content transitions on
+                        // times, delays and platforms never play.
+                        .animation(reduceMotion ? nil : .snappy, value: activeWindowViewModel.liveRefreshGeneration)
 
                     // Scrolls with the content: a pinned bottom strip used
                     // to cover a third of the screen and clip the cards.

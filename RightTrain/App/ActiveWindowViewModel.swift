@@ -2139,6 +2139,13 @@ final class ActiveWindowViewModel {
             return .error
         }
 
+        // A platform change sends people across the station, so it's the
+        // most urgent thing short of a cancellation.
+        if isSameRecommendation(previousRecommendation, currentRecommendation),
+           platformChanged(from: previousRecommendation.journey, to: currentRecommendation.journey) {
+            return .warning
+        }
+
         let previousDelay = JourneyFormatting.statusDelayMinutes(
             journey: previousRecommendation.journey,
             score: previousRecommendation.score
@@ -2147,7 +2154,7 @@ final class ActiveWindowViewModel {
             journey: currentRecommendation.journey,
             score: currentRecommendation.score
         )
-        if currentDelay > previousDelay {
+        if Self.delayTier(currentDelay) > Self.delayTier(previousDelay) {
             return .warning
         }
 
@@ -2156,6 +2163,27 @@ final class ActiveWindowViewModel {
         }
 
         return nil
+    }
+
+    /// Minutes of delay at which a growing delay buzzes again. Live delays
+    /// often creep up a minute per refresh; buzzing on each one teaches
+    /// people to ignore the warning.
+    static let delayHapticThresholds = [1, 5, 15, 30, 60]
+
+    static func delayTier(_ minutes: Int) -> Int {
+        delayHapticThresholds.lastIndex { minutes >= $0 }.map { $0 + 1 } ?? 0
+    }
+
+    /// Only a move between two known platforms counts: TBC becoming a
+    /// number is the platform arriving, not changing.
+    private func platformChanged(from previous: JourneyResult, to current: JourneyResult) -> Bool {
+        let unknown: Set<String> = ["-", "TBC"]
+        let previousPlatform = ActiveWindowPresentation.platformDisplay(for: previous).primary
+        let currentPlatform = ActiveWindowPresentation.platformDisplay(for: current).primary
+        guard !unknown.contains(previousPlatform), !unknown.contains(currentPlatform) else {
+            return false
+        }
+        return previousPlatform != currentPlatform
     }
 
     private func isSameRecommendation(

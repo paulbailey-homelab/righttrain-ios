@@ -2386,6 +2386,95 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
+    func testActiveWindowRefreshHapticsWarnOnPlatformChangeButNotWhenPlatformArrives() async {
+        let apiClient = FakeAPIClient()
+        let sessionStore = FakeSessionStore()
+        let feedbackGenerator = FakeNotificationFeedbackGenerator()
+        func window(platform: String?) -> WindowSubscription {
+            let recommendation = TestFactory.recommendation(
+                rank: 1,
+                serviceID: 111,
+                journey: TestFactory.journey(serviceID: 111, realtimePlatform: platform)
+            )
+            return TestFactory.window(
+                id: "platform-haptic-window",
+                selectedRecommendation: recommendation,
+                recommendations: [recommendation]
+            )
+        }
+        sessionStore.session = TestFactory.storedSession(accessToken: "platform-token")
+        apiClient.currentUserResult = .success(TestFactory.user())
+        apiClient.activeWindowResult = .success(window(platform: nil))
+        let model = makeModel(
+            apiClient: apiClient,
+            sessionStore: sessionStore,
+            notificationFeedbackGenerator: feedbackGenerator
+        )
+        await model.bootstrap()
+
+        apiClient.windowResult = .success(window(platform: "4"))
+        await model.refreshActiveWindow()
+        XCTAssertTrue(feedbackGenerator.types.isEmpty, "TBC becoming a platform is not a change")
+
+        apiClient.windowResult = .success(window(platform: "9"))
+        await model.refreshActiveWindow()
+        XCTAssertEqual(feedbackGenerator.types, [.warning])
+
+        apiClient.windowResult = .success(window(platform: "9"))
+        await model.refreshActiveWindow()
+        XCTAssertEqual(feedbackGenerator.types, [.warning])
+    }
+
+    @MainActor
+    func testActiveWindowRefreshHapticsOnlyWarnWhenDelayCrossesAThreshold() async {
+        let apiClient = FakeAPIClient()
+        let sessionStore = FakeSessionStore()
+        let feedbackGenerator = FakeNotificationFeedbackGenerator()
+        func window(delay: Int) -> WindowSubscription {
+            let recommendation = TestFactory.recommendation(
+                rank: 1,
+                serviceID: 111,
+                journey: TestFactory.journey(serviceID: 111, displayStatus: delay > 0 ? "delayed" : "on_time"),
+                score: TestFactory.score(delayMinutes: delay)
+            )
+            return TestFactory.window(
+                id: "delay-haptic-window",
+                selectedRecommendation: recommendation,
+                recommendations: [recommendation]
+            )
+        }
+        sessionStore.session = TestFactory.storedSession(accessToken: "delay-token")
+        apiClient.currentUserResult = .success(TestFactory.user())
+        apiClient.activeWindowResult = .success(window(delay: 6))
+        let model = makeModel(
+            apiClient: apiClient,
+            sessionStore: sessionStore,
+            notificationFeedbackGenerator: feedbackGenerator
+        )
+        await model.bootstrap()
+
+        for delay in [7, 9, 14] {
+            apiClient.windowResult = .success(window(delay: delay))
+            await model.refreshActiveWindow()
+        }
+        XCTAssertTrue(feedbackGenerator.types.isEmpty, "Creeping delays within a tier stay quiet")
+
+        apiClient.windowResult = .success(window(delay: 16))
+        await model.refreshActiveWindow()
+        XCTAssertEqual(feedbackGenerator.types, [.warning])
+    }
+
+    @MainActor
+    func testDelayHapticTiers() {
+        XCTAssertEqual(ActiveWindowViewModel.delayTier(0), 0)
+        XCTAssertEqual(ActiveWindowViewModel.delayTier(1), 1)
+        XCTAssertEqual(ActiveWindowViewModel.delayTier(4), 1)
+        XCTAssertEqual(ActiveWindowViewModel.delayTier(5), 2)
+        XCTAssertEqual(ActiveWindowViewModel.delayTier(29), 3)
+        XCTAssertEqual(ActiveWindowViewModel.delayTier(90), 5)
+    }
+
+    @MainActor
     func testActiveWindowRefreshDoesNotFireHapticsWhileBackgrounded() async {
         let apiClient = FakeAPIClient()
         let sessionStore = FakeSessionStore()

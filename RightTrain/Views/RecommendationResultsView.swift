@@ -406,11 +406,17 @@ private struct PinIconButton: View {
         } label: {
             Image(systemName: systemImage)
                 .font(.body.weight(.semibold))
+                // Pin and pin.fill share a shape, so Magic Replace fills the
+                // outline in place instead of cutting between them.
+                .contentTransition(.symbolEffect(.replace))
                 .frame(width: RTSize.tapTarget, height: RTSize.tapTarget)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.borderless)
         .foregroundStyle(Color.rightTrainActionInk)
+        .sensoryFeedback(trigger: isSelected) { _, pinned in
+            pinned ? .success : .selection
+        }
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(hint)
         .accessibilityAddTraits(isSelected ? .isSelected : [])

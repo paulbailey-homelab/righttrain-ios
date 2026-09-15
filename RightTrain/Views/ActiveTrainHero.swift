@@ -248,6 +248,7 @@ private struct HeroCountdownText: View {
 /// Tapping opens the journey detail sheet. Rendered directly on the status-surface background —
 /// no card chrome needed.
 struct StatusFirstHeroBlock: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
     var presentation: ActiveWindowPresentation
     var countdown: ActiveWindowPresentation.CountdownDisplay
     var surface: RTSurface
@@ -303,6 +304,9 @@ struct StatusFirstHeroBlock: View {
                         .foregroundStyle(isStale ? AnyShapeStyle(.secondary) : AnyShapeStyle(surface.ink))
                         .monospacedDigit()
                         .contentTransition(.numericText(countsDown: countdown.targetDate.map { $0 > now } ?? false))
+                        // The countdown ticks from a TimelineView, not a live
+                        // refresh, so it needs its own animation to roll.
+                        .animation(reduceMotion ? nil : .snappy, value: countdownValue)
                         .lineLimit(1)
                         .minimumScaleFactor(0.44)
                 }
@@ -336,12 +340,14 @@ struct StatusFirstHeroBlock: View {
                 if changedFrom != nil {
                     Image(systemName: "arrow.left.arrow.right")
                         .font(.title3.weight(.bold))
+                        .transition(.symbolEffect(.appear))
                         .accessibilityHidden(true)
                 }
                 Text(value)
                     .italic(isExpected)
                     .font(.system(size: 56, weight: .bold, design: .rounded))
                     .monospacedDigit()
+                    .contentTransition(.numericText())
                     .lineLimit(1)
                     .minimumScaleFactor(0.5)
             }
