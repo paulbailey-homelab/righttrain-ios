@@ -53,6 +53,22 @@ struct RightTrainRouteMark: View {
     }
 }
 
+/// The route mark on a rounded tile, as on the app icon: the one logo for
+/// launch and sign-in.
+struct RightTrainLogoTile: View {
+    var size: CGFloat = 82
+
+    var body: some View {
+        RightTrainRouteMark()
+            .frame(width: size * 0.78, height: size * 0.78)
+            .frame(width: size, height: size)
+            // A solid tile: the mark is content, and nothing floats above it
+            // for glass to separate it from.
+            .background(Color.rightTrainPaperCream, in: .rect(cornerRadius: size * 0.27, style: .continuous))
+            .accessibilityHidden(true)
+    }
+}
+
 struct StartupSplashView: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var isPulsing = false
@@ -63,12 +79,7 @@ struct StartupSplashView: View {
                 .ignoresSafeArea()
 
             VStack(spacing: RTSpacing.sectionGap) {
-                RightTrainRouteMark()
-                    .frame(width: 64, height: 64)
-                    .frame(width: 82, height: 82)
-                    // A solid tile: the mark is content, and nothing floats
-                    // above the splash for glass to separate it from.
-                    .background(Color.rightTrainPaperCream, in: .rect(cornerRadius: RTRadius.live))
+                RightTrainLogoTile()
                     .scaleEffect(isPulsing ? 1.04 : 1)
 
                 VStack(spacing: RTSpacing.small) {

@@ -200,7 +200,7 @@ struct RightTrainLiveActivityWidget: Widget {
         if context.attributes.activityKind == .itinerary {
             return context.state.statusKind.tint
         }
-        return .rightTrainActivityAccent
+        return .rightTrainGood
     }
 }
 
@@ -239,7 +239,7 @@ private struct IslandLeadingMetric: View {
 
     private var tint: Color {
         let delayed = showsArrival ? train?.arrivalDelayed : train?.departureDelayed
-        return delayed == true ? .rightTrainActivityLate : .rightTrainActivityText
+        return delayed == true ? .rightTrainLate : .rightTrainActivityText
     }
 
     private var isOnboardTrainActivity: Bool {
@@ -286,7 +286,7 @@ private struct CompactLeadingMetric: View {
     var body: some View {
         Text(time)
             .font(.caption.weight(.semibold))
-            .foregroundStyle(isDelayed ? Color.rightTrainActivityLate : Color.rightTrainActivityText)
+            .foregroundStyle(isDelayed ? Color.rightTrainLate : Color.rightTrainActivityText)
             .monospacedDigit()
             .lineLimit(1)
             .minimumScaleFactor(0.62)
@@ -605,7 +605,7 @@ private struct CompactPlatformChangeText: View {
             if showsIcon {
                 Image(systemName: "arrow.left.arrow.right")
                     .font(.caption2.weight(.bold))
-                    .foregroundStyle(Color.rightTrainActivityLate)
+                    .foregroundStyle(Color.rightTrainLate)
                     .accessibilityHidden(true)
             }
             PlatformTile.activity(
@@ -625,7 +625,7 @@ private extension PlatformTile {
             role: role,
             ink: .rightTrainActivityText,
             onInk: .rightTrainActivityBackground,
-            changeTint: .rightTrainActivityLate,
+            changeTint: .rightTrainLate,
             onChangeTint: .rightTrainActivityBackground
         )
     }
@@ -646,10 +646,10 @@ private struct ActivityCaptionedPlatformTile: View {
             role: role,
             alignment: alignment,
             captionFont: captionFont,
-            captionColor: highlighted ? .rightTrainActivityLate : .rightTrainActivitySecondaryText,
+            captionColor: highlighted ? .rightTrainLate : .rightTrainActivitySecondaryText,
             ink: .rightTrainActivityText,
             onInk: .rightTrainActivityBackground,
-            changeTint: .rightTrainActivityLate,
+            changeTint: .rightTrainLate,
             onChangeTint: .rightTrainActivityBackground
         )
     }
@@ -779,7 +779,7 @@ private struct WatchActivityView: View {
         }
         .padding(8)
         .activityBackgroundTint(nil)
-        .activitySystemActionForegroundColor(.rightTrainActivityAccent)
+        .activitySystemActionForegroundColor(.rightTrainGood)
         .accessibilityElement(children: .combine)
     }
 }
@@ -1298,7 +1298,7 @@ private struct ConnectionTimelineRow: View {
     }
 
     private var tint: Color {
-        emphasized ? .rightTrainActivityLate : .rightTrainActivitySecondaryText
+        emphasized ? .rightTrainLate : .rightTrainActivitySecondaryText
     }
 
     // Platforms at the change wait for the "Get off" state, where the
@@ -1335,11 +1335,11 @@ private struct ConnectionTimelineRow: View {
         }
         .padding(.vertical, 3)
         .padding(.horizontal, emphasized ? 8 : 0)
-        .background(emphasized ? Color.rightTrainActivityLate.opacity(0.08) : Color.clear, in: RoundedRectangle(cornerRadius: 7))
+        .background(emphasized ? Color.rightTrainLate.opacity(0.08) : Color.clear, in: RoundedRectangle(cornerRadius: 7))
         .overlay {
             if emphasized {
                 RoundedRectangle(cornerRadius: 7)
-                    .stroke(Color.rightTrainActivityLate.opacity(0.42), lineWidth: 1)
+                    .stroke(Color.rightTrainLate.opacity(0.42), lineWidth: 1)
             }
         }
         .accessibilityElement(children: .ignore)
@@ -1379,7 +1379,7 @@ private struct TimelineProgressHairline: View {
                 Capsule()
                     .fill(Color.rightTrainActivityDivider)
                 Capsule()
-                    .fill(Color.rightTrainActivityAccent)
+                    .fill(Color.rightTrainGood)
                     .frame(width: max(proxy.size.width * CGFloat(clampedProgress), 2))
             }
         }
@@ -1627,9 +1627,9 @@ private struct InterchangeHeroBlock: View {
     private var marginTint: Color {
         switch interchange.riskStatus {
         case "missed":
-            return .rightTrainActivityDanger
+            return .rightTrainCancelled
         case "tight", "at_risk":
-            return .rightTrainActivityLate
+            return .rightTrainLate
         default:
             return .rightTrainActivitySecondaryText
         }
@@ -1813,13 +1813,13 @@ private struct JourneyProgressFooter: View {
     private var tint: Color {
         switch train.statusKind {
         case .cancelled, .missed:
-            return .rightTrainActivityDanger
+            return .rightTrainCancelled
         case .delayed, .atRisk, .unreported, .notReported:
-            return .rightTrainActivityLate
+            return .rightTrainLate
         case .unknown:
             return .rightTrainActivitySecondaryText
         default:
-            return .rightTrainActivityAccent
+            return .rightTrainGood
         }
     }
 
@@ -1929,9 +1929,9 @@ private struct EmptyWindowText: View {
     private var tint: Color {
         switch text {
         case "All trains cancelled":
-            return .rightTrainActivityDanger
+            return .rightTrainCancelled
         default:
-            return .rightTrainActivityAccent
+            return .rightTrainGood
         }
     }
 
@@ -2169,7 +2169,7 @@ private struct JourneyHeroBlock: View {
     @ViewBuilder private var headline: some View {
         if isCancelled {
             Text("Cancelled")
-                .foregroundStyle(Color.rightTrainActivityDanger)
+                .foregroundStyle(Color.rightTrainCancelled)
         } else if hasHappened {
             Text(pastVerb)
                 .foregroundStyle(Color.rightTrainActivityText)
@@ -2181,7 +2181,7 @@ private struct JourneyHeroBlock: View {
                 .foregroundStyle(Color.rightTrainActivityText)
         } else {
             Text(currentTime)
-                .foregroundStyle(isDelayed ? Color.rightTrainActivityLate : Color.rightTrainActivityText)
+                .foregroundStyle(isDelayed ? Color.rightTrainLate : Color.rightTrainActivityText)
         }
     }
 
@@ -2200,7 +2200,7 @@ private struct JourneyHeroBlock: View {
 
     private var currentTimeText: Text {
         Text(currentTime)
-            .foregroundStyle(isDelayed ? Color.rightTrainActivityLate : Color.rightTrainActivityText)
+            .foregroundStyle(isDelayed ? Color.rightTrainLate : Color.rightTrainActivityText)
     }
 
     private var wasText: String {
@@ -2362,7 +2362,7 @@ private struct InterchangeBanner: View {
         default:
             return approaching
                 ? RightTrainLiveActivityAttributes.StatusKind.delayed.tint
-                : .rightTrainActivityAccent
+                : .rightTrainGood
         }
     }
 }
@@ -2386,19 +2386,19 @@ private struct ActivityTimeText: View {
                             .strikethrough(true, color: Color.rightTrainActivitySecondaryText)
                             .foregroundStyle(Color.rightTrainActivitySecondaryText)
                         Text(current)
-                            .foregroundStyle(delayed ? Color.rightTrainActivityLate : Color.rightTrainActivityText)
+                            .foregroundStyle(delayed ? Color.rightTrainLate : Color.rightTrainActivityText)
                     }
 
                     HStack(spacing: 2) {
                         Image(systemName: "clock")
                             .imageScale(.small)
-                            .foregroundStyle(delayed ? Color.rightTrainActivityLate : Color.rightTrainActivitySecondaryText)
+                            .foregroundStyle(delayed ? Color.rightTrainLate : Color.rightTrainActivitySecondaryText)
                         Text(current)
-                            .foregroundStyle(delayed ? Color.rightTrainActivityLate : Color.rightTrainActivityText)
+                            .foregroundStyle(delayed ? Color.rightTrainLate : Color.rightTrainActivityText)
                     }
 
                     Text(current)
-                        .foregroundStyle(delayed ? Color.rightTrainActivityLate : Color.rightTrainActivityText)
+                        .foregroundStyle(delayed ? Color.rightTrainLate : Color.rightTrainActivityText)
                 }
             } else {
                 Text(scheduled)
@@ -2990,25 +2990,25 @@ private extension RightTrainLiveActivityAttributes.StatusKind {
     func tint(delayMinutes: Int) -> Color {
         switch self {
         case .good:
-            return .rightTrainActivityGood
+            return .rightTrainGood
         case .arrived:
-            return .rightTrainActivityGood
+            return .rightTrainGood
         case .delayed, .atRisk:
             if delayMinutes >= 25 || self == .atRisk {
-                return delayMinutes >= 25 ? .rightTrainActivityDanger : .rightTrainActivityLate
+                return delayMinutes >= 25 ? .rightTrainCancelled : .rightTrainLate
             }
             if delayMinutes > 0 && delayMinutes < 12 {
-                return .rightTrainActivityLateSoft
+                return .rightTrainLate
             }
-            return .rightTrainActivityLate
+            return .rightTrainLate
         case .missed:
-            return .rightTrainActivityDanger
+            return .rightTrainCancelled
         case .cancelled:
-            return .rightTrainActivityDanger
+            return .rightTrainCancelled
         case .departed:
             return .rightTrainActivityDeparted
         case .unreported, .notReported:
-            return .rightTrainActivityLate
+            return .rightTrainLate
         case .unknown:
             return .rightTrainActivityUnknown
         }
@@ -3834,14 +3834,9 @@ private enum ActivityPreviewFixtures {
 
 private extension Color {
     static let rightTrainActivityBackground = Color("RightTrainActivityBackground")
-    static let rightTrainActivityAccent = Color("RightTrainActivityAccent")
-    static let rightTrainActivityGood = Color("RightTrainActivityGood")
     static let rightTrainActivityDeparted = Color("RightTrainActivityDeparted")
     static let rightTrainActivityUnknown = Color("RightTrainActivityUnknown")
     static let rightTrainActivityText = Color("RightTrainActivityText")
     static let rightTrainActivitySecondaryText = Color("RightTrainActivitySecondaryText")
-    static let rightTrainActivityLate = Color("RightTrainActivityLate")
-    static let rightTrainActivityLateSoft = Color("RightTrainActivityLateSoft")
-    static let rightTrainActivityDanger = Color("RightTrainActivityDanger")
     static let rightTrainActivityDivider = Color("RightTrainActivityDivider")
 }

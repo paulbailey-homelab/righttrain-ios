@@ -206,7 +206,7 @@ struct HeroTrainCard: View {
         if let progress = JourneyFormatting.journeyProgress(journey, now: now) {
             VStack(alignment: .leading, spacing: 4) {
                 ProgressView(value: progress)
-                    .tint(Color.rightTrainAccent)
+                    .tint(Color.rightTrainActionInk)
             }
             .padding(.top, 2)
         }

@@ -103,10 +103,10 @@ struct PlatformTile: View {
     var ink = Color(uiColor: .label)
     /// Number colour on a solid tile.
     var onInk = Color(uiColor: .systemBackground)
-    /// The app's amber; both targets share the colour asset.
-    var changeTint = Color("RightTrainAmber")
-    /// Number colour on a changed (tinted) tile.
-    var onChangeTint = Color.black
+    var changeTint = Color.rightTrainLate
+    /// Number colour on a changed (tinted) tile: white on the deep light-mode
+    /// amber, black on the bright dark-mode one.
+    var onChangeTint = Color(uiColor: .systemBackground)
 
     @ScaledMetric(relativeTo: .footnote) private var smallSide: CGFloat = 22
     @ScaledMetric(relativeTo: .title3) private var mediumSide: CGFloat = 36
@@ -203,9 +203,8 @@ struct CaptionedPlatformTile: View {
     var captionColor = Color.secondary
     var ink = Color(uiColor: .label)
     var onInk = Color(uiColor: .systemBackground)
-    /// The app's amber; both targets share the colour asset.
-    var changeTint = Color("RightTrainAmber")
-    var onChangeTint = Color.black
+    var changeTint = Color.rightTrainLate
+    var onChangeTint = Color(uiColor: .systemBackground)
 
     var body: some View {
         VStack(alignment: alignment, spacing: 4) {

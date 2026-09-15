@@ -326,7 +326,7 @@ private struct UpcomingTrainRow: View {
         .buttonStyle(.plain)
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
-        .background(isPinned && allowsPinning ? Color.rightTrainAccent.opacity(0.08) : Color.clear)
+        .background(isPinned && allowsPinning ? Color.rightTrainActionInk.opacity(0.08) : Color.clear)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(isPinned && allowsPinning ? "\(accessibilityLabel), pinned" : accessibilityLabel)
         .accessibilityHint("Shows the full journey calling points.")
@@ -364,7 +364,7 @@ private struct UpcomingTrainRow: View {
             if isPinned {
                 Text("Journey pinned")
                     .font(.caption.weight(.semibold))
-                    .foregroundStyle(Color.rightTrainAccent)
+                    .foregroundStyle(Color.rightTrainActionInk)
             }
             HStack(alignment: .top, spacing: 8) {
                 VStack(alignment: .leading, spacing: 6) {
@@ -415,7 +415,7 @@ private struct UpcomingTrainRow: View {
     private var trainSymbol: some View {
         Image(systemName: "tram.fill")
             .font(.caption2.weight(.semibold))
-            .foregroundStyle(Color.rightTrainAccent)
+            .foregroundStyle(Color.rightTrainActionInk)
             .symbolEffect(.bounce, value: entryAnimationTrigger)
             .accessibilityHidden(true)
             .onAppear {
@@ -429,7 +429,7 @@ private struct UpcomingTrainRow: View {
             if isPinned {
                 Image(systemName: "pin.fill")
                     .font(.caption2.weight(.semibold))
-                    .foregroundStyle(Color.rightTrainAccent)
+                    .foregroundStyle(Color.rightTrainActionInk)
                     .accessibilityHidden(true)
             }
             if let statusDisplay {
