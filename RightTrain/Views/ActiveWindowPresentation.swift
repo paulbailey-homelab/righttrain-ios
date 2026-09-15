@@ -36,6 +36,15 @@ struct ActiveWindowPresentation {
         var primary: String
         var secondary: String?
         var confirmed: Bool = false
+
+        /// The shared platform model that PlatformTile draws.
+        var value: PlatformValue {
+            PlatformValue(
+                primary,
+                confirmed: confirmed,
+                previous: secondary.map { String($0.dropFirst("was ".count)) }
+            )
+        }
     }
 
     struct CollapsedSetupState {
@@ -59,6 +68,8 @@ struct ActiveWindowPresentation {
         var statusText: String
         var statusTone: StatusPill.Tone
         var timingText: String
+        /// Drawn as a tile; `platformText` is its spoken and summary form.
+        var platform: PlatformValue = .unknown
         var platformText: String
         var nextActionText: String
         var freshnessText: String
@@ -219,7 +230,7 @@ struct ActiveWindowPresentation {
             return SetupPromptContent(
                 moment: .noActiveJourney,
                 needProfile: needProfile,
-                title: "Start from your routine",
+                title: "Start from a commute",
                 statusText: "No active journey",
                 primaryActionText: "Plan and monitor",
                 detailText: "Use your saved commute details, then adjust the live window before monitoring."
@@ -240,7 +251,7 @@ struct ActiveWindowPresentation {
                 title: "Plan and monitor a journey",
                 statusText: "No active journey",
                 primaryActionText: "Choose route and time",
-                detailText: "Pick origin, destination, and travel window; RightTrain watches the live service after that."
+                detailText: "Pick your stations and departure window, and RightTrain watches the live service from there."
             )
         }
     }
@@ -339,6 +350,7 @@ struct ActiveWindowPresentation {
             statusText: status.text,
             statusTone: status.tone,
             timingText: JourneyFormatting.glanceTimingText(departure: departure, arrival: arrival),
+            platform: platform.value,
             platformText: JourneyFormatting.platformStateText(primary: platform.primary, secondary: platform.secondary, confirmed: platform.confirmed),
             nextActionText: JourneyFormatting.nextActionText(for: journey, platform: platform.primary, moment: moment),
             freshnessText: isOffline ? "Offline · showing saved journey data" : freshnessText(updatedAt: updatedAt, now: now)

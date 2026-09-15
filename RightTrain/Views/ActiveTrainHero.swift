@@ -174,7 +174,7 @@ struct HeroTrainCard: View {
                 if let heroStatus {
                     StatusPill(text: heroStatus.text, tone: heroStatus.tone)
                 }
-                PlatformSquareChip(platform: platform, style: dynamicTypeSize > .large ? .compact : .featured)
+                PlatformTile(platform: platform.value, size: dynamicTypeSize > .large ? .small : .medium)
             }
             .fixedSize(horizontal: true, vertical: false)
             .layoutPriority(1)
@@ -248,6 +248,8 @@ private struct HeroCountdownText: View {
 /// Tapping opens the journey detail sheet. Rendered directly on the status-surface background —
 /// no card chrome needed.
 struct StatusFirstHeroBlock: View {
+    @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var presentation: ActiveWindowPresentation
     var countdown: ActiveWindowPresentation.CountdownDisplay
     var surface: RTSurface
@@ -290,7 +292,12 @@ struct StatusFirstHeroBlock: View {
         VStack(alignment: .leading, spacing: 2) {
             // The countdown and the platform are the two things to act on,
             // so they share the top row at the same scale.
-            HStack(alignment: .lastTextBaseline, spacing: RTSpacing.compact) {
+            // Side by side the two heroes squeeze each other at accessibility
+            // sizes, so they stack there.
+            let heroLayout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: RTSpacing.small))
+                : AnyLayout(HStackLayout(alignment: .lastTextBaseline, spacing: RTSpacing.compact))
+            heroLayout {
                 VStack(alignment: .leading, spacing: 0) {
                     if let prefix = countdownPrefix {
                         Text(prefix)
@@ -299,83 +306,53 @@ struct StatusFirstHeroBlock: View {
                     }
 
                     Text(countdownValue)
-                        .font(.system(size: 56, weight: .bold, design: .rounded))
+                        .heroNumberFont(size: 56)
                         .foregroundStyle(isStale ? AnyShapeStyle(.secondary) : AnyShapeStyle(surface.ink))
                         .monospacedDigit()
                         .contentTransition(.numericText(countsDown: countdown.targetDate.map { $0 > now } ?? false))
+                        // The countdown ticks from a TimelineView, not a live
+                        // refresh, so it needs its own animation to roll.
+                        .animation(reduceMotion ? nil : .snappy, value: countdownValue)
                         .lineLimit(1)
                         .minimumScaleFactor(0.44)
                 }
                 .layoutPriority(1)
 
-                Spacer(minLength: RTSpacing.small)
+                if !dynamicTypeSize.isAccessibilitySize {
+                    Spacer(minLength: RTSpacing.small)
+                }
 
                 platformHero
             }
 
             Text(presentation.routeTitle)
                 .font(.subheadline.weight(.semibold))
-                .lineLimit(1)
+                // Wrap rather than truncate once the text is large enough
+                // that shrinking can't fit a long route name.
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
                 .minimumScaleFactor(0.82)
         }
     }
 
     private var platformHero: some View {
-        let value = compactPlatformValue
-        let hasKnownPlatform = value != "-" && value.uppercased() != "TBC"
-        let isExpected = hasKnownPlatform && !platform.confirmed
-        let changedFrom = hasKnownPlatform ? platform.secondary : nil
-        return VStack(alignment: .trailing, spacing: 0) {
-            Text(platformLabel(changedFrom: changedFrom, isExpected: isExpected))
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(changedFrom != nil ? Color.rightTrainAmber : .secondary)
-                .lineLimit(1)
-                .minimumScaleFactor(0.78)
-
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                if changedFrom != nil {
-                    Image(systemName: "arrow.left.arrow.right")
-                        .font(.title3.weight(.bold))
-                        .accessibilityHidden(true)
-                }
-                Text(value)
-                    .italic(isExpected)
-                    .font(.system(size: 56, weight: .bold, design: .rounded))
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.5)
-            }
-            .foregroundStyle(platformTint(hasKnownPlatform: hasKnownPlatform, changed: changedFrom != nil))
-        }
-        .fixedSize(horizontal: true, vertical: false)
-    }
-
-    private func platformLabel(changedFrom: String?, isExpected: Bool) -> String {
-        if let changedFrom {
-            // "was 2" -> "Was platform 2"
-            return "Was platform \(changedFrom.dropFirst("was ".count))"
-        }
-        return isExpected ? "Platform · exp" : "Platform"
-    }
-
-    private func platformTint(hasKnownPlatform: Bool, changed: Bool) -> AnyShapeStyle {
-        if changed {
-            return AnyShapeStyle(Color.rightTrainAmber)
-        }
-        if !hasKnownPlatform || isStale {
-            return AnyShapeStyle(.secondary)
-        }
-        return AnyShapeStyle(surface.ink)
+        CaptionedPlatformTile(
+            platform: platform.value,
+            size: .large,
+            alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .trailing
+        )
+        .opacity(isStale ? 0.6 : 1)
     }
 
     // MARK: - Time strip
 
     private var timeStrip: some View {
-        HStack(spacing: 0) {
+        let stacked = dynamicTypeSize.isAccessibilitySize
+        let layout = stacked ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))
+        return layout {
             timeCell(label: "Dep", display: depDisplay)
 
             Divider()
-                .padding(.vertical, RTSpacing.compact)
+                .padding(stacked ? .horizontal : .vertical, RTSpacing.compact)
 
             timeCell(label: "Arr", display: arrDisplay)
         }
@@ -432,13 +409,6 @@ struct StatusFirstHeroBlock: View {
         if text.hasPrefix("Departed · arr ")  { return String(text.dropFirst("Departed · arr ".count)) }
         if text.hasPrefix("Departed ")        { return String(text.dropFirst("Departed ".count)) }
         return text
-    }
-
-    private var compactPlatformValue: String {
-        let p = platform.primary.trimmingCharacters(in: .whitespacesAndNewlines)
-        if p.uppercased() == "TBC" || p == "-" { return p }
-        if p.uppercased().hasPrefix("P"), p.count > 1 { return String(p.dropFirst()) }
-        return p
     }
 
     private var heroFreshnessText: String {

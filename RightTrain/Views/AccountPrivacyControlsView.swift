@@ -99,8 +99,8 @@ struct AccountPrivacyControlsView: View {
                     value: "\(export.preferenceSet.version)"
                 )
                 SettingsAccountValueRow(
-                    title: "Saved Routines",
-                    systemImage: "tram",
+                    title: "Saved Commutes",
+                    systemImage: "calendar.badge.clock",
                     value: "\(export.preferenceSet.commuteRoutines.count)"
                 )
                 SettingsAccountValueRow(

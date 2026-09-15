@@ -66,7 +66,9 @@ struct StartupSplashView: View {
                 RightTrainRouteMark()
                     .frame(width: 64, height: 64)
                     .frame(width: 82, height: 82)
-                    .glassEffect(.regular, in: .rect(cornerRadius: RTRadius.live))
+                    // A solid tile: the mark is content, and nothing floats
+                    // above the splash for glass to separate it from.
+                    .background(Color.rightTrainPaperCream, in: .rect(cornerRadius: RTRadius.live))
                     .scaleEffect(isPulsing ? 1.04 : 1)
 
                 VStack(spacing: RTSpacing.small) {

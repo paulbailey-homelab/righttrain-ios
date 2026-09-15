@@ -26,7 +26,7 @@ enum JourneySetupIntent: String, CaseIterable, Identifiable {
     var title: String {
         switch self {
         case .routineCommute:
-            return "Routine commute"
+            return "Commute"
         case .oneOffDirect:
             return "One-off direct"
         case .connectionSensitive:
@@ -37,7 +37,7 @@ enum JourneySetupIntent: String, CaseIterable, Identifiable {
     var shortTitle: String {
         switch self {
         case .routineCommute:
-            return "Routine"
+            return "Commute"
         case .oneOffDirect:
             return "Direct"
         case .connectionSensitive:
@@ -327,7 +327,7 @@ final class WindowSetupViewModel {
     @discardableResult
     func loadRecommendations() async -> Bool {
         guard let origin, let destination else {
-            operationState.alertState = .validation("Choose both stations before searching for Pins.")
+            operationState.alertState = .validation("Choose both stations to search.")
             return false
         }
         let searchDepartureStart = effectiveDepartureStart()

@@ -13,7 +13,7 @@ private enum SettingsConfirmation {
         case .clearDevice:
             return "Clear this device?"
         case .deleteAccount:
-            return "Permanently delete your RightTrain account?"
+            return "Delete your RightTrain account?"
         }
     }
 
@@ -24,7 +24,7 @@ private enum SettingsConfirmation {
         case .clearDevice:
             return "This removes saved RightTrain data from this device."
         case .deleteAccount:
-            return "This permanently deletes your account data. It cannot be undone."
+            return "Your account and synced preferences will be deleted. This can't be undone."
         }
     }
 }
@@ -335,8 +335,6 @@ struct SettingsProfileView: View {
                     Label("Clear This Device", systemImage: "iphone.slash")
                 }
             }
-        } header: {
-            Text("Danger Zone")
         } footer: {
             Text(authViewModel.hasPortableAccount ? "Log out of this device or permanently delete the account." : "Clears saved RightTrain data from this device.")
         }

@@ -179,7 +179,7 @@ struct CommuteRoutinesView: View {
             Text("Saved · \(viewModel.routines.count) of \(authViewModel.user?.entitlements.commuteRoutineLimit ?? 2)")
         } footer: {
             if !viewModel.routines.isEmpty {
-                Text("Tap a commute to edit it. Swipe for pause and delete.")
+                Text("Swipe a commute to pause or delete it.")
             }
         }
     }

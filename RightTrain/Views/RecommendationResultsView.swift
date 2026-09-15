@@ -68,7 +68,7 @@ struct SearchPinToolbarButton: View {
         // The one tinted glass control on the results screen: pinning is its
         // primary action.
         .buttonStyle(.glassProminent)
-        .accessibilityHint("Creates a Search Pin for \(recommendationCount) direct trains in this departure range.")
+        .accessibilityHint("Creates a Search Pin for \(recommendationCount) direct trains in this departure window.")
     }
 }
 
@@ -175,9 +175,9 @@ private struct SearchResultRowLayout<Status: View>: View {
             }
             .frame(maxWidth: .infinity, alignment: .leading)
 
-            // A "P4" chip instead of a stacked "Platform / 4" column keeps
-            // the times wide enough for delays.
-            PlatformSquareChip(platform: platform, style: .compact)
+            // A tile instead of a stacked "Platform / 4" column keeps the
+            // times wide enough for delays.
+            PlatformTile(platform: platform.value)
                 .fixedSize()
 
             PinJourneyIconButton(
@@ -406,11 +406,17 @@ private struct PinIconButton: View {
         } label: {
             Image(systemName: systemImage)
                 .font(.body.weight(.semibold))
+                // Pin and pin.fill share a shape, so Magic Replace fills the
+                // outline in place instead of cutting between them.
+                .contentTransition(.symbolEffect(.replace))
                 .frame(width: RTSize.tapTarget, height: RTSize.tapTarget)
                 .contentShape(Rectangle())
         }
         .buttonStyle(.borderless)
         .foregroundStyle(Color.rightTrainActionInk)
+        .sensoryFeedback(trigger: isSelected) { _, pinned in
+            pinned ? .success : .selection
+        }
         .accessibilityLabel(accessibilityLabel)
         .accessibilityHint(hint)
         .accessibilityAddTraits(isSelected ? .isSelected : [])

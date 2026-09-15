@@ -125,6 +125,7 @@ private struct NotificationDetailContentView: View {
                 .buttonStyle(.glass)
                 .controlSize(.extraLarge)
                 .padding(.horizontal, RTSpacing.pageHorizontal + 4)
+                .readableWidthFrame()
                 .padding(.bottom, RTSpacing.small)
             }
         }
@@ -230,15 +231,15 @@ private struct NotificationDetailContentView: View {
         case "recommended_train_departed":
             return "Your previous best option has already left, so the pinned search now needs a decision."
         case "delay":
-            return "The departure or arrival timing may no longer match the window you chose."
+            return "The new times may no longer fit your departure window."
         case "platform_change":
-            return "The train may leave from a different platform than the one you were watching."
+            return "You may need to go to a different platform."
         case "cancellation":
             return "The selected train is no longer usable for this journey."
         case "window_train_entered_window":
-            return "A delayed train has moved into your monitored window and may now be useful."
+            return "A delayed train now leaves during your pinned search, so it could work for you."
         case "window_train_after_window":
-            return "A delayed train may leave too late for the journey window you pinned."
+            return "A delayed train may now leave after your pinned search ends."
         case "window_guidance_cleared":
             return "The disruption RightTrain was tracking no longer needs extra action."
         default:
@@ -295,7 +296,7 @@ private struct NotificationDetailContentView: View {
                 LazyVGrid(columns: columns, alignment: .leading, spacing: RTSpacing.small) {
                     MetricView(label: "Dep", value: notificationDepartureText(recommendation))
                     MetricView(label: "Arr", value: JourneyFormatting.arrivalText(recommendation.journey))
-                    MetricView(label: "Platform", value: JourneyFormatting.platformMetricText(recommendation.journey))
+                    PlatformMetricView(platform: ActiveWindowPresentation.platformDisplay(for: recommendation.journey).value)
                 }
             }
             .frame(maxWidth: .infinity, alignment: .leading)

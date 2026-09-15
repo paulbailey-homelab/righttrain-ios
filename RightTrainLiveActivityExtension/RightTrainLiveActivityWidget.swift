@@ -33,7 +33,11 @@ struct RightTrainLiveActivityWidget: Widget {
                         if let platformChange = context.state.activePlatformChange {
                             PlatformChangeIslandMetric(change: platformChange, edge: .trailing)
                         } else if let platform = islandPlatform(for: context) {
-                            IslandEdgeMetric(label: platform.label, value: platform.value, edge: .trailing)
+                            IslandPlatformMetric(
+                                platform: PlatformValue(platform.value, confirmed: platform.confirmed),
+                                role: platform.role,
+                                edge: .trailing
+                            )
                         } else {
                             IslandEdgeMetric(label: "Status", value: context.state.selectedTrain?.statusText ?? context.state.statusText, edge: .trailing)
                         }
@@ -57,15 +61,15 @@ struct RightTrainLiveActivityWidget: Widget {
                     } else if let platform = compactPlatform(for: context) {
                         CompactPlatformText(
                             platform: platform.value,
-                            accessibilityPrefix: platform.accessibilityPrefix,
-                            highlighted: platform.highlighted
+                            confirmed: platform.confirmed,
+                            accessibilityPrefix: platform.accessibilityPrefix
                         )
                     } else if statusKind != .good {
                         // Already falls back to its bare symbol via
                         // ViewThatFits, keeping "+18" whenever it fits.
                         StatusGlyph(kind: statusKind, delayMinutes: context.state.selectedTrain?.delayMinutes ?? context.state.delayMinutes)
                     } else if let platform = departurePlatform(for: context) {
-                        CompactPlatformText(platform: platform)
+                        CompactPlatformText(platform: platform, confirmed: context.state.platformConfirmed)
                     } else {
                         StatusGlyph(kind: statusKind, delayMinutes: context.state.selectedTrain?.delayMinutes ?? context.state.delayMinutes)
                     }
@@ -81,12 +85,10 @@ struct RightTrainLiveActivityWidget: Widget {
                 } else if let platform = islandPlatform(for: context) {
                     // An on-time tick says nothing; the platform is the
                     // one thing worth a glance when the island is shared.
-                    Text(readablePlatformValue(platform.value))
-                        .font(.caption.weight(.bold))
-                        .monospacedDigit()
-                        .foregroundStyle(platform.label == "Change to" ? Color.rightTrainActivityLate : Color.rightTrainActivityText)
-                        .minimumScaleFactor(0.6)
-                        .accessibilityLabel("\(platform.accessibilityLabel) \(readablePlatformValue(platform.value))")
+                    PlatformTile.activity(
+                        PlatformValue(platform.value, confirmed: platform.confirmed),
+                        role: platform.role
+                    )
                 }
             }
             .widgetURL(activityURL(for: context))
@@ -117,40 +119,40 @@ struct RightTrainLiveActivityWidget: Widget {
         return context.state.recommendedTrain?.departureTime ?? context.state.compactWindowEmptyStateText
     }
 
-    private func islandPlatform(for context: ActivityViewContext<RightTrainLiveActivityAttributes>) -> (label: String, value: String, accessibilityLabel: String)? {
+    private func islandPlatform(for context: ActivityViewContext<RightTrainLiveActivityAttributes>) -> (role: String, value: String, confirmed: Bool)? {
         if context.attributes.activityKind == .train,
            let train = context.state.selectedTrain,
            train.isOnboard {
-            return displayPlatform(train.arrivalPlatform).map { (label: "Platform", value: $0, accessibilityLabel: "Arrival platform") }
+            return displayPlatform(train.arrivalPlatform).map { (role: "Arrival platform", value: $0, confirmed: true) }
         }
         // On approaching_interchange, the user cares most about the
         // ONWARD platform at the interchange. Surface it in the island.
         if context.attributes.activityKind == .leg,
            ItineraryPhase.from(rawValue: context.state.phase) == .approachingInterchange,
            let platform = displayPlatform(context.state.interchange?.onwardPlatform) {
-            return (label: "Change to", value: platform, accessibilityLabel: "Onward platform")
+            return (role: "Next platform", value: platform, confirmed: context.state.interchange?.onwardPlatformConfirmed == true)
         }
         // On any boarded leg, current arrival platform is the next signal.
         if context.attributes.activityKind == .leg,
            let train = context.state.activeItineraryTrain,
            let platform = displayPlatform(train.arrivalPlatform) {
-            return (label: "Platform", value: platform, accessibilityLabel: "Arrival platform")
+            return (role: "Arrival platform", value: platform, confirmed: true)
         }
-        return departurePlatform(for: context).map { (label: "Platform", value: $0, accessibilityLabel: "Departure platform") }
+        return departurePlatform(for: context).map { (role: "Platform", value: $0, confirmed: context.state.platformConfirmed) }
     }
 
-    private func compactPlatform(for context: ActivityViewContext<RightTrainLiveActivityAttributes>) -> (value: String, accessibilityPrefix: String, highlighted: Bool)? {
+    private func compactPlatform(for context: ActivityViewContext<RightTrainLiveActivityAttributes>) -> (value: String, accessibilityPrefix: String, confirmed: Bool)? {
         if context.attributes.activityKind == .train,
            let train = context.state.selectedTrain,
            train.isOnboard,
            let platform = displayPlatform(train.arrivalPlatform) {
-            return (value: platform, accessibilityPrefix: "Arrival platform", highlighted: false)
+            return (value: platform, accessibilityPrefix: "Arrival platform", confirmed: true)
         }
-        // Amber says "act now": this is the platform to walk to.
+        // At an interchange the onward platform is the one to walk to.
         if context.attributes.activityKind == .leg,
            ItineraryPhase.from(rawValue: context.state.phase) == .approachingInterchange,
            let platform = displayPlatform(context.state.interchange?.onwardPlatform) {
-            return (value: platform, accessibilityPrefix: "Onward platform", highlighted: true)
+            return (value: platform, accessibilityPrefix: "Next platform", confirmed: context.state.interchange?.onwardPlatformConfirmed == true)
         }
         return nil
     }
@@ -555,35 +557,13 @@ private func readablePlatformValue(_ platform: String) -> String {
     return trimmed
 }
 
-private func compactPlatformDisplayValue(_ platform: String) -> String {
-    let trimmed = platform.trimmingCharacters(in: .whitespacesAndNewlines)
-    if trimmed.uppercased() == "TBC" || trimmed == "-" {
-        return trimmed
-    }
-    if trimmed.uppercased().hasPrefix("P") {
-        return trimmed.uppercased()
-    }
-    return "P\(trimmed)"
-}
-
 private struct CompactPlatformText: View {
     var platform: String
-    var accessibilityPrefix: String = "Departure platform"
-    var highlighted = false
-
-    private var platformDisplayValue: String {
-        readablePlatformValue(platform)
-    }
+    var confirmed: Bool
+    var accessibilityPrefix: String = "Platform"
 
     var body: some View {
-        Text(compactPlatformDisplayValue(platform))
-        .font(.caption.weight(.semibold))
-        .monospacedDigit()
-        .foregroundStyle(highlighted ? Color.rightTrainActivityLate : Color.rightTrainActivityText)
-        .lineLimit(1)
-        .minimumScaleFactor(0.55)
-        .allowsTightening(true)
-        .accessibilityLabel(platformDisplayValue.uppercased() == "TBC" ? "\(accessibilityPrefix) to be confirmed" : "\(accessibilityPrefix) \(platformDisplayValue)")
+        PlatformTile.activity(PlatformValue(platform, confirmed: confirmed), role: accessibilityPrefix)
     }
 }
 
@@ -615,30 +595,82 @@ private struct DynamicIslandWidthReader<Content: View>: View {
 
 private struct CompactPlatformChangeText: View {
     var change: RightTrainLiveActivityAttributes.ContentState.PlatformChange
-    /// The swap arrows are dropped when the island is width-limited; the
-    /// amber platform and the accessibility label still carry the change.
+    /// The swap arrows give the change a cue beyond colour; they're dropped
+    /// when the island is width-limited, where the amber tile and the
+    /// accessibility label still carry it.
     var showsIcon = true
 
-    private var currentPlatform: String {
-        compactPlatformDisplayValue(change.currentPlatform)
+    var body: some View {
+        HStack(spacing: 3) {
+            if showsIcon {
+                Image(systemName: "arrow.left.arrow.right")
+                    .font(.caption2.weight(.bold))
+                    .foregroundStyle(Color.rightTrainActivityLate)
+                    .accessibilityHidden(true)
+            }
+            PlatformTile.activity(
+                PlatformValue(change.currentPlatform, confirmed: true, previous: change.previousPlatform)
+            )
+        }
     }
+}
+
+private extension PlatformTile {
+    /// A tile in the Live Activity's own palette, which follows the Lock
+    /// Screen and Dynamic Island appearance rather than the app's.
+    static func activity(_ platform: PlatformValue, size: Size = .small, role: String = "Platform") -> PlatformTile {
+        PlatformTile(
+            platform: platform,
+            size: size,
+            role: role,
+            ink: .rightTrainActivityText,
+            onInk: .rightTrainActivityBackground,
+            changeTint: .rightTrainActivityLate,
+            onChangeTint: .rightTrainActivityBackground
+        )
+    }
+}
+
+private struct ActivityCaptionedPlatformTile: View {
+    var platform: PlatformValue
+    var size: PlatformTile.Size = .medium
+    var role = "Platform"
+    var alignment: HorizontalAlignment = .trailing
+    var captionFont: Font = .caption.weight(.medium)
+    var highlighted = false
 
     var body: some View {
-        Group {
-            if showsIcon {
-                Label(currentPlatform, systemImage: "arrow.left.arrow.right")
-                    .labelStyle(.titleAndIcon)
-            } else {
-                Text(currentPlatform)
-            }
-        }
-        .font(.caption.weight(.semibold))
-        .monospacedDigit()
-        .foregroundStyle(Color.rightTrainActivityLate)
-        .lineLimit(1)
-        .minimumScaleFactor(0.55)
-        .allowsTightening(true)
-        .accessibilityLabel("Departure platform changed from \(readablePlatformValue(change.previousPlatform)) to \(readablePlatformValue(change.currentPlatform))")
+        CaptionedPlatformTile(
+            platform: platform,
+            size: size,
+            role: role,
+            alignment: alignment,
+            captionFont: captionFont,
+            captionColor: highlighted ? .rightTrainActivityLate : .rightTrainActivitySecondaryText,
+            ink: .rightTrainActivityText,
+            onInk: .rightTrainActivityBackground,
+            changeTint: .rightTrainActivityLate,
+            onChangeTint: .rightTrainActivityBackground
+        )
+    }
+}
+
+private struct IslandPlatformMetric: View {
+    var platform: PlatformValue
+    var role = "Platform"
+    var edge: IslandExpandedEdge = .trailing
+
+    var body: some View {
+        ActivityCaptionedPlatformTile(
+            platform: platform,
+            size: .medium,
+            role: role,
+            alignment: edge.horizontalAlignment,
+            captionFont: .caption2.weight(.medium)
+        )
+        .frame(maxWidth: .infinity, alignment: edge.alignment)
+        // Keep clear of the island's rounded shoulders.
+        .padding(edge.paddingEdges, 6)
     }
 }
 
@@ -766,7 +798,7 @@ private struct WatchWindowActivityView: View {
             if let train = state.recommendedTrain {
                 WatchDepartureSummary(
                     train: train,
-                    platformText: state.watchPlatformText(for: train),
+                    platform: PlatformValue(train.departurePlatform, confirmed: state.platformConfirmed),
                     statusText: train.statusText,
                     statusKind: train.statusKind,
                     delayMinutes: train.delayMinutes
@@ -810,7 +842,7 @@ private struct WatchTrainActivityView: View {
                 }
                 WatchDepartureSummary(
                     train: train,
-                    platformText: state.watchPlatformText(for: train),
+                    platform: PlatformValue(train.departurePlatform, confirmed: state.platformConfirmed),
                     statusText: train.statusText,
                     statusKind: train.statusKind,
                     delayMinutes: train.delayMinutes
@@ -838,7 +870,7 @@ private struct WatchOnboardArrivalRow: View {
 
             Spacer(minLength: 2)
 
-            PlatformBadge(text: state.watchArrivalPlatformText(for: train))
+            PlatformBadge(platform: PlatformValue(train.arrivalPlatform, confirmed: true), role: "Arrival platform")
 
             if train.statusKind != .departed && train.statusKind != .good {
                 StatusGlyph(kind: train.statusKind, delayMinutes: train.delayMinutes)
@@ -864,7 +896,7 @@ private struct WatchItineraryActivityView: View {
             if let train = state.activeItineraryTrain {
                 WatchDepartureSummary(
                     train: train,
-                    platformText: state.watchPlatformText(for: train),
+                    platform: PlatformValue(train.departurePlatform, confirmed: state.platformConfirmed),
                     statusText: state.statusText,
                     statusKind: state.statusKind,
                     delayMinutes: state.delayMinutes
@@ -941,7 +973,7 @@ private struct WatchOperatorText: View {
 
 private struct WatchDepartureSummary: View {
     var train: RightTrainLiveActivityAttributes.ContentState.Train
-    var platformText: String
+    var platform: PlatformValue
     var statusText: String
     var statusKind: RightTrainLiveActivityAttributes.StatusKind
     var delayMinutes: Int
@@ -967,7 +999,7 @@ private struct WatchDepartureSummary: View {
 
     private var badgeRow: some View {
         HStack(spacing: 5) {
-            PlatformBadge(text: platformText)
+            PlatformBadge(platform: platform)
             if statusKind.isHeroAnomalous {
                 StatusBadge(text: statusText, kind: statusKind, delayMinutes: delayMinutes)
             }
@@ -1704,12 +1736,8 @@ private struct IslandTitle: View {
         if activityKind == .itinerary {
             return state.itineraryIslandSubtitle
         }
-        if activityKind == .window {
-            return state.windowIslandSubtitle
-        }
-        if let platformChange = state.activePlatformChange {
-            return "Was platform \(readablePlatformValue(platformChange.previousPlatform))"
-        }
+        // A platform change is captioned on the platform tile beside the
+        // title, so it isn't repeated here.
         return nil
     }
 
@@ -2022,12 +2050,7 @@ private struct CompactItineraryDetail: View {
         if state.resolvedPhase == .approachingInterchange,
            let interchange = state.interchange {
             let platform = interchange.onwardPlatform?.trimmingCharacters(in: .whitespacesAndNewlines)
-            let platformText: String
-            if let platform, !platform.isEmpty {
-                platformText = "P\(platform)"
-            } else {
-                platformText = "P TBC"
-            }
+            let platformText = PlatformValue.bare(platform).map { "platform \($0)" } ?? "platform TBC"
             return "Get off · \(platformText)"
         }
         if state.resolvedPhase.isOnboard,
@@ -2208,84 +2231,25 @@ private struct JourneyHeroBlock: View {
 private struct InlinePlatformLabel: View {
     var platform: String
     var confirmed: Bool
-    var accessibilityPrefix: String = "Departure platform"
+    var accessibilityPrefix: String = "Platform"
     var platformChange: RightTrainLiveActivityAttributes.ContentState.PlatformChange? = nil
-    var valueFont: Font = .title.weight(.semibold)
     /// Replaces "Platform", e.g. "Next platform" at an interchange.
     var title = "Platform"
+    /// Amber caption: this is the platform to walk to now.
     var highlighted = false
 
-    private var platformText: String {
-        platform.trimmingCharacters(in: .whitespacesAndNewlines)
-    }
-
-    private var hasKnownPlatform: Bool {
-        !platformText.isEmpty && platformText.uppercased() != "TBC" && platformText != "-"
-    }
-
-    private var platformDisplayValue: String {
-        readablePlatformValue(platformText)
-    }
-
-    private var label: String {
-        if let platformChange, hasKnownPlatform {
-            return "Was platform \(readablePlatformValue(platformChange.previousPlatform))"
-        }
-        if hasKnownPlatform, !confirmed {
-            return title == "Platform" ? "Expected platform" : "\(title) · exp."
-        }
-        return title
-    }
-
-    private var value: String {
-        hasKnownPlatform ? platformDisplayValue : "TBC"
-    }
-
-    private var valueTint: Color {
-        if !hasKnownPlatform || platformChange != nil || highlighted {
-            return .rightTrainActivityLate
-        }
-        return .rightTrainActivityText
-    }
-
     var body: some View {
-        VStack(alignment: .trailing, spacing: 0) {
-            Text(label)
-                .font(.caption.weight(.medium))
-                .foregroundStyle(Color.rightTrainActivitySecondaryText)
-                .lineLimit(1)
-                .minimumScaleFactor(0.7)
-            HStack(alignment: .firstTextBaseline, spacing: 4) {
-                // A struck-through old platform beside the new one reads as
-                // a single number ("2 12"); the label carries the old value.
-                if platformChange != nil, hasKnownPlatform {
-                    Image(systemName: "arrow.left.arrow.right")
-                        .font(.headline.weight(.bold))
-                        .foregroundStyle(valueTint)
-                }
-                Text(value)
-                    .font(valueFont)
-                    .fontDesign(.rounded)
-                    .foregroundStyle(valueTint)
-            }
-            .monospacedDigit()
-            .lineLimit(1)
-            .minimumScaleFactor(0.58)
-            .contentTransition(.numericText())
-        }
+        ActivityCaptionedPlatformTile(
+            platform: PlatformValue(platform, confirmed: confirmed, previous: platformChange?.previousPlatform),
+            role: title,
+            highlighted: highlighted
+        )
         .layoutPriority(1)
         .accessibilityElement(children: .ignore)
-        .accessibilityLabel(accessibilityLabel)
-    }
-
-    private var accessibilityLabel: String {
-        guard hasKnownPlatform else {
-            return "\(accessibilityPrefix) to be confirmed"
-        }
-        if let platformChange {
-            return "\(accessibilityPrefix) changed from \(readablePlatformValue(platformChange.previousPlatform)) to \(platformDisplayValue)"
-        }
-        return confirmed ? "\(accessibilityPrefix) \(platformDisplayValue)" : "\(accessibilityPrefix) \(platformDisplayValue), expected"
+        .accessibilityLabel(
+            PlatformValue(platform, confirmed: confirmed, previous: platformChange?.previousPlatform)
+                .accessibilityLabel(role: title == "Platform" ? accessibilityPrefix : title)
+        )
     }
 }
 
@@ -2332,12 +2296,10 @@ private struct InterchangeBanner: View {
             }
             Spacer(minLength: 4)
             if let platform = onwardPlatformDisplay {
-                Text("Platform \(platform)")
-                    .font(.caption2.weight(.bold))
-                    .foregroundStyle(Color.rightTrainActivityText)
-                    .padding(.horizontal, 6)
-                    .padding(.vertical, 2)
-                    .background(tint.opacity(0.18), in: Capsule())
+                PlatformTile.activity(
+                    PlatformValue(platform, confirmed: interchange.onwardPlatformConfirmed),
+                    role: "Next platform"
+                )
             }
         }
         .padding(.horizontal, 10)
@@ -2498,14 +2460,10 @@ private struct PlatformChangeIslandMetric: View {
     var edge: IslandExpandedEdge = .leading
 
     var body: some View {
-        IslandEdgeMetric(
-            label: "Now platform",
-            value: readablePlatformValue(change.currentPlatform),
-            tint: .rightTrainActivityLate,
+        IslandPlatformMetric(
+            platform: PlatformValue(change.currentPlatform, confirmed: true, previous: change.previousPlatform),
             edge: edge
         )
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel("Departure platform changed from \(readablePlatformValue(change.previousPlatform)) to \(readablePlatformValue(change.currentPlatform))")
     }
 }
 
@@ -2639,36 +2597,11 @@ private struct StatusBadge: View {
 }
 
 private struct PlatformBadge: View {
-    var text: String
+    var platform: PlatformValue
+    var role = "Platform"
 
     var body: some View {
-        ViewThatFits(in: .horizontal) {
-            badgeText(text)
-            badgeText(compactText)
-        }
-        .accessibilityLabel(text)
-    }
-
-    private var compactText: String {
-        text
-            .replacingOccurrences(of: "Platform ", with: "P")
-            .replacingOccurrences(of: "Plat ", with: "P")
-    }
-
-    private func badgeText(_ value: String) -> some View {
-        Text(value)
-            .font(.caption.weight(.semibold))
-            .lineLimit(1)
-            .minimumScaleFactor(0.58)
-            .allowsTightening(true)
-            .foregroundStyle(Color.rightTrainActivityText)
-            .padding(.horizontal, 7)
-            .padding(.vertical, 4)
-            .background(Color.rightTrainActivityAccent.opacity(0.14), in: Capsule())
-            .overlay {
-                Capsule()
-                    .stroke(Color.rightTrainActivityAccent.opacity(0.35), lineWidth: 1)
-            }
+        PlatformTile.activity(platform, role: role)
     }
 }
 
@@ -2781,14 +2714,6 @@ private extension RightTrainLiveActivityAttributes.ContentState {
         changeCountText
     }
 
-    var windowIslandSubtitle: String? {
-        if let platformChange = activePlatformChange {
-            return "Was platform \(readablePlatformValue(platformChange.previousPlatform))"
-        }
-        // Status and countdown live in the bottom row, and the operator
-        // doesn't change what the traveller does.
-        return nil
-    }
 
     var itineraryConnectionFooterText: String {
         // The coordinator now sets a phase-specific otherDeparturesText
@@ -2962,19 +2887,6 @@ private extension RightTrainLiveActivityAttributes.ContentState {
             return "\(trainCount) trains, \(departedCount) departed"
         }
         return "\(trainCount) \(trainCount == 1 ? "train" : "trains")"
-    }
-
-    func watchPlatformText(for train: RightTrainLiveActivityAttributes.ContentState.Train) -> String {
-        let platform = train.departurePlatform.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !platform.isEmpty else {
-            return "Plat TBC"
-        }
-        return platform.uppercased() == "TBC" ? "Plat TBC" : "Plat \(readablePlatformValue(platform))"
-    }
-
-    func watchArrivalPlatformText(for train: RightTrainLiveActivityAttributes.ContentState.Train) -> String {
-        let platform = readablePlatformValue(train.arrivalPlatform)
-        return platform.uppercased() == "TBC" ? "Arr plat TBC" : "Arr plat \(platform)"
     }
 
     private func nonEmpty(_ value: String?) -> String? {
@@ -3250,11 +3162,11 @@ struct LiveActivityLayoutProbe: View {
             if let platformChange = state.activePlatformChange {
                 CompactPlatformChangeText(change: platformChange)
             } else if activityKind == .train, selectedTrain?.isOnboard == true, let platform {
-                CompactPlatformText(platform: platform, accessibilityPrefix: "Arrival platform")
+                CompactPlatformText(platform: platform, confirmed: true, accessibilityPrefix: "Arrival platform")
             } else if statusKind != .good {
                 StatusGlyph(kind: statusKind, delayMinutes: delayMinutes)
             } else if let platform {
-                CompactPlatformText(platform: platform)
+                CompactPlatformText(platform: platform, confirmed: state.platformConfirmed)
             } else {
                 StatusGlyph(kind: statusKind, delayMinutes: delayMinutes)
             }
@@ -3275,7 +3187,11 @@ struct LiveActivityLayoutProbe: View {
                     PlatformChangeIslandMetric(change: platformChange, edge: .trailing)
                         .frame(maxWidth: 84, alignment: .trailing)
                 } else if let platform {
-                    IslandEdgeMetric(label: platformMetricLabel, value: platform, edge: .trailing)
+                    IslandPlatformMetric(
+                        platform: PlatformValue(platform, confirmed: selectedTrain?.isOnboard == true || state.platformConfirmed),
+                        role: platformMetricLabel,
+                        edge: .trailing
+                    )
                         .frame(maxWidth: 84, alignment: .trailing)
                 } else {
                     StatusGlyph(kind: statusKind, delayMinutes: delayMinutes)

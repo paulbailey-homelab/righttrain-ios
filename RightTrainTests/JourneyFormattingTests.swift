@@ -254,13 +254,6 @@ final class JourneyFormattingTests: XCTestCase {
         XCTAssertEqual(JourneyFormatting.platformStateText(primary: "TBC", confirmed: false), "Platform TBC")
     }
 
-    func testQualifiedPlatformValueAddsExpectedPrefixOnlyWhenUnconfirmed() {
-        XCTAssertEqual(JourneyFormatting.qualifiedPlatformValue("4", confirmed: true), "4")
-        XCTAssertEqual(JourneyFormatting.qualifiedPlatformValue("4", confirmed: false), "Expected 4")
-        XCTAssertEqual(JourneyFormatting.qualifiedPlatformValue("TBC", confirmed: false), "TBC")
-        XCTAssertEqual(JourneyFormatting.qualifiedPlatformValue("", confirmed: false), "TBC")
-    }
-
     func testFreshnessAndAccessibilityLabelsDescribeLiveConfidence() throws {
         let now = try XCTUnwrap(DateFormatting.date(from: "2026-01-10T10:10:00.000Z"))
 
@@ -1459,5 +1452,48 @@ final class JourneyFormattingTests: XCTestCase {
         let fallback = JourneyFormatting.segmentStopRange(stops, originTPL: nil, destinationTPL: "UNKNOWN")
         XCTAssertEqual(fallback.origin, 0)
         XCTAssertEqual(fallback.destination, 3)
+    }
+
+    func testPlatformValueParsesFeedStrings() {
+        XCTAssertEqual(PlatformValue.bare("4"), "4")
+        XCTAssertEqual(PlatformValue.bare(" P12 "), "12")
+        XCTAssertEqual(PlatformValue.bare("Platform 3"), "3")
+        XCTAssertEqual(PlatformValue.bare("12a"), "12A")
+        XCTAssertNil(PlatformValue.bare("TBC"))
+        XCTAssertNil(PlatformValue.bare("-"))
+        XCTAssertNil(PlatformValue.bare(""))
+        XCTAssertNil(PlatformValue.bare(nil))
+    }
+
+    func testPlatformValueStatesCaptionsAndAccessibility() {
+        let confirmed = PlatformValue("P4", confirmed: true)
+        XCTAssertEqual(confirmed.state, .confirmed)
+        XCTAssertEqual(confirmed.caption(), "Platform")
+        XCTAssertEqual(confirmed.accessibilityLabel(), "Platform 4")
+
+        let expected = PlatformValue("4", confirmed: false)
+        XCTAssertEqual(expected.state, .expected)
+        XCTAssertEqual(expected.caption(), "Expected platform")
+        XCTAssertEqual(expected.accessibilityLabel(role: "Arrival platform"), "Expected arrival platform 4")
+
+        let unknown = PlatformValue("TBC", confirmed: true)
+        XCTAssertEqual(unknown.state, .unknown)
+        XCTAssertNil(unknown.number)
+        XCTAssertEqual(unknown.accessibilityLabel(), "Platform to be confirmed")
+
+        let changed = PlatformValue("12", confirmed: true, previous: "P2")
+        XCTAssertTrue(changed.isChanged)
+        XCTAssertEqual(changed.caption(), "Was platform 2")
+        XCTAssertEqual(changed.accessibilityLabel(), "Platform 12, changed from 2")
+
+        XCTAssertFalse(PlatformValue("4", confirmed: true, previous: "4").isChanged)
+        XCTAssertFalse(PlatformValue("TBC", confirmed: true, previous: "2").isChanged, "An unknown platform can't have changed")
+    }
+
+    func testPlatformDisplayBridgesToPlatformValue() {
+        let value = ActiveWindowPresentation.PlatformDisplay(primary: "P12", secondary: "was 2", confirmed: false).value
+        XCTAssertEqual(value.number, "12")
+        XCTAssertEqual(value.state, .expected)
+        XCTAssertEqual(value.previousNumber, "2")
     }
 }

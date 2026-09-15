@@ -411,20 +411,6 @@ enum JourneyFormatting {
         journey.destinationRealtime?.platformConfirmed == true
     }
 
-    /// Bare platform value with an "expected" qualifier when the feed has not
-    /// confirmed it, for metric cells whose label already says "Platform".
-    static func platformMetricText(_ journey: JourneyResult) -> String {
-        qualifiedPlatformValue(platformText(journey), confirmed: departurePlatformConfirmed(journey))
-    }
-
-    static func qualifiedPlatformValue(_ value: String, confirmed: Bool) -> String {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        if trimmed.isEmpty || trimmed == "-" || trimmed.uppercased() == "TBC" || confirmed {
-            return trimmed.isEmpty ? "TBC" : trimmed
-        }
-        return "Expected \(trimmed)"
-    }
-
     static func platformStateText(primary: String, secondary: String? = nil, confirmed: Bool = true) -> String {
         let trimmed = primary.trimmingCharacters(in: .whitespacesAndNewlines)
         if trimmed.isEmpty || trimmed == "-" || trimmed.uppercased() == "TBC" {

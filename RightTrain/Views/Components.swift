@@ -201,6 +201,25 @@ struct MetricView: View {
     }
 }
 
+/// A MetricView-shaped cell whose value is a platform tile.
+struct PlatformMetricView: View {
+    var platform: PlatformValue
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 3) {
+            Text(platform.caption())
+                .font(.caption.weight(.semibold))
+                .foregroundStyle(platform.isChanged ? Color.rightTrainAmber : .secondary)
+                .lineLimit(2)
+                .fixedSize(horizontal: false, vertical: true)
+            PlatformTile(platform: platform)
+        }
+        .frame(maxWidth: .infinity, alignment: .leading)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(platform.accessibilityLabel())
+    }
+}
+
 struct LiveGlancePanel: View {
     var content: ActiveWindowPresentation.LiveGlanceContent
 
@@ -227,7 +246,7 @@ struct LiveGlancePanel: View {
 
             HStack(alignment: .top, spacing: RTSpacing.compact) {
                 MetricView(label: "Timing", value: content.timingText)
-                MetricView(label: "Platform", value: content.platformText)
+                PlatformMetricView(platform: content.platform)
             }
 
             NextActionCallout(text: content.nextActionText, tone: content.statusTone)
@@ -657,7 +676,8 @@ struct EmptyStateView: View {
         VStack(spacing: 8) {
             if let symbolName {
                 Image(systemName: symbolName)
-                    .font(.system(size: 40, weight: .regular))
+                    .font(.largeTitle)
+                    .imageScale(.large)
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(tint)
                     .padding(.bottom, 4)
