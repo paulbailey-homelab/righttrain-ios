@@ -219,7 +219,7 @@ struct ActiveWindowPresentation {
             return SetupPromptContent(
                 moment: .noActiveJourney,
                 needProfile: needProfile,
-                title: "Start from your routine",
+                title: "Start from a commute",
                 statusText: "No active journey",
                 primaryActionText: "Plan and monitor",
                 detailText: "Use your saved commute details, then adjust the live window before monitoring."
@@ -240,7 +240,7 @@ struct ActiveWindowPresentation {
                 title: "Plan and monitor a journey",
                 statusText: "No active journey",
                 primaryActionText: "Choose route and time",
-                detailText: "Pick origin, destination, and travel window; RightTrain watches the live service after that."
+                detailText: "Pick your stations and departure window, and RightTrain watches the live service from there."
             )
         }
     }

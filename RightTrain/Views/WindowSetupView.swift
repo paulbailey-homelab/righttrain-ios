@@ -114,7 +114,7 @@ struct WindowSetupView: View {
             // the button says so whichever trip type is chosen.
             Text(viewModel.canUseMultiLegRouting ? viewModel.setupIntentContent.primaryActionText : "Find direct trains")
         }
-        .accessibilityHint("Searches journeys in the selected departure range.")
+        .accessibilityHint("Searches for direct trains in the departure window.")
     }
 
     private func searchJourneys() async {

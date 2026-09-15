@@ -37,7 +37,7 @@ struct SignInView: View {
                     .padding(.horizontal, RTSpacing.pageHorizontal)
                     .padding(.bottom, RTSpacing.compact)
 
-                Text("Set up a route or routine, then let RightTrain watch the timing, platform, disruption, and next action. Alerts are for action-needed changes, not reassurance noise.")
+                Text("Set up a route or commute, and RightTrain watches its timing, platform, and disruptions. You're only alerted when you need to act.")
                     .font(.system(size: 15, weight: .regular))
                     .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
                     .fixedSize(horizontal: false, vertical: true)
@@ -99,7 +99,7 @@ struct SignInView: View {
                 Text("No contact details by default")
                     .font(.system(size: 13, weight: .semibold))
                     .foregroundStyle(Color.rightTrainInk)
-                Text("Your device gets a private key for journeys, routines, and live alerts. No email, phone number, or password is needed.")
+                Text("Your device gets a private key for journeys, commutes, and live alerts. No email, phone number, or password is needed.")
                     .font(.system(size: 12, weight: .regular))
                     .foregroundStyle(Color.rightTrainInk.opacity(RTOpacity.secondary))
                     .fixedSize(horizontal: false, vertical: true)

@@ -42,7 +42,7 @@ final class AppOperationState {
             } else if apiError.isMissingEndpoint {
                 alertState = .backendVersion("This backend does not expose the requested API yet. Deploy a compatible API image.")
             } else if apiError.isEmptyWindow {
-                alertState = .emptyWindow("No journeys were found in that range. Try a wider departure range.")
+                alertState = .emptyWindow("No trains leave in that window. Try a wider departure window.")
             } else {
                 alertState = .network(apiError.localizedDescription)
             }

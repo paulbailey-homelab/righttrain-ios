@@ -433,7 +433,7 @@ private struct PlanSearchResultsView: View {
                 pendingPinAction = nil
             }
         } message: {
-            Text("RightTrain can keep one live Pin at a time. This removes your current Pin and pins this instead.")
+            Text("You can have one Pin at a time, so your current Pin will be removed.")
         }
     }
 

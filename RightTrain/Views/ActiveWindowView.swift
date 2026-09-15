@@ -25,7 +25,7 @@ struct ActiveWindowView: View {
             }
             Button("Keep Pin", role: .cancel) {}
         } message: {
-            Text("This removes the current \(unpinTargetName.capitalized) Pin from RightTrain.")
+            Text(unpinTargetName == "search" ? "RightTrain will stop watching these trains." : "RightTrain will stop watching this journey.")
         }
     }
 
@@ -452,7 +452,7 @@ struct ActiveOnTrainJourneyView: View {
             }
             Button("Keep Pin", role: .cancel) {}
         } message: {
-            Text("This removes the current Journey Pin from RightTrain.")
+            Text("RightTrain will stop watching this journey.")
         }
     }
 

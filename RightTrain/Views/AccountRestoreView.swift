@@ -38,7 +38,7 @@ struct AccountRestoreView: View {
                 Section {
                     SettingsAccountValueRow(title: "Preference version", systemImage: "number", value: "\(preferenceSet.version)")
                     SettingsAccountValueRow(title: "Last synced", systemImage: "clock", value: preferenceSet.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                    SettingsAccountValueRow(title: "Saved routines", systemImage: "tram", value: "\(preferenceSet.commuteRoutines.count)")
+                    SettingsAccountValueRow(title: "Saved commutes", systemImage: "tram", value: "\(preferenceSet.commuteRoutines.count)")
                 } header: {
                     Label("Synced preferences", systemImage: "arrow.down.doc")
                 }

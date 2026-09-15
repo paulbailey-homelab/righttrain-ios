@@ -68,7 +68,7 @@ struct SearchPinToolbarButton: View {
         // The one tinted glass control on the results screen: pinning is its
         // primary action.
         .buttonStyle(.glassProminent)
-        .accessibilityHint("Creates a Search Pin for \(recommendationCount) direct trains in this departure range.")
+        .accessibilityHint("Creates a Search Pin for \(recommendationCount) direct trains in this departure window.")
     }
 }
 

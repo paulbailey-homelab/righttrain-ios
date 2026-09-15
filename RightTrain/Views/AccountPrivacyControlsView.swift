@@ -99,7 +99,7 @@ struct AccountPrivacyControlsView: View {
                     value: "\(export.preferenceSet.version)"
                 )
                 SettingsAccountValueRow(
-                    title: "Saved Routines",
+                    title: "Saved Commutes",
                     systemImage: "tram",
                     value: "\(export.preferenceSet.commuteRoutines.count)"
                 )
