@@ -149,9 +149,10 @@ struct JourneyDetailView: View {
     private func journeyOverviewCard(_ detail: JourneyDetail, surface: RTSurface) -> some View {
         VStack(alignment: .leading, spacing: RTSpacing.cardPadding) {
             HStack(alignment: .center, spacing: RTSpacing.small) {
-                RTStatusPill(
-                    statusText: JourneyFormatting.displayStatusText(detail),
-                    surface: surface
+                StatusPill(
+                    text: JourneyFormatting.displayStatusText(detail),
+                    tone: surface.pillTone,
+                    style: .dot
                 )
 
                 Spacer(minLength: RTSpacing.small)
@@ -181,7 +182,7 @@ struct JourneyDetailView: View {
                 prefersStackedLayout: dynamicTypeSize.prefersExpandedLayout
             )
         }
-        .rtCard(padding: RTSpacing.cardPadding, radius: RTRadius.heroCard)
+        .rtCard(padding: RTSpacing.cardPadding)
         .accessibilityElement(children: .contain)
     }
 

@@ -560,7 +560,7 @@ private struct LoadingOverlay: View {
                     .controlSize(.large)
                     .tint(Color.rightTrainActionInk)
                     .padding(22)
-                    .glassEffect(.regular, in: .rect(cornerRadius: 22))
+                    .glassEffect(.regular, in: .rect(cornerRadius: RTRadius.floating))
                     .accessibilityLabel("Loading")
             }
         }

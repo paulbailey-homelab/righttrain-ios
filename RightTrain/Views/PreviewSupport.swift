@@ -1150,7 +1150,7 @@ struct PreviewFeedbackReviewScreen: View {
                                 .foregroundStyle(Color.rightTrainOnAccent)
                                 .frame(maxWidth: .infinity)
                                 .frame(height: RTSize.buttonHeight)
-                                .background(Color.rightTrainActionInk, in: RoundedRectangle(cornerRadius: RTRadius.button))
+                                .background(Color.rightTrainActionInk, in: Capsule())
                         }
                         .buttonStyle(.plain)
                     }

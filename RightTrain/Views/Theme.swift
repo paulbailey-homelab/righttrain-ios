@@ -61,6 +61,16 @@ enum RTSurface: Equatable {
 
     var isStatus: Bool { self != .neutral }
 
+    /// The status pill tone for text on this surface.
+    var pillTone: StatusPill.Tone {
+        switch self {
+        case .good: .green
+        case .warn: .amber
+        case .bad: .red
+        case .neutral: .accent
+        }
+    }
+
     var bg: Color {
         .rightTrainSurfaceCream
     }
@@ -128,17 +138,6 @@ enum RTOpacity {
     static let tertiary: Double = 0.44
     /// Hairlines, borders, disabled states.
     static let faint: Double = 0.22
-}
-
-// MARK: - Radius tokens
-
-enum RTRadius {
-    static let chip: CGFloat     = 8
-    /// Matches inset-grouped list sections.
-    static let card: CGFloat     = 12
-    static let button: CGFloat   = 12
-    static let heroCard: CGFloat = 12
-    static let live: CGFloat     = 22
 }
 
 // MARK: - Spacing tokens

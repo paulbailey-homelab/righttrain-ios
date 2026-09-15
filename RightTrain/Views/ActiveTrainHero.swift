@@ -129,7 +129,7 @@ struct HeroTrainCard: View {
                 Rectangle()
                     .fill(countdown.tone.color)
                     .frame(width: 3)
-                    .clipShape(RoundedRectangle(cornerRadius: 1.5))
+                    .clipShape(Capsule())
                     .padding(.vertical, RTSpacing.compact)
                     .accessibilityHidden(true)
             }

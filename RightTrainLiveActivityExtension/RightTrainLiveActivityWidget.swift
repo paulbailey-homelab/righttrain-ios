@@ -1335,10 +1335,10 @@ private struct ConnectionTimelineRow: View {
         }
         .padding(.vertical, 3)
         .padding(.horizontal, emphasized ? 8 : 0)
-        .background(emphasized ? Color.rightTrainLate.opacity(0.08) : Color.clear, in: RoundedRectangle(cornerRadius: 7))
+        .background(emphasized ? Color.rightTrainLate.opacity(0.08) : Color.clear, in: RoundedRectangle(cornerRadius: RTRadius.chip))
         .overlay {
             if emphasized {
-                RoundedRectangle(cornerRadius: 7)
+                RoundedRectangle(cornerRadius: RTRadius.chip)
                     .stroke(Color.rightTrainLate.opacity(0.42), lineWidth: 1)
             }
         }
@@ -2304,9 +2304,9 @@ private struct InterchangeBanner: View {
         }
         .padding(.horizontal, 10)
         .padding(.vertical, 6)
-        .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: 12, style: .continuous))
+        .background(tint.opacity(0.10), in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
         .overlay(
-            RoundedRectangle(cornerRadius: 12, style: .continuous)
+            RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous)
                 .stroke(tint.opacity(approaching ? 0.55 : 0.25), lineWidth: approaching ? 1.5 : 1)
         )
         .accessibilityElement(children: .combine)
