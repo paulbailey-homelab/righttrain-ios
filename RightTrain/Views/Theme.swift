@@ -67,7 +67,7 @@ enum RTSurface: Equatable {
     case good    // emerald  — on time / pre-departure default
     case warn    // amber    — delayed
     case bad     // deep red — cancelled
-    case neutral // cream    — no live state / planning / settings
+    case neutral // system   — no live state / planning / settings
 
     var isStatus: Bool { self != .neutral }
 
@@ -130,7 +130,7 @@ extension View {
 enum RTOpacity {
     /// Emphasised secondary content (eyebrow headers over status colour).
     static let emphasized: Double = 0.72
-    /// Standard secondary text on cream surfaces.
+    /// Standard secondary text on page and card surfaces.
     static let dim: Double = 0.62
     /// Supporting text a step quieter than dim (metric labels, captions).
     static let secondary: Double = 0.55
@@ -169,6 +169,62 @@ enum RTSpacing {
     /// content, so this only needs a small breathing gap.
     static let bottomSafeArea: CGFloat  = 16
     static let statusBarSafeArea: CGFloat = 50
+}
+
+// MARK: - Layout tokens
+
+enum RTLayout {
+    /// Widest a column of guidance or rows grows before it centres — UIKit's
+    /// readable content width at the default text size. Phones never reach
+    /// it; iPhone Duo's inner display in landscape and wide split widths do,
+    /// and without it countdown and platform drift to opposite edges.
+    static let readableWidth: CGFloat = 672
+}
+
+private struct ReadableContentMargins: ViewModifier {
+    @ScaledMetric(relativeTo: .body) private var readableWidth = RTLayout.readableWidth
+    @State private var containerWidth: CGFloat = 0
+
+    func body(content: Content) -> some View {
+        content
+            // Safe-area padding rather than `contentMargins`: contentMargins
+            // replaces a List's native row inset (rows went edge to edge on
+            // phones), whereas padding adds to it and is a no-op at zero.
+            .safeAreaPadding(.horizontal, max(0, (containerWidth - readableWidth) / 2))
+            // Measured outside the padding so the inset can't feed back
+            // into the width it's computed from.
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.size.width
+            } action: { width in
+                containerWidth = width
+            }
+    }
+}
+
+private struct ReadableWidthFrame: ViewModifier {
+    @ScaledMetric(relativeTo: .body) private var readableWidth = RTLayout.readableWidth
+
+    func body(content: Content) -> some View {
+        content
+            .frame(maxWidth: readableWidth)
+            .frame(maxWidth: .infinity)
+    }
+}
+
+extension View {
+    /// Centres a ScrollView, List or Form's content in a readable column once
+    /// the container is wider than `RTLayout.readableWidth`. Apply it to the
+    /// scroll container itself so each screen measures its own width (sheets
+    /// and split columns are narrower than the window).
+    func readableContentMargins() -> some View {
+        modifier(ReadableContentMargins())
+    }
+
+    /// Caps floating, non-scrolling chrome (bars, banners) to the same
+    /// readable column as `readableContentMargins()`.
+    func readableWidthFrame() -> some View {
+        modifier(ReadableWidthFrame())
+    }
 }
 
 // MARK: - Size tokens

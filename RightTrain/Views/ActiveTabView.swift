@@ -51,6 +51,7 @@ struct ActiveTabView: View {
                 .padding(.horizontal, RTSpacing.pageHorizontal)
                 .padding(.vertical, RTSpacing.pageVertical)
             }
+            .readableContentMargins()
             .safeAreaPadding(.bottom, RTSpacing.bottomSafeArea)
             .safeAreaInset(edge: .top, spacing: 0) {
                 TimelineView(.periodic(from: .now, by: 30)) { context in
@@ -200,6 +201,7 @@ struct ActiveTabView: View {
             .padding(RTSpacing.cardPadding)
             .glassEffect(.regular, in: .rect(cornerRadius: 28))
             .padding(.horizontal, RTSpacing.pageHorizontal)
+            .readableWidthFrame()
             .padding(.vertical, RTSpacing.small)
             .accessibilitySortPriority(10)
         }

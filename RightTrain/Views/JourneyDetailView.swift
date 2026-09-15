@@ -33,6 +33,7 @@ struct JourneyDetailView: View {
                     .padding(.horizontal, RTSpacing.pageHorizontal)
                     .padding(.vertical, RTSpacing.cardPadding + 2)
                 }
+                .readableContentMargins()
                 .safeAreaPadding(.bottom, RTSpacing.bottomSafeArea + RTSpacing.sectionGap)
                 .scrollBounceBehavior(.always, axes: .vertical)
                 .scrollIndicators(.visible)

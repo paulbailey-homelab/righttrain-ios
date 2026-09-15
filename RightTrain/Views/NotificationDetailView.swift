@@ -84,6 +84,7 @@ private struct NotificationDetailContentView: View {
             .padding(.vertical, RTSpacing.pageVertical)
             .lightSurfaceForeground()
         }
+        .readableContentMargins()
         .background(Color.rightTrainSurfaceCream.ignoresSafeArea())
         .safeAreaBar(edge: .bottom) {
             if isRecommendedDeparted {

@@ -61,6 +61,7 @@ struct AccountCreationView: View {
                 }
             }
         }
+        .readableContentMargins()
         .navigationTitle("Create account")
         .navigationBarTitleDisplayMode(.inline)
     }

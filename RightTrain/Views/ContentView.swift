@@ -323,6 +323,7 @@ private struct PlanTabView: View {
                     .padding(.horizontal, RTSpacing.pageHorizontal)
                     .padding(.vertical, RTSpacing.pageVertical)
             }
+            .readableContentMargins()
         } else {
             WindowSetupView(
                 onStationFieldEditingBegan: { target in
@@ -402,6 +403,7 @@ private struct PlanSearchResultsView: View {
             }
         }
         .listStyle(.insetGrouped)
+        .readableContentMargins()
         .toolbar {
             if let response = viewModel.recommendationResponse,
                !response.recommendations.isEmpty || response.topRecommendation != nil {

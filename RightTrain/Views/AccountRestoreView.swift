@@ -50,6 +50,7 @@ struct AccountRestoreView: View {
                 }
             }
         }
+        .readableContentMargins()
         .navigationTitle("Log in")
         .navigationBarTitleDisplayMode(.inline)
     }

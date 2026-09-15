@@ -65,6 +65,7 @@ struct WindowSetupView: View {
                 Text("RightTrain compares trains leaving within this window.")
             }
         }
+        .readableContentMargins()
         .contentMargins(.top, RTSpacing.small, for: .scrollContent)
         .safeAreaBar(edge: .bottom) {
             searchJourneysButton
