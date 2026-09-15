@@ -36,6 +36,7 @@
 		7B000000000000000000011B /* NotificationPermissionView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000011A /* NotificationPermissionView.swift */; };
 		7B000000000000000000011D /* Components.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000011C /* Components.swift */; };
 		7B000000000000000000011F /* PreviewSupport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000011E /* PreviewSupport.swift */; };
+		7B0000000000000000000601 /* PinnedWidePrototypes.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000600 /* PinnedWidePrototypes.swift */; };
 		7B0000000000000000000131 /* DeviceCheck.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000130 /* DeviceCheck.framework */; };
 		7B0000000000000000000133 /* Security.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000132 /* Security.framework */; };
 		7B0000000000000000000135 /* UserNotifications.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000134 /* UserNotifications.framework */; };
@@ -162,6 +163,7 @@
 		7B000000000000000000011A /* NotificationPermissionView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = NotificationPermissionView.swift; sourceTree = "<group>"; };
 		7B000000000000000000011C /* Components.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Components.swift; sourceTree = "<group>"; };
 		7B000000000000000000011E /* PreviewSupport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PreviewSupport.swift; sourceTree = "<group>"; };
+		7B0000000000000000000600 /* PinnedWidePrototypes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PinnedWidePrototypes.swift; sourceTree = "<group>"; };
 		7B0000000000000000000120 /* RightTrain.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = RightTrain.entitlements; sourceTree = "<group>"; };
 		7B0000000000000000000122 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		7B0000000000000000000130 /* DeviceCheck.framework */ = {isa = PBXFileReference; lastKnownFileType = wrapper.framework; name = DeviceCheck.framework; path = System/Library/Frameworks/DeviceCheck.framework; sourceTree = SDKROOT; };
@@ -391,6 +393,7 @@
 				7B0000000000000000000162 /* JourneyFormatting.swift */,
 				7B000000000000000000016C /* UserDisplay.swift */,
 				7B0000000000000000000160 /* Theme.swift */,
+				7B0000000000000000000600 /* PinnedWidePrototypes.swift */,
 				7B000000000000000000011E /* PreviewSupport.swift */,
 			);
 			path = Views;
@@ -642,6 +645,7 @@
 				7B0000000000000000000171 /* SettingsProfileView.swift in Sources */,
 				7B0000000000000000000175 /* CommuteRoutinesView.swift in Sources */,
 				7B000000000000000000011F /* PreviewSupport.swift in Sources */,
+				7B0000000000000000000601 /* PinnedWidePrototypes.swift in Sources */,
 				7B0000000000000000000201 /* RightTrainLiveActivityAttributes.swift in Sources */,
 				7B0000000000000000000204 /* LiveActivityCoordinator.swift in Sources */,
 				7B0000000000000000000221 /* LiveActivityIntents.swift in Sources */,

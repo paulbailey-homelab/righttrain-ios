@@ -77,7 +77,10 @@ struct RightTrainApp: App {
     @ViewBuilder
     private var rootContent: some View {
 #if DEBUG
-        if previewLaunch?.usesNotificationPermissionReview == true {
+        if previewLaunch != nil,
+           let prototype = PinnedWidePrototype(arguments: ProcessInfo.processInfo.arguments) {
+            PinnedWidePrototypeFrame(prototype: prototype)
+        } else if previewLaunch?.usesNotificationPermissionReview == true {
             PreviewNotificationPermissionReviewScreen()
         } else if previewLaunch?.usesOnboardingReview == true {
             PreviewOnboardingReviewScreen()
