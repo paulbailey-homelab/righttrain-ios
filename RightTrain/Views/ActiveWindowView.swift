@@ -9,7 +9,19 @@ struct ActiveWindowView: View {
     @State private var isDeleting = false
     var window: WindowSubscription
     var showsJustDepartedPrompt = true
+    var layout: PinnedLayout = .column
+    /// Shown under the trailing column in the board layout, where the page
+    /// no longer scrolls as one.
+    var boardFooter: AnyView? = nil
     var loadDetail: (DirectWindowRecommendation) async -> Void
+
+    enum PinnedLayout {
+        /// One column inside the tab's scroll view.
+        case column
+        /// Wide screens: the countdown and platform stay put on the left
+        /// while the rest of the search scrolls on the right.
+        case board
+    }
 
     var body: some View {
         TimelineView(.periodic(from: .now, by: 30)) { context in
@@ -44,6 +56,42 @@ struct ActiveWindowView: View {
 
         let isStale = glance.moment == .staleData || glance.moment == .offline
 
+        switch layout {
+        case .column:
+            VStack(alignment: .leading, spacing: 0) {
+                leadingColumn(presentation: presentation, now: now, surface: surface, countdown: heroCountdown, showsHero: showsHero, glance: glance, isStale: isStale)
+                trailingColumn(presentation: presentation, now: now, surface: surface, countdown: heroCountdown)
+            }
+        case .board:
+            HStack(alignment: .top, spacing: RTSpacing.sectionGap) {
+                ScrollView {
+                    leadingColumn(presentation: presentation, now: now, surface: surface, countdown: heroCountdown, showsHero: showsHero, glance: glance, isStale: isStale)
+                        .padding(.vertical, RTSpacing.pageVertical)
+                }
+                .frame(width: RTLayout.boardLeadingWidth)
+                .scrollBounceBehavior(.basedOnSize)
+
+                ScrollView {
+                    VStack(alignment: .leading, spacing: RTSpacing.sectionGap) {
+                        trailingColumn(presentation: presentation, now: now, surface: surface, countdown: heroCountdown)
+                        boardFooter
+                    }
+                    .padding(.vertical, RTSpacing.pageVertical)
+                }
+            }
+        }
+    }
+
+    @ViewBuilder
+    private func leadingColumn(
+        presentation: ActiveWindowPresentation,
+        now: Date,
+        surface: RTSurface,
+        countdown heroCountdown: ActiveWindowPresentation.CountdownDisplay,
+        showsHero: Bool,
+        glance: ActiveWindowPresentation.LiveGlanceContent,
+        isStale: Bool
+    ) -> some View {
         VStack(alignment: .leading, spacing: 0) {
             statusPillRow(
                 presentation: presentation,
@@ -72,7 +120,17 @@ struct ActiveWindowView: View {
                 )
                 .padding(.bottom, RTSpacing.sectionGap)
             }
+        }
+    }
 
+    @ViewBuilder
+    private func trailingColumn(
+        presentation: ActiveWindowPresentation,
+        now: Date,
+        surface: RTSurface,
+        countdown heroCountdown: ActiveWindowPresentation.CountdownDisplay
+    ) -> some View {
+        VStack(alignment: .leading, spacing: 0) {
             if presentation.heroIsPinnedTrain {
                 pinnedNextStepCard(
                     presentation: presentation,

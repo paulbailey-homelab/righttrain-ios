@@ -179,6 +179,13 @@ enum RTLayout {
     /// it; iPhone Duo's inner display in landscape and wide split widths do,
     /// and without it countdown and platform drift to opposite edges.
     static let readableWidth: CGFloat = 672
+    /// Container width at which Pinned switches to the board layout. iPhone
+    /// Duo's inner display in landscape (951pt) qualifies; in portrait
+    /// (669pt) two columns would each be too narrow for a train row.
+    static let boardMinimumWidth: CGFloat = 820
+    /// The board's fixed hero column: wide enough for the countdown and
+    /// platform side by side.
+    static let boardLeadingWidth: CGFloat = 400
 }
 
 private struct ReadableContentMargins: ViewModifier {

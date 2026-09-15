@@ -26,6 +26,7 @@ struct ActiveTabView: View {
     @State private var routePath: [AppRoute] = []
     @State private var preparedShareItem: ShareSheetItem?
     @State private var isPreparingShare = false
+    @State private var contentWidth: CGFloat = 0
 
     /// Current surface colour derived from the hero recommendation's live status.
     private var activeSurface: RTSurface {
@@ -40,23 +41,44 @@ struct ActiveTabView: View {
 
     var body: some View {
         NavigationStack(path: $routePath) {
-            ScrollView {
-                VStack(alignment: .leading, spacing: RTSpacing.sectionGap) {
-                    activeJourneyContent
-                        // Live refreshes land outside any transaction, so
-                        // without this the numeric content transitions on
-                        // times, delays and platforms never play.
-                        .animation(reduceMotion ? nil : .snappy, value: activeWindowViewModel.liveRefreshGeneration)
+            Group {
+                if let boardWindow {
+                    // Each column scrolls on its own, so the hero isn't
+                    // inside the page-level scroll view.
+                    ActiveWindowView(
+                        window: boardWindow,
+                        showsJustDepartedPrompt: false,
+                        layout: .board,
+                        boardFooter: AnyView(BetaOnboardingView()),
+                        loadDetail: openDetail(for:)
+                    )
+                    .animation(reduceMotion ? nil : .snappy, value: activeWindowViewModel.liveRefreshGeneration)
+                    .padding(.horizontal, RTSpacing.sectionGap)
+                } else {
+                    ScrollView {
+                        VStack(alignment: .leading, spacing: RTSpacing.sectionGap) {
+                            activeJourneyContent
+                                // Live refreshes land outside any transaction, so
+                                // without this the numeric content transitions on
+                                // times, delays and platforms never play.
+                                .animation(reduceMotion ? nil : .snappy, value: activeWindowViewModel.liveRefreshGeneration)
 
-                    // Scrolls with the content: a pinned bottom strip used
-                    // to cover a third of the screen and clip the cards.
-                    BetaOnboardingView()
+                            // Scrolls with the content: a pinned bottom strip used
+                            // to cover a third of the screen and clip the cards.
+                            BetaOnboardingView()
+                        }
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                        .padding(.horizontal, RTSpacing.pageHorizontal)
+                        .padding(.vertical, RTSpacing.pageVertical)
+                    }
+                    .readableContentMargins()
                 }
-                .frame(maxWidth: .infinity, alignment: .leading)
-                .padding(.horizontal, RTSpacing.pageHorizontal)
-                .padding(.vertical, RTSpacing.pageVertical)
             }
-            .readableContentMargins()
+            .onGeometryChange(for: CGFloat.self) { proxy in
+                proxy.size.width
+            } action: { width in
+                contentWidth = width
+            }
             .safeAreaPadding(.bottom, RTSpacing.bottomSafeArea)
             .safeAreaInset(edge: .top, spacing: 0) {
                 TimelineView(.periodic(from: .now, by: 30)) { context in
@@ -93,6 +115,16 @@ struct ActiveTabView: View {
                 handlePendingRoute(appCoordinator.pendingRoute)
             }
         }
+    }
+
+    /// The Search or Journey Pin to lay out as a board, when the screen is
+    /// wide enough. Itineraries and on-board journeys keep the column.
+    private var boardWindow: WindowSubscription? {
+        guard contentWidth >= RTLayout.boardMinimumWidth,
+              activePrimaryContent == .window else {
+            return nil
+        }
+        return activeWindowViewModel.activeWindow
     }
 
     @ViewBuilder
