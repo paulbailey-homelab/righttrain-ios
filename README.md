@@ -44,11 +44,24 @@ journey is active, active guidance first once monitoring exists, and
 action-needed-only push/Live Activity interruptions. The screenshot evidence
 checklist lives at `design/review-screenshots/ios-redesign-checklist.md`.
 
-The app is deliberately light-only: the cream/paper editorial identity has no
-dark counterpart, so `Info.plist` sets `UIUserInterfaceStyle = Light` and
-views must not add per-view colour-scheme overrides. The Live Activity widget
-extension is exempt — it renders on the lock screen, where dark appearance
-still applies, and manages its own fixed colours.
+The app follows the system appearance. Screens use native structure
+(inset-grouped lists and forms, visible navigation bars) and iOS semantic
+colours, so they read correctly in light and dark mode; brand identity comes
+from the green accent. The historical `Cream`/`Paper` token names in
+`Views/Theme.swift` now resolve to system colours — don't reintroduce fixed
+cream surfaces or per-view colour-scheme overrides. Liquid Glass is reserved
+for floating and navigation controls (tab bar accessory, bottom action bars,
+banners); content cards and rows stay solid. The Live Activity widget
+extension manages its own colours for the Lock Screen and Dynamic Island.
+
+Layouts must not assume a phone-sized screen. iPhone Duo's inner display
+ignores the portrait-only orientation setting and reports regular size
+classes, so apply `readableContentMargins()` to each screen's `ScrollView`,
+`List` or `Form` (and `readableWidthFrame()` to floating bars) to keep content
+in a centred readable column once the container is wider than
+`RTLayout.readableWidth`. Compact Dynamic Island content reads
+`isDynamicIslandLimitedInWidth` (iOS 27) to drop to a narrower form in
+landscape.
 
 ## Local Build
 
