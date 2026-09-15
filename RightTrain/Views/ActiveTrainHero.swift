@@ -249,6 +249,7 @@ private struct HeroCountdownText: View {
 /// no card chrome needed.
 struct StatusFirstHeroBlock: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var presentation: ActiveWindowPresentation
     var countdown: ActiveWindowPresentation.CountdownDisplay
     var surface: RTSurface
@@ -291,7 +292,12 @@ struct StatusFirstHeroBlock: View {
         VStack(alignment: .leading, spacing: 2) {
             // The countdown and the platform are the two things to act on,
             // so they share the top row at the same scale.
-            HStack(alignment: .lastTextBaseline, spacing: RTSpacing.compact) {
+            // Side by side the two heroes squeeze each other at accessibility
+            // sizes, so they stack there.
+            let heroLayout = dynamicTypeSize.isAccessibilitySize
+                ? AnyLayout(VStackLayout(alignment: .leading, spacing: RTSpacing.small))
+                : AnyLayout(HStackLayout(alignment: .lastTextBaseline, spacing: RTSpacing.compact))
+            heroLayout {
                 VStack(alignment: .leading, spacing: 0) {
                     if let prefix = countdownPrefix {
                         Text(prefix)
@@ -300,7 +306,7 @@ struct StatusFirstHeroBlock: View {
                     }
 
                     Text(countdownValue)
-                        .font(.system(size: 56, weight: .bold, design: .rounded))
+                        .heroNumberFont(size: 56)
                         .foregroundStyle(isStale ? AnyShapeStyle(.secondary) : AnyShapeStyle(surface.ink))
                         .monospacedDigit()
                         .contentTransition(.numericText(countsDown: countdown.targetDate.map { $0 > now } ?? false))
@@ -312,14 +318,18 @@ struct StatusFirstHeroBlock: View {
                 }
                 .layoutPriority(1)
 
-                Spacer(minLength: RTSpacing.small)
+                if !dynamicTypeSize.isAccessibilitySize {
+                    Spacer(minLength: RTSpacing.small)
+                }
 
                 platformHero
             }
 
             Text(presentation.routeTitle)
                 .font(.subheadline.weight(.semibold))
-                .lineLimit(1)
+                // Wrap rather than truncate once the text is large enough
+                // that shrinking can't fit a long route name.
+                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
                 .minimumScaleFactor(0.82)
         }
     }
@@ -329,7 +339,7 @@ struct StatusFirstHeroBlock: View {
         let hasKnownPlatform = value != "-" && value.uppercased() != "TBC"
         let isExpected = hasKnownPlatform && !platform.confirmed
         let changedFrom = hasKnownPlatform ? platform.secondary : nil
-        return VStack(alignment: .trailing, spacing: 0) {
+        return VStack(alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .trailing, spacing: 0) {
             Text(platformLabel(changedFrom: changedFrom, isExpected: isExpected))
                 .font(.subheadline.weight(.medium))
                 .foregroundStyle(changedFrom != nil ? Color.rightTrainAmber : .secondary)
@@ -345,7 +355,7 @@ struct StatusFirstHeroBlock: View {
                 }
                 Text(value)
                     .italic(isExpected)
-                    .font(.system(size: 56, weight: .bold, design: .rounded))
+                    .heroNumberFont(size: 56)
                     .monospacedDigit()
                     .contentTransition(.numericText())
                     .lineLimit(1)
@@ -377,11 +387,13 @@ struct StatusFirstHeroBlock: View {
     // MARK: - Time strip
 
     private var timeStrip: some View {
-        HStack(spacing: 0) {
+        let stacked = dynamicTypeSize.isAccessibilitySize
+        let layout = stacked ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))
+        return layout {
             timeCell(label: "Dep", display: depDisplay)
 
             Divider()
-                .padding(.vertical, RTSpacing.compact)
+                .padding(stacked ? .horizontal : .vertical, RTSpacing.compact)
 
             timeCell(label: "Arr", display: arrDisplay)
         }

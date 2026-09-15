@@ -540,7 +540,7 @@ private struct ActiveItineraryPlanHeroCard: View {
                         .foregroundStyle(.secondary)
                     Text(platformValue)
                         .italic(!platform.confirmed && platformValue != "TBC")
-                        .font(.system(size: 34, weight: .bold, design: .rounded))
+                        .heroNumberFont(size: 34)
                         .monospacedDigit()
                         .lineLimit(1)
                         .minimumScaleFactor(0.6)

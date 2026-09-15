@@ -482,6 +482,8 @@ private struct SoftDivider: View {
 /// Compact train row rendered inside the other-trains container on a status surface.
 /// All colours are derived from `surface` so they read correctly on emerald / amber / deep-red.
 struct StatusFirstTrainRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .subheadline) private var timeColumnWidth: CGFloat = 46
     var recommendation: DirectWindowRecommendation
     var surface: RTSurface
     var isPinned: Bool
@@ -530,60 +532,83 @@ struct StatusFirstTrainRow: View {
     }
 
     private var rowContent: some View {
-        HStack(alignment: .center, spacing: RTSpacing.small) {
-            // Status indicator dot — accent for on-time, accent-of-status-surface for anomalies
-            Circle()
-                .fill(dotColor)
-                .frame(width: 8, height: 8)
-                .accessibilityHidden(true)
-
-            // Dep → Arr timing columns
-            HStack(alignment: .top, spacing: 5) {
-                surfaceTimeView(depDisplay)
-                    .frame(width: 46, alignment: .leading)
-
-                Text("→")
-                    .font(.caption2.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-                    .padding(.top, 2)
-                    .accessibilityHidden(true)
-
-                surfaceTimeView(arrDisplay)
-                    .frame(width: 46, alignment: .leading)
-            }
-
-            Spacer(minLength: RTSpacing.xs)
-
-            // Trailing: optional anomaly label + platform chip + chevron
-            HStack(alignment: .center, spacing: 6) {
-                if let status = rowStatus {
-                    Text(status.text)
-                        .font(.footnote.weight(.semibold))
-                        .foregroundStyle(status.tone.color)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.8)
+        Group {
+            // At accessibility sizes the times need the whole width, so the
+            // status and platform move to a second line.
+            if dynamicTypeSize.isAccessibilitySize {
+                VStack(alignment: .leading, spacing: RTSpacing.xs) {
+                    HStack(alignment: .center, spacing: RTSpacing.small) {
+                        statusDot
+                        timingColumns
+                    }
+                    trailingDetails
                 }
-
-                Text(compactPlatform)
-                    .italic(isExpectedPlatform)
-                    .font(.footnote.weight(.semibold))
-                    .monospacedDigit()
-                    .foregroundStyle(.primary)
-                    .frame(minWidth: 26, minHeight: 24)
-                    .padding(.horizontal, 4)
-                    .background(Color.rightTrainInsetFill, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
-                    .lineLimit(1)
-
-                Image(systemName: "chevron.right")
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
-                    .accessibilityHidden(true)
+            } else {
+                HStack(alignment: .center, spacing: RTSpacing.small) {
+                    statusDot
+                    timingColumns
+                    Spacer(minLength: RTSpacing.xs)
+                    trailingDetails
+                }
             }
-            .layoutPriority(1)
         }
         .padding(.vertical, RTSpacing.compact)
         .frame(maxWidth: .infinity, alignment: .leading)
         .contentShape(Rectangle())
+    }
+
+    // Status indicator dot — accent for on-time, accent-of-status-surface for anomalies
+    private var statusDot: some View {
+        Circle()
+            .fill(dotColor)
+            .frame(width: 8, height: 8)
+            .accessibilityHidden(true)
+    }
+
+    // Dep → Arr timing columns, wide enough for "23:59" at the current text size.
+    private var timingColumns: some View {
+        HStack(alignment: .top, spacing: 5) {
+            surfaceTimeView(depDisplay)
+                .frame(width: timeColumnWidth, alignment: .leading)
+
+            Text("→")
+                .font(.caption2.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .padding(.top, 2)
+                .accessibilityHidden(true)
+
+            surfaceTimeView(arrDisplay)
+                .frame(width: timeColumnWidth, alignment: .leading)
+        }
+    }
+
+    // Optional anomaly label + platform chip + chevron
+    private var trailingDetails: some View {
+        HStack(alignment: .center, spacing: 6) {
+            if let status = rowStatus {
+                Text(status.text)
+                    .font(.footnote.weight(.semibold))
+                    .foregroundStyle(status.tone.color)
+                    .lineLimit(1)
+                    .minimumScaleFactor(0.8)
+            }
+
+            Text(compactPlatform)
+                .italic(isExpectedPlatform)
+                .font(.footnote.weight(.semibold))
+                .monospacedDigit()
+                .foregroundStyle(.primary)
+                .frame(minWidth: 26, minHeight: 24)
+                .padding(.horizontal, 4)
+                .background(Color.rightTrainInsetFill, in: RoundedRectangle(cornerRadius: 6, style: .continuous))
+                .lineLimit(1)
+
+            Image(systemName: "chevron.right")
+                .font(.footnote.weight(.semibold))
+                .foregroundStyle(.tertiary)
+                .accessibilityHidden(true)
+        }
+        .layoutPriority(1)
     }
 
     // MARK: - Surface-aware time display

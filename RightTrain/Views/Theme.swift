@@ -256,6 +256,32 @@ enum RTFont {
     static let eyebrow: Font      = .system(size: 11, weight: .bold)
 }
 
+private struct HeroNumberFont: ViewModifier {
+    @ScaledMetric private var size: CGFloat
+
+    init(size: CGFloat) {
+        _size = ScaledMetric(wrappedValue: size, relativeTo: .largeTitle)
+    }
+
+    func body(content: Content) -> some View {
+        content
+            .font(.system(size: size, weight: .bold, design: .rounded))
+    }
+}
+
+extension View {
+    /// Display-size rounded numerals for the countdown and platform heroes.
+    /// Scales with Dynamic Type relative to Large Title, unlike a fixed
+    /// `.system(size:)`.
+    func heroNumberFont(size: CGFloat) -> some View {
+        modifier(HeroNumberFont(size: size))
+            // Applied outside the modifier so its @ScaledMetric reads the
+            // capped size: past AX1 a platform can't sit beside the
+            // countdown, and callers' minimum scale factors take over.
+            .dynamicTypeSize(...DynamicTypeSize.accessibility1)
+    }
+}
+
 // MARK: - Dynamic type helpers
 
 extension DynamicTypeSize {

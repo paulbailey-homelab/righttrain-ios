@@ -657,7 +657,8 @@ struct EmptyStateView: View {
         VStack(spacing: 8) {
             if let symbolName {
                 Image(systemName: symbolName)
-                    .font(.system(size: 40, weight: .regular))
+                    .font(.largeTitle)
+                    .imageScale(.large)
                     .symbolRenderingMode(.hierarchical)
                     .foregroundStyle(tint)
                     .padding(.bottom, 4)

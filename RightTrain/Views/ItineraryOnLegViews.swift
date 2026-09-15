@@ -76,7 +76,7 @@ struct ItineraryOnLegView: View {
                         .font(.subheadline.weight(.medium))
                         .foregroundStyle(.secondary)
                     Text(onwardPlatform)
-                        .font(.system(size: 44, weight: .bold, design: .rounded))
+                        .heroNumberFont(size: 44)
                         .foregroundStyle(Color.rightTrainAmber)
                         .monospacedDigit()
                         .lineLimit(1)
