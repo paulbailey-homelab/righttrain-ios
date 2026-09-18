@@ -2592,6 +2592,53 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
+    func testSwitchSelectedItineraryRecreatesSubscriptionWithChosenRoute() async {
+        let selected = TestFactory.itinerary(rank: 1, stableKey: "selected-route")
+        let alternative = TestFactory.itinerary(rank: 2, stableKey: "alternative-route")
+        let apiClient = FakeAPIClient()
+        apiClient.activeItineraryResult = .success(TestFactory.itinerarySubscription(
+            id: "itinerary-switch",
+            selectedItinerary: selected,
+            itineraries: [selected, alternative]
+        ))
+        apiClient.createItineraryResult = .success(TestFactory.itinerarySubscription(
+            id: "itinerary-switched",
+            selectedItinerary: alternative,
+            itineraries: [selected, alternative]
+        ))
+        let viewModel = makeActiveWindowViewModel(apiClient: apiClient)
+
+        await viewModel.refreshActiveWindow(showLoading: false)
+        await viewModel.switchSelectedItinerary(to: alternative)
+
+        XCTAssertEqual(apiClient.deleteItineraryRequests.last?.id, "itinerary-switch")
+        XCTAssertEqual(apiClient.createItineraryRequests.last?.input.selectedItineraryStableKey, "alternative-route")
+        XCTAssertEqual(apiClient.createItineraryRequests.last?.input.originCrs, "AAA")
+        XCTAssertEqual(apiClient.createItineraryRequests.last?.input.destinationCrs, "BBB")
+        XCTAssertEqual(apiClient.createItineraryRequests.last?.input.windowMinutes, 120)
+        XCTAssertEqual(viewModel.activeItinerary?.id, "itinerary-switched")
+    }
+
+    @MainActor
+    func testSwitchSelectedItineraryIgnoresTheRouteAlreadyMonitored() async {
+        let selected = TestFactory.itinerary(rank: 1, stableKey: "selected-route")
+        let apiClient = FakeAPIClient()
+        apiClient.activeItineraryResult = .success(TestFactory.itinerarySubscription(
+            id: "itinerary-switch",
+            selectedItinerary: selected,
+            itineraries: [selected]
+        ))
+        let viewModel = makeActiveWindowViewModel(apiClient: apiClient)
+
+        await viewModel.refreshActiveWindow(showLoading: false)
+        await viewModel.switchSelectedItinerary(to: selected)
+
+        XCTAssertTrue(apiClient.deleteItineraryRequests.isEmpty)
+        XCTAssertTrue(apiClient.createItineraryRequests.isEmpty)
+        XCTAssertEqual(viewModel.activeItinerary?.id, "itinerary-switch")
+    }
+
+    @MainActor
     func testCreateJourneyShareURLUsesActiveWindowSubscription() async {
         let apiClient = FakeAPIClient()
         apiClient.windowResult = .success(TestFactory.window(id: "window-share"))
