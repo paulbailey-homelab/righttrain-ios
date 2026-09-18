@@ -932,6 +932,42 @@ final class ActiveWindowViewModel {
         return subscription
     }
 
+    /// Switches the monitored journey to another itinerary the same search
+    /// returned. There is no server-side "select" for an existing
+    /// subscription, so this recreates it with the chosen stable key — the
+    /// same path the results screen uses when replacing an active journey.
+    /// Only offered before boarding: once a leg is under way the recovery
+    /// replan is the right tool.
+    func switchSelectedItinerary(to option: ItineraryRecommendation) async {
+        guard let itinerary = activeItinerary else {
+            return
+        }
+        let stableKey = option.stableKey.trimmingCharacters(in: .whitespacesAndNewlines)
+        guard !stableKey.isEmpty,
+              stableKey != itinerary.selectedItinerary.stableKey.trimmingCharacters(in: .whitespacesAndNewlines) else {
+            return
+        }
+        guard let departureStart = DateFormatting.date(from: itinerary.departureStart) else {
+            return
+        }
+
+        await operationState.withLoading {
+            try await replaceActiveJourneyIfNeeded()
+            _ = try await createItinerary(
+                input: CreateItinerarySubscriptionRequest(
+                    originCrs: itinerary.originCrs,
+                    destinationCrs: itinerary.destinationCrs,
+                    departureStart: departureStart,
+                    windowMinutes: itinerary.windowMinutes,
+                    maxChanges: itinerary.maxChanges,
+                    limit: itinerary.limit,
+                    selectedItineraryStableKey: stableKey
+                )
+            )
+            BetaDiagnostics.record("active_itinerary_switched")
+        }
+    }
+
     func replaceActiveJourneyIfNeeded() async throws {
         guard activeWindowID != nil || activeItineraryID != nil else {
             return

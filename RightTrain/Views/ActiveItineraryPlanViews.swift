@@ -321,6 +321,8 @@ private struct ActiveItineraryStatusHeader: View {
 struct ActiveItineraryView: View {
     @Environment(ActiveWindowViewModel.self) private var activeWindowViewModel
     @State private var expandedItineraryIDs: Set<String> = []
+    @State private var showsAlternatives = false
+    @State private var pendingSwitch: ItineraryRecommendation?
     var itinerary: ItinerarySubscription
     var loadDetail: (ItineraryLeg) async -> Void
 
@@ -336,6 +338,8 @@ struct ActiveItineraryView: View {
                 }
 
                 selectedJourneySection(now: context.date)
+
+                alternativesSection
             }
         }
         .background {
@@ -385,6 +389,82 @@ struct ActiveItineraryView: View {
                 title: "No connections",
                 message: "RightTrain could not find a usable journey for this window."
             )
+        }
+    }
+
+    /// Before boarding, the other routes this search returned are the only
+    /// way out of a journey whose change has gone tight — without them the
+    /// screen is a dead end until the Pin is deleted and rebuilt.
+    @ViewBuilder
+    private var alternativesSection: some View {
+        let alternatives = presentation.alternativeItineraries
+        if !alternatives.isEmpty {
+            VStack(alignment: .leading, spacing: RTSpacing.listItem) {
+                Divider()
+
+                Button {
+                    withAnimation(.snappy) {
+                        showsAlternatives.toggle()
+                    }
+                } label: {
+                    HStack(spacing: RTSpacing.small) {
+                        Text(alternatives.count == 1 ? "1 other route" : "\(alternatives.count) other routes")
+                            .font(.subheadline.weight(.semibold))
+                        Spacer()
+                        Image(systemName: showsAlternatives ? "chevron.up" : "chevron.down")
+                            .font(.footnote.weight(.semibold))
+                            .foregroundStyle(.tertiary)
+                    }
+                    .contentShape(Rectangle())
+                }
+                .buttonStyle(.plain)
+                .accessibilityHint(showsAlternatives
+                    ? "Hides the other routes from this search."
+                    : "Shows the other routes from this search, which you can monitor instead.")
+
+                if showsAlternatives {
+                    ForEach(alternatives) { alternative in
+                        ActiveItineraryAlternativeRow(itinerary: alternative) {
+                            pendingSwitch = alternative
+                        }
+                    }
+                }
+            }
+            .lightSurfaceForeground()
+            .confirmationDialog(
+                "Monitor this route instead?",
+                isPresented: switchConfirmationPresented,
+                titleVisibility: .visible
+            ) {
+                Button("Monitor this route") {
+                    switchToPendingItinerary()
+                }
+                Button("Cancel", role: .cancel) {
+                    pendingSwitch = nil
+                }
+            } message: {
+                Text("RightTrain will follow this route instead. Your current Journey Pin is replaced.")
+            }
+        }
+    }
+
+    private var switchConfirmationPresented: Binding<Bool> {
+        Binding {
+            pendingSwitch != nil
+        } set: { isPresented in
+            if !isPresented {
+                pendingSwitch = nil
+            }
+        }
+    }
+
+    private func switchToPendingItinerary() {
+        guard let alternative = pendingSwitch else {
+            return
+        }
+        pendingSwitch = nil
+        Task {
+            await activeWindowViewModel.switchSelectedItinerary(to: alternative)
         }
     }
 
@@ -439,6 +519,90 @@ struct ActiveItineraryView: View {
         .padding(12)
         .background(Color.rightTrainActionInk.opacity(0.08), in: RoundedRectangle(cornerRadius: RTRadius.chip))
         .lightSurfaceForeground()
+    }
+}
+
+/// One alternative route, compact enough to scan several at once: the times
+/// that decide it, and the state of its change, which is the thing that makes
+/// an alternative worth taking.
+private struct ActiveItineraryAlternativeRow: View {
+    var itinerary: ItineraryRecommendation
+    var monitor: () -> Void
+
+    var body: some View {
+        HStack(alignment: .center, spacing: RTSpacing.listItem) {
+            VStack(alignment: .leading, spacing: 3) {
+                Text("\(ItineraryFormatting.departureText(itinerary)) - \(ItineraryFormatting.arrivalText(itinerary))")
+                    .font(.subheadline.weight(.semibold))
+                    .monospacedDigit()
+
+                Text(summaryText)
+                    .font(.caption)
+                    .foregroundStyle(.secondary)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if itinerary.score.changeCount > 0 {
+                    Label(connectionText, systemImage: connectionIcon)
+                        .font(.caption2.weight(.medium))
+                        .foregroundStyle(connectionTone.color)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            Spacer(minLength: RTSpacing.small)
+
+            Button("Monitor", action: monitor)
+                .buttonStyle(.rtSecondary)
+                .fixedSize()
+                .accessibilityLabel("Monitor the \(ItineraryFormatting.departureText(itinerary)) route instead")
+        }
+        .padding(.vertical, 6)
+        .accessibilityElement(children: .contain)
+    }
+
+    private var summaryText: String {
+        var parts = [
+            ItineraryFormatting.durationText(itinerary),
+            ItineraryFormatting.changesText(itinerary)
+        ]
+        if let connection = itinerary.connections.first {
+            let station = JourneyFormatting.stationDisplayName(
+                name: connection.atName,
+                fallback: connection.atCrs
+            )
+            parts.append("via \(station)")
+        }
+        return parts.joined(separator: " \u{00B7} ")
+    }
+
+    private var connection: ItineraryConnection? {
+        itinerary.connections.first
+    }
+
+    private var connectionTone: StatusPill.Tone {
+        guard let connection else {
+            return .green
+        }
+        return ItineraryFormatting.connectionTone(connection)
+    }
+
+    private var connectionIcon: String {
+        switch connection?.risk.status ?? "" {
+        case "missed":
+            return "xmark.octagon.fill"
+        case "at_risk", "tight":
+            return "exclamationmark.triangle.fill"
+        default:
+            return "arrow.triangle.branch"
+        }
+    }
+
+    private var connectionText: String {
+        guard let connection else {
+            let margin = itinerary.score.minimumConnectionMarginMinutes
+            return margin < 0 ? "\(abs(margin)) min short to change" : "\(margin) min to change"
+        }
+        return ItineraryFormatting.connectionRiskSummaryText(connection)
     }
 }
 
