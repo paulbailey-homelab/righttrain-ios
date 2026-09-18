@@ -87,6 +87,80 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
+    func testCommuteDefaultsPickerSearchesAllStations() async {
+        // Home and Work are saved places, not a leg of a journey, so the
+        // picker must not restrict Work to direct destinations from Home.
+        let apiClient = FakeAPIClient()
+        apiClient.stationSearchResult = .success([TestFactory.station(crs: "WAT", name: "London Waterloo")])
+        let viewModel = StationPickerViewModel(
+            context: StationPickerContext(
+                selectionRole: .destination,
+                routeMode: .anyRoute,
+                selectedCounterpartCRS: "EUS",
+                departureStart: nil,
+                windowMinutes: 180,
+                sourceSurface: .commuteDefaults,
+                previousSelection: nil,
+                selectionLabel: "Work"
+            ),
+            apiClient: apiClient,
+            favourites: [],
+            locationProvider: FakeStationLocationProvider(),
+            initialQuery: "Waterloo"
+        )
+
+        await viewModel.loadSearchIfNeeded()
+
+        XCTAssertFalse(viewModel.requiresDirectDestinationEligibility)
+        XCTAssertNil(viewModel.directDestinationNote)
+        XCTAssertTrue(apiClient.directDestinationStationRequests.isEmpty)
+        XCTAssertEqual(apiClient.stationSearchRequests.map({ $0.query }), ["Waterloo"])
+        XCTAssertEqual(viewModel.searchResults.map(\.crs), ["WAT"])
+    }
+
+    @MainActor
+    func testCommuteDefaultsPickerStillRejectsSameStationForHomeAndWork() {
+        let viewModel = StationPickerViewModel(
+            context: StationPickerContext(
+                selectionRole: .destination,
+                routeMode: .anyRoute,
+                selectedCounterpartCRS: "EUS",
+                departureStart: nil,
+                windowMinutes: 180,
+                sourceSurface: .commuteDefaults,
+                previousSelection: nil,
+                selectionLabel: "Work"
+            ),
+            apiClient: FakeAPIClient(),
+            favourites: [],
+            locationProvider: FakeStationLocationProvider()
+        )
+
+        XCTAssertFalse(viewModel.commit(TestFactory.station(crs: "eus", name: "London Euston")))
+        XCTAssertTrue(viewModel.commit(TestFactory.station(crs: "WAT", name: "London Waterloo")))
+    }
+
+    func testStationPickerContextNamesTheSlotItIsFilling() {
+        var context = StationPickerContext(
+            selectionRole: .destination,
+            routeMode: .anyRoute,
+            selectedCounterpartCRS: nil,
+            departureStart: nil,
+            windowMinutes: 180,
+            sourceSurface: .commuteDefaults,
+            previousSelection: nil,
+            selectionLabel: "Work"
+        )
+
+        XCTAssertEqual(context.title, "Choose work")
+        XCTAssertEqual(context.fieldTitle, "Work")
+
+        context.selectionLabel = nil
+        XCTAssertEqual(context.title, "Choose destination")
+        XCTAssertEqual(context.fieldTitle, "To")
+    }
+
+    @MainActor
     func testStationPickerRejectsSameCRSCommit() {
         let viewModel = StationPickerViewModel(
             context: StationPickerContext(

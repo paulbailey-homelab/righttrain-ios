@@ -10,6 +10,7 @@ struct CommuteRoutinesView: View {
     @State private var workStation: StationSuggestion?
     @State private var editorSheet: RoutineEditorSheet?
     @State private var routineToDelete: CommuteRoutine?
+    @State private var hasLoadedInitialData = false
 
     var body: some View {
         NavigationStack {
@@ -23,7 +24,18 @@ struct CommuteRoutinesView: View {
             .navigationBarTitleDisplayMode(.large)
             .toolbar { addToolbarItem }
             .refreshable { await refreshRoutines() }
-            .task { await loadInitialData() }
+            // Pushing the station picker disappears this view, so this runs
+            // again on the way back. Only the routines are worth reloading
+            // then: resyncing Home & Work from the server copy would discard
+            // the station just picked, whose save is still in flight.
+            .task {
+                guard !hasLoadedInitialData else {
+                    await refreshRoutines()
+                    return
+                }
+                hasLoadedInitialData = true
+                await loadInitialData()
+            }
             .onChange(of: currentHomeDefault) { _, _ in syncDefaultsFromUser() }
             .onChange(of: currentWorkDefault) { _, _ in syncDefaultsFromUser() }
             .sheet(item: $editorSheet) { sheet in
@@ -105,13 +117,13 @@ struct CommuteRoutinesView: View {
         Section {
             NavigationLink {
                 StationPickerView(
-                    context: defaultPickerContext(role: .origin, previousSelection: homeStation, counterpart: workStation),
+                    context: defaultPickerContext(role: .origin, label: "Home", previousSelection: homeStation, counterpart: workStation),
                     apiClient: appCoordinator.stationPickerAPIClient,
                     favourites: localStationFavourites,
                     locationProvider: SystemStationLocationProvider()
                 ) { station in
                     homeStation = station
-                    saveDefaults()
+                    saveDefaults(home: station, work: workStation)
                 }
             } label: {
                 StationFormLabel(title: "Home", station: homeStation, placeholder: "Choose station", showsChevron: false)
@@ -119,13 +131,13 @@ struct CommuteRoutinesView: View {
 
             NavigationLink {
                 StationPickerView(
-                    context: defaultPickerContext(role: .destination, previousSelection: workStation, counterpart: homeStation),
+                    context: defaultPickerContext(role: .destination, label: "Work", previousSelection: workStation, counterpart: homeStation),
                     apiClient: appCoordinator.stationPickerAPIClient,
                     favourites: localStationFavourites,
                     locationProvider: SystemStationLocationProvider()
                 ) { station in
                     workStation = station
-                    saveDefaults()
+                    saveDefaults(home: homeStation, work: station)
                 }
             } label: {
                 StationFormLabel(title: "Work", station: workStation, placeholder: "Choose station", showsChevron: false)
@@ -138,19 +150,18 @@ struct CommuteRoutinesView: View {
     }
 
     /// Saves as soon as a station is picked, so there's no separate Save row
-    /// that looks like placeholder text while disabled.
-    private func saveDefaults() {
-        guard hasUnsavedDefaults else { return }
+    /// that looks like placeholder text while disabled. Both stations are
+    /// passed in by the caller rather than read back off `@State`, because the
+    /// request body carries both and reading them when the task actually runs
+    /// can pick up a value that has since been resynced from the server.
+    private func saveDefaults(home: StationSuggestion?, work: StationSuggestion?) {
+        guard home?.crs != currentHomeDefault || work?.crs != currentWorkDefault else { return }
         Task {
             await viewModel.updateStationDefaults(
-                homeStation: homeStation,
-                workStation: workStation
+                homeStation: home,
+                workStation: work
             )
         }
-    }
-
-    private var hasUnsavedDefaults: Bool {
-        homeStation?.crs != currentHomeDefault || workStation?.crs != currentWorkDefault
     }
 
     private var routinesSection: some View {
@@ -323,19 +334,27 @@ struct CommuteRoutinesView: View {
         )
     }
 
+    /// Home and Work are saved places, not the two ends of a journey, so the
+    /// picker must not filter them: `.direct` here made choosing Work run the
+    /// direct-destination search from Home over the next three hours, which
+    /// comes back empty outside service hours. `selectedCounterpartCRS` is
+    /// still passed so the picker refuses to make Home and Work the same
+    /// station, and `.anyRoute` keeps that check without the filtering.
     private func defaultPickerContext(
         role: StationPickerSelectionRole,
+        label: String,
         previousSelection: StationSuggestion?,
         counterpart: StationSuggestion?
     ) -> StationPickerContext {
         StationPickerContext(
             selectionRole: role,
-            routeMode: .direct,
+            routeMode: .anyRoute,
             selectedCounterpartCRS: counterpart?.crs,
             departureStart: nil,
             windowMinutes: 180,
             sourceSurface: .commuteDefaults,
-            previousSelection: previousSelection
+            previousSelection: previousSelection,
+            selectionLabel: label
         )
     }
 
@@ -454,6 +473,7 @@ private struct RoutineEditorView: View {
     @State private var autoArmLeadMinutes = 30
     @State private var notificationsEnabled = true
     @State private var status = "active"
+    @State private var hasLoadedInitialState = false
 
     var body: some View {
         NavigationStack {
@@ -520,7 +540,15 @@ private struct RoutineEditorView: View {
                     .disabled(origin == nil || destination == nil || activeWeekdays.isEmpty)
                 }
             }
-            .onAppear(perform: loadInitialState)
+            // Only when the sheet opens. The station picker is pushed onto this
+            // same stack, so `onAppear` fires again when it pops, and an
+            // unguarded reload put From, To, the name and the departure time
+            // back to what they were before the station was chosen.
+            .onAppear {
+                guard !hasLoadedInitialState else { return }
+                hasLoadedInitialState = true
+                loadInitialState()
+            }
         }
     }
 
