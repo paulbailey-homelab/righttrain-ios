@@ -571,25 +571,22 @@ private struct CompactPlatformText: View {
 /// From iOS 27 compact and minimal presentations also show in landscape,
 /// where they can't grow, so they drop to their narrowest form. Earlier
 /// systems only show them in portrait, which is never limited.
+///
+/// This always reports "not limited" for now. The value comes from SwiftUI's
+/// `isDynamicIslandLimitedInWidth` environment key, shown in the WWDC26
+/// sessions but not yet declared in any shipped iPhoneOS SDK, so reading it
+/// fails to compile rather than falling back at runtime — an availability
+/// check doesn't help, because the symbol has to exist to build at all. That
+/// left the widget extension unbuildable by every released Xcode. Restoring
+/// the real value is a change to this one type once an SDK declares the key.
+///
+/// Reporting "not limited" is what every device running this app gets today:
+/// the landscape presentation it feeds only exists on iOS 27.
 private struct DynamicIslandWidthReader<Content: View>: View {
     @ViewBuilder var content: (_ isLimitedInWidth: Bool) -> Content
 
     var body: some View {
-        if #available(iOS 27.0, *) {
-            LimitedWidthReader(content: content)
-        } else {
-            content(false)
-        }
-    }
-
-    @available(iOS 27.0, *)
-    private struct LimitedWidthReader: View {
-        @Environment(\.isDynamicIslandLimitedInWidth) private var isLimitedInWidth
-        var content: (Bool) -> Content
-
-        var body: some View {
-            content(isLimitedInWidth)
-        }
+        content(false)
     }
 }
 
