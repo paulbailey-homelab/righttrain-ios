@@ -1,10 +1,58 @@
 import Foundation
 
+/// Where one train sits in the itinerary being monitored: which leg it is,
+/// the change at the end of it, and what comes next. The journey screen shows
+/// a single service, so without this a leg of a multi-leg journey is
+/// indistinguishable from a direct train.
+struct ItineraryLegContext: Equatable {
+    var legNumber: Int
+    var legCount: Int
+    var connection: ItineraryConnection?
+    var onwardLeg: ItineraryLeg?
+
+    var isFinalLeg: Bool {
+        legNumber >= legCount
+    }
+}
+
 enum ItineraryFormatting {
     struct StatusDisplay {
         var text: String
         var icon: String
         var tone: StatusPill.Tone
+    }
+
+    /// Places a journey-detail screen's train within the monitored itinerary.
+    ///
+    /// Only the selected itinerary is searched. The alternatives carry legs
+    /// too, and matching one of those would describe a change the traveller
+    /// is not making. Single-leg itineraries return nil: there is no leg
+    /// context worth showing when there is only one train.
+    static func legContext(
+        serviceID: Int,
+        originTPL: String?,
+        destinationTPL: String?,
+        in subscription: ItinerarySubscription
+    ) -> ItineraryLegContext? {
+        let itinerary = subscription.selectedItinerary
+        let legs = itinerary.legs
+        guard legs.count > 1 else {
+            return nil
+        }
+        guard let index = legs.firstIndex(where: { leg in
+            leg.serviceId == serviceID
+                && (originTPL == nil || leg.originTpl == originTPL)
+                && (destinationTPL == nil || leg.destinationTpl == destinationTPL)
+        }) else {
+            return nil
+        }
+        let leg = legs[index]
+        return ItineraryLegContext(
+            legNumber: index + 1,
+            legCount: legs.count,
+            connection: connection(afterLegIndex: leg.legIndex, in: itinerary),
+            onwardLeg: legs.first { $0.legIndex == leg.legIndex + 1 }
+        )
     }
 
     static func chronologicalItineraries(
