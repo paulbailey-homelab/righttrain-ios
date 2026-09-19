@@ -171,10 +171,12 @@ struct JourneyDetailView: View {
     /// of it and its risk, and the train being caught.
     private func itineraryLegCard(_ context: ItineraryLegContext, surface: RTSurface) -> some View {
         VStack(alignment: .leading, spacing: RTSpacing.small) {
+            // No Spacer in the horizontal branch: a flexible child makes
+            // ViewThatFits report a fit at any width, so the stacked
+            // fallback would never be reached and the label would truncate.
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .firstTextBaseline, spacing: RTSpacing.small) {
                     legLabel(context, surface: surface)
-                    Spacer(minLength: RTSpacing.small)
                     riskPill(context)
                 }
                 VStack(alignment: .leading, spacing: RTSpacing.small) {
@@ -182,6 +184,7 @@ struct JourneyDetailView: View {
                     riskPill(context)
                 }
             }
+            .frame(maxWidth: .infinity, alignment: .leading)
 
             if let connection = context.connection {
                 Text(ItineraryFormatting.connectionTitleText(connection))
