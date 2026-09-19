@@ -458,7 +458,7 @@ private struct RoutineEditorView: View {
     var body: some View {
         NavigationStack {
             Form {
-                Section("Route") {
+                Section {
                     TextField("Name", text: $name)
                     NavigationLink {
                         StationPickerView(
@@ -485,6 +485,13 @@ private struct RoutineEditorView: View {
                     } label: {
                         StationFormLabel(title: "To", station: destination, placeholder: "Choose destination", showsChevron: false)
                     }
+                } header: {
+                    Text("Route")
+                } footer: {
+                    // A commute can only arm a direct train, so the picker
+                    // offers direct destinations only. Say so here rather
+                    // than let someone wonder where their station went.
+                    Text("Commutes watch direct trains only. To follow a journey with a change, search for it and pin it.")
                 }
 
                 Section("Schedule") {
