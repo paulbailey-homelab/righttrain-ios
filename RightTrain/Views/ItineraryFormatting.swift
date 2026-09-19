@@ -4,7 +4,7 @@ import Foundation
 /// the change at the end of it, and what comes next. The journey screen shows
 /// a single service, so without this a leg of a multi-leg journey is
 /// indistinguishable from a direct train.
-struct ItineraryLegContext: Equatable {
+struct ItineraryLegContext {
     var legNumber: Int
     var legCount: Int
     var connection: ItineraryConnection?
