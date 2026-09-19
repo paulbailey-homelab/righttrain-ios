@@ -571,17 +571,36 @@ private struct CompactPlatformText: View {
 /// From iOS 27 compact and minimal presentations also show in landscape,
 /// where they can't grow, so they drop to their narrowest form. Earlier
 /// systems only show them in portrait, which is never limited.
+///
+/// The value comes from SwiftUI's `isDynamicIslandLimitedInWidth`, which the
+/// iOS 27 SDK declares and earlier SDKs do not. An availability check is not
+/// enough to read it: the symbol has to exist in the SDK for the file to
+/// compile at all, so an Xcode 26 toolchain cannot build this file if it
+/// mentions the key, whatever guards surround it. `RIGHTTRAIN_IOS_27_SDK`
+/// comes from an SDK-conditional build setting in the project and gates the
+/// mention itself.
+///
+/// Building against an older SDK therefore reports "not limited", which is
+/// what those builds would do anyway: the landscape presentation this feeds
+/// only exists on iOS 27. If a future SDK stops matching that condition the
+/// app still builds and simply behaves as it did before iOS 27, so a lost
+/// landscape form is the signal that the condition needs widening.
 private struct DynamicIslandWidthReader<Content: View>: View {
     @ViewBuilder var content: (_ isLimitedInWidth: Bool) -> Content
 
     var body: some View {
+        #if RIGHTTRAIN_IOS_27_SDK
         if #available(iOS 27.0, *) {
             LimitedWidthReader(content: content)
         } else {
             content(false)
         }
+        #else
+        content(false)
+        #endif
     }
 
+    #if RIGHTTRAIN_IOS_27_SDK
     @available(iOS 27.0, *)
     private struct LimitedWidthReader: View {
         @Environment(\.isDynamicIslandLimitedInWidth) private var isLimitedInWidth
@@ -591,6 +610,7 @@ private struct DynamicIslandWidthReader<Content: View>: View {
             content(isLimitedInWidth)
         }
     }
+    #endif
 }
 
 private struct CompactPlatformChangeText: View {

@@ -2794,23 +2794,58 @@ final class AppModelTests: XCTestCase {
         )
     }
 
+    /// Waits for `condition`, and fails the test if it never holds.
+    ///
+    /// A fixed number of `Task.yield()`s is not a wait: the work being waited
+    /// on may finish on another actor, and a loaded machine can exhaust the
+    /// yields before it does. Worse, falling out of such a loop silently means
+    /// the assertions that follow test a value that has not arrived yet, so
+    /// the failure is reported against them rather than against the wait.
+    /// This polls against a real deadline and says so when it expires.
     @MainActor
-    private func waitForAuthInvalidation(_ model: AppModel) async {
-        for _ in 0..<20 {
-            if model.accessToken == nil {
+    private func waitFor(
+        _ description: String,
+        timeout: Duration = .seconds(2),
+        file: StaticString = #filePath,
+        line: UInt = #line,
+        until condition: () -> Bool
+    ) async {
+        let deadline = ContinuousClock.now.advanced(by: timeout)
+        while ContinuousClock.now < deadline {
+            if condition() {
                 return
             }
             await Task.yield()
+            try? await Task.sleep(for: .milliseconds(1))
+        }
+
+        if condition() {
+            return
+        }
+
+        XCTFail("Timed out waiting for \(description)", file: file, line: line)
+    }
+
+    @MainActor
+    private func waitForAuthInvalidation(
+        _ model: AppModel,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) async {
+        await waitFor("the access token to be invalidated", file: file, line: line) {
+            model.accessToken == nil
         }
     }
 
     @MainActor
-    private func waitForPendingRoute(_ model: AppModel, route: AppRoute) async {
-        for _ in 0..<40 {
-            if model.pendingRoute == route {
-                return
-            }
-            await Task.yield()
+    private func waitForPendingRoute(
+        _ model: AppModel,
+        route: AppRoute,
+        file: StaticString = #filePath,
+        line: UInt = #line
+    ) async {
+        await waitFor("pending route \(route)", file: file, line: line) {
+            model.pendingRoute == route
         }
     }
 
