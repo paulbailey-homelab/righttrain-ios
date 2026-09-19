@@ -377,6 +377,7 @@ private struct PlanSearchResultsView: View {
                 RecommendationResultsView(
                     response: response,
                     canSearchRoutesWithChanges: viewModel.canUseMultiLegRouting,
+                    searchRoutesWithChanges: { await viewModel.searchRoutesWithChanges() },
                     pinWindow: requestPinDirectWindow,
                     isJourneyPinned: isPinnedDirectJourney,
                     toggleJourneyPin: toggleDirectJourneyPin

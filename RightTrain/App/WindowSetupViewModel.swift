@@ -368,6 +368,19 @@ final class WindowSetupViewModel {
         return didLoadResults
     }
 
+    /// Runs the same route again allowing changes. The direct results screen
+    /// offers this when it finds nothing, so a dead end does not send the
+    /// user back to the setup form to flip the trip type by hand.
+    @discardableResult
+    func searchRoutesWithChanges() async -> Bool {
+        guard multiLegRoutingEnabled else {
+            operationState.alertState = .validation("All routes are coming soon.")
+            return false
+        }
+        directRoutesOnly = false
+        return await loadRecommendations()
+    }
+
     func createActiveWindow(replacingActiveJourney: Bool = false) async {
         guard let origin, let destination else {
             operationState.alertState = .validation("Choose both stations before creating a Pin.")

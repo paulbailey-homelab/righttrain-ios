@@ -5,6 +5,7 @@ import SwiftUI
 struct RecommendationResultsView: View {
     var response: DirectWindowRecommendationResponse
     var canSearchRoutesWithChanges: Bool
+    var searchRoutesWithChanges: () async -> Void
     var pinWindow: () async -> Void
     var isJourneyPinned: (DirectWindowRecommendation) -> Bool
     var toggleJourneyPin: (DirectWindowRecommendation) async -> Void
@@ -17,11 +18,21 @@ struct RecommendationResultsView: View {
 
         if recommendations.isEmpty {
             Section {
+                // Telling someone to switch to routes with changes and then
+                // making them walk back to the setup form to do it is the
+                // dead end, not the empty result. Offer the search here.
                 EmptyStateView(
                     title: "No direct trains found",
                     message: canSearchRoutesWithChanges
-                        ? "Try widening the departure window or switching to routes with changes."
-                        : "RightTrain only finds direct trains for now, so journeys that need a change won't appear. Try a wider departure window."
+                        ? "There may still be a route with a change. Try that, or widen the departure window."
+                        : "RightTrain only finds direct trains for now, so journeys that need a change won't appear. Try a wider departure window.",
+                    primaryAction: canSearchRoutesWithChanges
+                        ? EmptyStateView.PrimaryAction(
+                            label: "Search routes with changes",
+                            systemImage: "arrow.triangle.branch",
+                            perform: { Task { await searchRoutesWithChanges() } }
+                        )
+                        : nil
                 )
                 .listRowInsets(EdgeInsets())
             }

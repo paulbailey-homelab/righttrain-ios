@@ -1496,4 +1496,124 @@ final class JourneyFormattingTests: XCTestCase {
         XCTAssertEqual(value.state, .expected)
         XCTAssertEqual(value.previousNumber, "2")
     }
+
+    // MARK: - Leg context on the journey screen
+
+    private func twoLegItinerary(
+        stableKey: String = "itinerary-1",
+        firstServiceID: Int = 301,
+        secondServiceID: Int = 302
+    ) -> ItineraryRecommendation {
+        let firstLeg = TestFactory.itineraryLeg(
+            legIndex: 0,
+            journey: TestFactory.journey(
+                serviceID: firstServiceID,
+                scheduledDeparture: "2026-05-21T09:00:00.000Z",
+                scheduledArrival: "2026-05-21T09:40:00.000Z",
+                originName: "London Euston",
+                destinationName: "Crewe",
+                originTpl: "EUSTON",
+                originCrs: "EUS",
+                destinationTpl: "CREWE",
+                destinationCrs: "CRE"
+            )
+        )
+        let secondLeg = TestFactory.itineraryLeg(
+            legIndex: 1,
+            journey: TestFactory.journey(
+                serviceID: secondServiceID,
+                scheduledDeparture: "2026-05-21T09:55:00.000Z",
+                scheduledArrival: "2026-05-21T10:30:00.000Z",
+                originName: "Crewe",
+                destinationName: "Chester",
+                originTpl: "CREWE",
+                originCrs: "CRE",
+                destinationTpl: "CHESTER",
+                destinationCrs: "CTR"
+            )
+        )
+        let connection = TestFactory.itineraryConnection(
+            atTpl: "CREWE",
+            atCrs: "CRE",
+            atName: "Crewe",
+            scheduledArrival: "2026-05-21T09:40:00.000Z",
+            scheduledDeparture: "2026-05-21T09:55:00.000Z",
+            expectedArrival: "2026-05-21T09:40:00.000Z",
+            expectedDeparture: "2026-05-21T09:55:00.000Z"
+        )
+        return TestFactory.itinerary(stableKey: stableKey, legs: [firstLeg, secondLeg], connections: [connection])
+    }
+
+    func testLegContextDescribesTheChangeAtTheEndOfTheLeg() throws {
+        let itinerary = twoLegItinerary()
+        let subscription = TestFactory.itinerarySubscription(selectedItinerary: itinerary, itineraries: [itinerary])
+
+        let context = try XCTUnwrap(
+            ItineraryFormatting.legContext(
+                serviceID: 301,
+                originTPL: "EUSTON",
+                destinationTPL: "CREWE",
+                in: subscription
+            )
+        )
+
+        XCTAssertEqual(context.legNumber, 1)
+        XCTAssertEqual(context.legCount, 2)
+        XCTAssertFalse(context.isFinalLeg)
+        XCTAssertEqual(context.connection?.atName, "Crewe")
+        XCTAssertEqual(context.onwardLeg?.serviceId, 302)
+    }
+
+    func testLegContextOnTheLastLegHasNoChangeToDescribe() throws {
+        let itinerary = twoLegItinerary()
+        let subscription = TestFactory.itinerarySubscription(selectedItinerary: itinerary, itineraries: [itinerary])
+
+        let context = try XCTUnwrap(
+            ItineraryFormatting.legContext(
+                serviceID: 302,
+                originTPL: "CREWE",
+                destinationTPL: "CHESTER",
+                in: subscription
+            )
+        )
+
+        XCTAssertEqual(context.legNumber, 2)
+        XCTAssertTrue(context.isFinalLeg)
+        XCTAssertNil(context.connection)
+        XCTAssertNil(context.onwardLeg)
+    }
+
+    func testLegContextIsAbsentForADirectJourney() {
+        let itinerary = TestFactory.itinerary()
+        let subscription = TestFactory.itinerarySubscription(selectedItinerary: itinerary, itineraries: [itinerary])
+
+        XCTAssertNil(
+            ItineraryFormatting.legContext(
+                serviceID: itinerary.legs[0].serviceId,
+                originTPL: itinerary.legs[0].originTpl,
+                destinationTPL: itinerary.legs[0].destinationTpl,
+                in: subscription
+            ),
+            "One train is not a leg of anything"
+        )
+    }
+
+    func testLegContextIgnoresLegsThatBelongOnlyToAnAlternativeRoute() {
+        let selected = twoLegItinerary(stableKey: "selected", firstServiceID: 301, secondServiceID: 302)
+        let alternative = twoLegItinerary(stableKey: "alternative", firstServiceID: 401, secondServiceID: 402)
+        let subscription = TestFactory.itinerarySubscription(
+            selectedItinerary: selected,
+            itineraries: [selected, alternative]
+        )
+
+        XCTAssertNil(
+            ItineraryFormatting.legContext(
+                serviceID: 401,
+                originTPL: "EUSTON",
+                destinationTPL: "CREWE",
+                in: subscription
+            ),
+            "Describing a change from a route the traveller did not pick would be describing a journey they are not on"
+        )
+    }
 }

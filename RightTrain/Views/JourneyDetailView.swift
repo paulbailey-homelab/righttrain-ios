@@ -135,6 +135,23 @@ struct JourneyDetailView: View {
             (identity.destinationTPL == nil || leg.destinationTpl == identity.destinationTPL)
     }
 
+    /// Nil unless this train is a leg of the itinerary currently being
+    /// monitored. Deliberately not `matchingActiveItineraryLeg`, which also
+    /// searches the alternatives so live data stays fresh for routes the
+    /// traveller might switch to; describing a change from one of those would
+    /// be describing a journey they are not on.
+    private var activeItineraryLegContext: ItineraryLegContext? {
+        guard let itinerary = activeWindowViewModel.activeItinerary else {
+            return nil
+        }
+        return ItineraryFormatting.legContext(
+            serviceID: identity.serviceID,
+            originTPL: identity.originTPL,
+            destinationTPL: identity.destinationTPL,
+            in: itinerary
+        )
+    }
+
     private func summarySection(_ detail: JourneyDetail, surface: RTSurface) -> some View {
         VStack(alignment: .leading, spacing: RTSpacing.sectionGap) {
             journeyOverviewCard(detail, surface: surface)
@@ -142,8 +159,108 @@ struct JourneyDetailView: View {
             if let message = disruptionMessage(for: detail) {
                 disruptionBanner(message: message, cancelled: detail.cancelled, surface: surface)
             }
+
+            if let legContext = activeItineraryLegContext {
+                itineraryLegCard(legContext, surface: surface)
+            }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
+    }
+
+    /// The itinerary this train belongs to: which leg, the change at the end
+    /// of it and its risk, and the train being caught.
+    private func itineraryLegCard(_ context: ItineraryLegContext, surface: RTSurface) -> some View {
+        VStack(alignment: .leading, spacing: RTSpacing.small) {
+            // No Spacer in the horizontal branch: a flexible child makes
+            // ViewThatFits report a fit at any width, so the stacked
+            // fallback would never be reached and the label would truncate.
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .firstTextBaseline, spacing: RTSpacing.small) {
+                    legLabel(context, surface: surface)
+                    riskPill(context)
+                }
+                VStack(alignment: .leading, spacing: RTSpacing.small) {
+                    legLabel(context, surface: surface)
+                    riskPill(context)
+                }
+            }
+            .frame(maxWidth: .infinity, alignment: .leading)
+
+            if let connection = context.connection {
+                Text(ItineraryFormatting.connectionTitleText(connection))
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(surface.ink)
+                    .fixedSize(horizontal: false, vertical: true)
+
+                if let advice = ItineraryFormatting.connectionAdviceText(connection) {
+                    Text(advice)
+                        .font(.caption)
+                        .foregroundStyle(surface.dim)
+                        .fixedSize(horizontal: false, vertical: true)
+                }
+            }
+
+            if let onward = context.onwardLeg {
+                Text(onwardLegText(onward))
+                    .font(.footnote)
+                    .foregroundStyle(surface.dim)
+                    .monospacedDigit()
+                    .fixedSize(horizontal: false, vertical: true)
+            } else if context.isFinalLeg {
+                Text("This is the last leg — you arrive on this train.")
+                    .font(.footnote)
+                    .foregroundStyle(surface.dim)
+                    .fixedSize(horizontal: false, vertical: true)
+            }
+        }
+        .rtCard(padding: RTSpacing.cardPadding)
+        // The change and its risk must reach VoiceOver as one statement; the
+        // pill's colour is not a status signal on its own.
+        .accessibilityElement(children: .combine)
+    }
+
+    private func legLabel(_ context: ItineraryLegContext, surface: RTSurface) -> some View {
+        Label(
+            "Leg \(context.legNumber) of \(context.legCount)",
+            systemImage: "arrow.triangle.branch"
+        )
+        .font(.subheadline.weight(.semibold))
+        .foregroundStyle(surface.ink)
+    }
+
+    @ViewBuilder
+    private func riskPill(_ context: ItineraryLegContext) -> some View {
+        if let connection = context.connection {
+            StatusPill(
+                text: ItineraryFormatting.connectionRiskSummaryText(connection),
+                tone: ItineraryFormatting.connectionTone(connection)
+            )
+            .fixedSize()
+        }
+    }
+
+    private func onwardLegText(_ leg: ItineraryLeg) -> String {
+        let time = ItineraryFormatting.timeText(leg.expectedDeparture ?? leg.scheduledDeparture)
+        let destination = JourneyFormatting.stationDisplayName(
+            name: leg.destinationName,
+            fallback: leg.destinationCrs
+        )
+        return "Then the \(time) to \(destination)"
+    }
+
+    /// The note on the calling point where the traveller leaves this train for
+    /// the next one. Without it the interchange is just another stop in the
+    /// list of everywhere the train calls.
+    private func interchangeStopNote(_ detail: JourneyDetail) -> (text: String, tone: StatusPill.Tone)? {
+        guard let context = activeItineraryLegContext,
+              let connection = context.connection else {
+            return nil
+        }
+        guard let onward = context.onwardLeg else {
+            return ("Change here", ItineraryFormatting.connectionTone(connection))
+        }
+        let time = ItineraryFormatting.timeText(onward.expectedDeparture ?? onward.scheduledDeparture)
+        return ("Change here for the \(time)", ItineraryFormatting.connectionTone(connection))
     }
 
     private func journeyOverviewCard(_ detail: JourneyDetail, surface: RTSurface) -> some View {
@@ -218,6 +335,9 @@ struct JourneyDetailView: View {
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, RTSpacing.cardPadding)
 
+            let range = segmentRange(detail)
+            let interchange = interchangeStopNote(detail)
+
             LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(Array(detail.stops.enumerated()), id: \.element.id) { index, stop in
                     let trainPosition = currentTrainPosition(detail, now: now)
@@ -231,7 +351,12 @@ struct JourneyDetailView: View {
                         isLast: index == detail.stops.index(before: detail.stops.endIndex),
                         // Platforms matter where you board and get off; the
                         // stops in between only need a time.
-                        showsPlatform: index == segmentRange(detail).origin || index == segmentRange(detail).destination
+                        showsPlatform: index == range.origin || index == range.destination,
+                        // The stop where this leg ends is the one that matters
+                        // most on a multi-leg journey, and nothing else in the
+                        // list distinguishes it from a stop passed through.
+                        changeNote: index == range.destination ? interchange?.text : nil,
+                        changeTone: interchange?.tone ?? .neutral
                     )
                         .padding(.vertical, 10)
                 }
@@ -486,6 +611,8 @@ struct JourneyStopRow: View {
     var isFirst: Bool
     var isLast: Bool
     var showsPlatform = true
+    var changeNote: String?
+    var changeTone: StatusPill.Tone = .neutral
 
     var body: some View {
         HStack(alignment: .top, spacing: 12) {
@@ -505,6 +632,9 @@ struct JourneyStopRow: View {
                         .font(.caption)
                         .foregroundStyle(.secondary)
                         .fixedSize(horizontal: false, vertical: true)
+                }
+                if let changeNote {
+                    StatusPill(text: changeNote, tone: changeTone)
                 }
             }
 
