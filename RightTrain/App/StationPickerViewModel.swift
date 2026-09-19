@@ -81,6 +81,18 @@ struct StationPickerContext: Equatable {
     var windowMinutes: Int
     var sourceSurface: StationPickerSourceSurface
     var previousSelection: StationSuggestion?
+    /// Names the slot being filled when it isn't a leg of a journey, so Home &
+    /// Work doesn't ask for an "origin" and a "destination".
+    var selectionLabel: String? = nil
+
+    var title: String {
+        guard let selectionLabel else { return selectionRole.title }
+        return "Choose \(selectionLabel.lowercased())"
+    }
+
+    var fieldTitle: String {
+        selectionLabel ?? selectionRole.fieldTitle
+    }
 }
 
 @MainActor

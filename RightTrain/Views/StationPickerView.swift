@@ -48,7 +48,7 @@ struct StationPickerView: View {
             .listSectionSpacing(.compact)
 
             if let station = viewModel.context.previousSelection {
-                Section("Current \(viewModel.context.selectionRole.fieldTitle.lowercased())") {
+                Section("Current \(viewModel.context.fieldTitle.lowercased())") {
                     StationPickerStationRow(station: station, showsChevron: false) {
                         select(station)
                     }
@@ -81,7 +81,7 @@ struct StationPickerView: View {
         .searchFocused($isSearchFocused)
         .textInputAutocapitalization(.characters)
         .autocorrectionDisabled()
-        .navigationTitle(viewModel.context.selectionRole.title)
+        .navigationTitle(viewModel.context.title)
         .navigationBarTitleDisplayMode(.inline)
         .onAppear {
             if viewModel.activeChoice == .search, viewModel.query.isEmpty {
