@@ -1598,6 +1598,21 @@ final class JourneyFormattingTests: XCTestCase {
         )
     }
 
+    // MARK: - Route chain on the pinned card
+
+    func testRouteChainNamesEveryStationInOrder() throws {
+        let chain = try XCTUnwrap(ItineraryFormatting.routeChainText(twoLegItinerary()))
+
+        XCTAssertEqual(chain, "London Euston \u{2192} Crewe \u{2192} Chester")
+    }
+
+    func testRouteChainIsAbsentForADirectJourney() {
+        XCTAssertNil(
+            ItineraryFormatting.routeChainText(TestFactory.itinerary()),
+            "A direct journey's chain would only repeat the route title above it"
+        )
+    }
+
     func testLegContextIgnoresLegsThatBelongOnlyToAnAlternativeRoute() {
         let selected = twoLegItinerary(stableKey: "selected", firstServiceID: 301, secondServiceID: 302)
         let alternative = twoLegItinerary(stableKey: "alternative", firstServiceID: 401, secondServiceID: 402)

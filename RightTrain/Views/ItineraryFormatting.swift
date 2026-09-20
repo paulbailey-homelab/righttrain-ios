@@ -121,6 +121,23 @@ enum ItineraryFormatting {
         return count == 1 ? "1 change" : "\(count) changes"
     }
 
+    /// "New Barnet → London Kings Cross → Peterborough": where the
+    /// journey starts, every station it changes at, and where it ends.
+    ///
+    /// Nil for a single-leg itinerary, where the chain would only repeat the
+    /// route title above it.
+    static func routeChainText(_ itinerary: ItineraryRecommendation) -> String? {
+        let legs = itinerary.legs
+        guard legs.count > 1, let first = legs.first else {
+            return nil
+        }
+        var names = [JourneyFormatting.stationDisplayName(name: first.originName, fallback: first.originCrs)]
+        for leg in legs {
+            names.append(JourneyFormatting.stationDisplayName(name: leg.destinationName, fallback: leg.destinationCrs))
+        }
+        return names.joined(separator: " \u{2192} ")
+    }
+
     static func transferMetricLabel(_ itinerary: ItineraryRecommendation) -> String {
         let fixedCount = itinerary.connections.filter(isFixedLinkConnection).count
         if fixedCount > 1 || (fixedCount == 1 && itinerary.score.changeCount > 1) {
