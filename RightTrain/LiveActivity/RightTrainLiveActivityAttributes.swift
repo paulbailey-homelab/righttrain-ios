@@ -51,22 +51,6 @@ struct RightTrainLiveActivityAttributes: ActivityAttributes {
             var journeyProgress: Double?
         }
 
-        struct ItineraryOption: Codable, Hashable, Identifiable {
-            var id: String { stableKey }
-
-            var stableKey: String
-            var rank: Int
-            var recommended: Bool
-            var changeCount: Int
-            var statusText: String
-            var statusKind: StatusKind
-            var departureTime: String
-            var arrivalTime: String
-            var firstTrain: Train
-            var trains: [Train]?
-            var connectionText: String?
-        }
-
         /// Snapshot of the next interchange the user has yet to make.
         /// Populated for the `on_leg` / `approaching_interchange` phases
         /// so the Live Activity can render the change-over without a
@@ -129,7 +113,6 @@ struct RightTrainLiveActivityAttributes: ActivityAttributes {
         var trains: [Train]
         var pinnedTrainServiceID: Int? = nil
         var pinnedFirstLeg: PinnedFirstLeg? = nil
-        var itineraryOptions: [ItineraryOption]? = nil
         var currentLegIndex: Int? = nil
         var onwardLeg: Train? = nil
         var interchange: Interchange? = nil

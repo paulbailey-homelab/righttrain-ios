@@ -436,6 +436,51 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
         return trimmed
     }
 
+    /// ActivityKit rejects a content state over roughly 4 KB, and an itinerary
+    /// carries one `Train` per leg where a direct window carries one in total.
+    /// A four-leg journey can reach the limit on its own, and `Activity.request`
+    /// then throws, leaving no Live Activity and no sign of why. The widget
+    /// reads only the leg at `currentLegIndex` and the one after it, so a state
+    /// that will not fit is reduced to those two.
+    private static let maximumContentStateBytes = 3_500
+
+    private static func encodedSize(
+        _ state: RightTrainLiveActivityAttributes.ContentState
+    ) -> Int? {
+        try? JSONEncoder().encode(state).count
+    }
+
+    private static func sizeBounded(
+        _ state: RightTrainLiveActivityAttributes.ContentState
+    ) -> RightTrainLiveActivityAttributes.ContentState {
+        guard let size = encodedSize(state), size > maximumContentStateBytes else {
+            return state
+        }
+        // Keep the leg being travelled and the one being changed on to; the
+        // widget renders no others. Rebasing `currentLegIndex` to zero keeps
+        // every index it derives pointing at the same train, so a journey of
+        // any length reduces to two.
+        let start = min(max(state.currentLegIndex ?? 0, 0), max(state.trains.count - 1, 0))
+        let window = Array(state.trains.dropFirst(start).prefix(2))
+        guard window.count < state.trains.count else {
+            BetaDiagnostics.record(
+                "live_activity_itinerary_state_oversized",
+                details: "\(size) bytes across \(state.trains.count) legs, nothing left to trim",
+                severity: .error
+            )
+            return state
+        }
+        var trimmed = state
+        trimmed.trains = window
+        trimmed.currentLegIndex = state.currentLegIndex == nil ? nil : 0
+        BetaDiagnostics.record(
+            "live_activity_itinerary_state_trimmed",
+            details: "\(size) bytes across \(state.trains.count) legs cut to \(window.count)",
+            severity: .warning
+        )
+        return trimmed
+    }
+
     private func upsertItineraryActivity(
         itinerary: ItinerarySubscription,
         kind: RightTrainLiveActivityAttributes.ActivityKind,
@@ -444,7 +489,7 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
         tokenRegistration: LiveActivityTokenRegistrationContext?
     ) async {
         let content = ActivityContent(
-            state: state,
+            state: Self.sizeBounded(state),
             staleDate: staleDate(for: itinerary, activityKind: kind),
             relevanceScore: relevanceScore
         )
@@ -480,7 +525,14 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
                 )
                 observePushTokenUpdates(for: activity, tokenRegistration: tokenRegistration)
             } catch {
-                BetaDiagnostics.record("live_activity_itinerary_request_failed", details: error.localizedDescription, severity: .error)
+                // Worth the encoded size: every realistic cause of a throw here
+                // is the payload, and the message alone does not say so.
+                let size = Self.encodedSize(content.state).map { "\($0) bytes, " } ?? ""
+                BetaDiagnostics.record(
+                    "live_activity_itinerary_request_failed",
+                    details: "\(size)\(content.state.trains.count) legs: \(error.localizedDescription)",
+                    severity: .error
+                )
             }
         }
     }
@@ -997,8 +1049,7 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
             otherDeparturesText: nil,
             trains: [train],
             pinnedTrainServiceID: nil,
-            pinnedFirstLeg: nil,
-            itineraryOptions: nil
+            pinnedFirstLeg: nil
         )
     }
 
@@ -1478,7 +1529,6 @@ enum LiveActivityPreviewScenario: String, CaseIterable {
             trains: trains,
             pinnedTrainServiceID: pinnedTrainServiceID,
             pinnedFirstLeg: pinnedFirstLeg(from: trains.first),
-            itineraryOptions: nil,
             currentLegIndex: currentLegIndex,
             onwardLeg: onwardLeg,
             interchange: interchange
@@ -1778,7 +1828,6 @@ enum RightTrainLiveActivityStateBuilder {
             trains: trains,
             pinnedTrainServiceID: nil,
             pinnedFirstLeg: itinerary.pinnedFirstLeg.map(liveActivityPinnedFirstLeg),
-            itineraryOptions: recommendations.compactMap { itineraryOption(for: $0, now: now) },
             currentLegIndex: itinerary.currentLegIndex,
             onwardLeg: onwardTrain,
             interchange: interchange
@@ -2073,31 +2122,6 @@ enum RightTrainLiveActivityStateBuilder {
             arrivalTime: (leg.expectedArrival ?? leg.scheduledArrival).map(ItineraryFormatting.timeText),
             scheduledArrivalDate: leg.scheduledArrival.flatMap(DateFormatting.date(from:)),
             arrivalDate: (leg.expectedArrival ?? leg.scheduledArrival).flatMap(DateFormatting.date(from:))
-        )
-    }
-
-    private static func itineraryOption(
-        for itinerary: ItineraryRecommendation,
-        now: Date
-    ) -> RightTrainLiveActivityAttributes.ContentState.ItineraryOption? {
-        guard let firstLeg = itinerary.legs.first else {
-            return nil
-        }
-        let candidates = itinerary.legs.map { trainCandidate(for: $0, now: now) }
-        let trains = candidates.map(\.train)
-        let statusKind = itineraryStatusKind(for: itinerary, trains: trains)
-        return RightTrainLiveActivityAttributes.ContentState.ItineraryOption(
-            stableKey: itinerary.stableKey,
-            rank: itinerary.rank,
-            recommended: itinerary.recommended,
-            changeCount: itinerary.score.changeCount,
-            statusText: itineraryStatusText(for: itinerary, statusKind: statusKind),
-            statusKind: statusKind,
-            departureTime: ItineraryFormatting.departureText(itinerary),
-            arrivalTime: ItineraryFormatting.arrivalText(itinerary),
-            firstTrain: trainCandidate(for: firstLeg, now: now).train,
-            trains: trains,
-            connectionText: ItineraryFormatting.changesText(itinerary)
         )
     }
 

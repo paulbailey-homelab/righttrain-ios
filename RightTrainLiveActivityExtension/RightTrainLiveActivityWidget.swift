@@ -3793,7 +3793,6 @@ private enum ActivityPreviewFixtures {
             trains: trains,
             pinnedTrainServiceID: activityKind == .train ? recommendationServiceID : nil,
             pinnedFirstLeg: nil,
-            itineraryOptions: nil,
             currentLegIndex: currentLegIndex,
             onwardLeg: onwardLeg,
             interchange: interchange

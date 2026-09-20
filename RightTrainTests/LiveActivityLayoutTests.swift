@@ -938,8 +938,7 @@ final class LiveActivityLayoutTests: XCTestCase {
             otherDeparturesText: activityKind == .itinerary ? "Change at Milton Keynes Central - 3 min" : "5 later, 2 already departed, 1 cancelled",
             trains: trains,
             pinnedTrainServiceID: activityKind == .train ? first.serviceID : nil,
-            pinnedFirstLeg: nil,
-            itineraryOptions: nil
+            pinnedFirstLeg: nil
         )
     }
 
@@ -990,5 +989,57 @@ final class LiveActivityLayoutTests: XCTestCase {
         formatter.timeZone = TimeZone(identifier: "Europe/London")
         formatter.dateFormat = "HH:mm"
         return formatter.string(from: date)
+    }
+
+    // MARK: - Live Activity payload size
+
+    /// ActivityKit rejects a content state over roughly 4 KB and `Activity.request`
+    /// then throws, so an oversized itinerary state shows up as no Live Activity at
+    /// all rather than as an error. A direct window ships one train; an itinerary
+    /// ships one per leg, so this is the shape that can outgrow the budget.
+    func testItineraryLiveActivityStateFitsActivityKitBudget() throws {
+        let selected = multiLegItinerary(stableKey: "selected-route", rank: 1, serviceBase: 200)
+        let alternatives = (1...4).map { index in
+            multiLegItinerary(
+                stableKey: "alternative-\(index)",
+                rank: index + 1,
+                serviceBase: 300 + index * 10
+            )
+        }
+        let subscription = TestFactory.itinerarySubscription(
+            phase: ItineraryPhase.onLeg.rawValue,
+            currentLegIndex: 0,
+            selectedItinerary: selected,
+            itineraries: [selected] + alternatives
+        )
+
+        let state = RightTrainLiveActivityStateBuilder.state(for: subscription)
+        let encoded = try JSONEncoder().encode(state)
+
+        XCTAssertLessThan(
+            encoded.count,
+            4096,
+            "A multi-leg itinerary's content state must fit ActivityKit's budget, or no Live Activity starts"
+        )
+    }
+
+    /// The alternatives the search returned are not part of the Live Activity.
+    /// They were once packed into every state and nothing ever rendered them,
+    /// which is what pushed the payload over the limit.
+    func testItineraryLiveActivityStateCarriesOnlyTheSelectedRoutesLegs() {
+        let selected = multiLegItinerary(stableKey: "selected-route", rank: 1, serviceBase: 200)
+        let alternative = multiLegItinerary(stableKey: "alternative-1", rank: 2, serviceBase: 400)
+        let subscription = TestFactory.itinerarySubscription(
+            selectedItinerary: selected,
+            itineraries: [selected, alternative]
+        )
+
+        let state = RightTrainLiveActivityStateBuilder.state(for: subscription)
+
+        XCTAssertEqual(state.trains.count, selected.legs.count)
+        let carried = Set(state.trains.map(\.serviceID))
+        for leg in alternative.legs {
+            XCTAssertFalse(carried.contains(leg.serviceId), "An alternative route's leg must not ride along")
+        }
     }
 }
