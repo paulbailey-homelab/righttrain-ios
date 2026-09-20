@@ -456,11 +456,6 @@ extension AppCoordinator {
         set { windowSetupViewModel.windowMinutes = newValue }
     }
 
-    var directRoutesOnly: Bool {
-        get { windowSetupViewModel.directRoutesOnly }
-        set { windowSetupViewModel.directRoutesOnly = newValue }
-    }
-
     var isLoading: Bool {
         get { operationState.isLoading }
         set { operationState.isLoading = newValue }

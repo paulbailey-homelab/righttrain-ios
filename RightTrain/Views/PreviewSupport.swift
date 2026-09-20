@@ -1414,10 +1414,9 @@ struct RightTrainPreviewLaunch {
             coordinator.destination = PreviewFixtures.stations[1]
             coordinator.departureStart = PreviewFixtures.baseDate
             coordinator.windowMinutes = 120
+            // The capability is the only thing that picks the search now, and
+            // it is already true for exactly the itinerary surfaces.
             coordinator.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: multiLegRoutingEnabled))
-            coordinator.directRoutesOnly = surface != .itinerarySearch &&
-                surface != .itinerarySearchPinned &&
-                surface != .us2ResultsChanges
             await coordinator.loadRecommendations()
         case .us2SetupRoutine:
             coordinator.windowSetupViewModel.applyRoutinePrefill(
@@ -1427,14 +1426,13 @@ struct RightTrainPreviewLaunch {
                 now: PreviewFixtures.baseDate
             )
         case .us2SetupDirect:
-            coordinator.windowSetupViewModel.selectSetupIntent(.oneOffDirect)
+            coordinator.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: false))
             coordinator.origin = PreviewFixtures.stations[0]
             coordinator.destination = PreviewFixtures.stations[1]
             coordinator.departureStart = PreviewFixtures.baseDate
             coordinator.windowMinutes = 120
         case .us2SetupConnection:
             coordinator.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: true))
-            coordinator.windowSetupViewModel.selectSetupIntent(.connectionSensitive)
             coordinator.origin = PreviewFixtures.stations[0]
             coordinator.destination = PreviewFixtures.stations[1]
             coordinator.departureStart = PreviewFixtures.baseDate

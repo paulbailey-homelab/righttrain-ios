@@ -1,89 +1,14 @@
 import Foundation
 
+/// Which search the app runs. This is no longer something the user chooses.
+/// The planner returns direct journeys as one-leg itineraries and ranks them
+/// against journeys with changes, so it is the search; `.direct` is only the
+/// fallback for a backend with multi-leg routing turned off.
 enum JourneySearchMode: String, CaseIterable, Identifiable {
     case direct
     case anyRoute
 
     var id: String { rawValue }
-
-    func title(multiLegRoutingEnabled: Bool) -> String {
-        switch self {
-        case .direct:
-            return "Direct trains"
-        case .anyRoute:
-            return "All routes"
-        }
-    }
-}
-
-enum JourneySetupIntent: String, CaseIterable, Identifiable {
-    case routineCommute
-    case oneOffDirect
-    case connectionSensitive
-
-    var id: String { rawValue }
-
-    var title: String {
-        switch self {
-        case .routineCommute:
-            return "Commute"
-        case .oneOffDirect:
-            return "One-off direct"
-        case .connectionSensitive:
-            return "Connection-sensitive"
-        }
-    }
-
-    var shortTitle: String {
-        switch self {
-        case .routineCommute:
-            return "Commute"
-        case .oneOffDirect:
-            return "Direct"
-        case .connectionSensitive:
-            return "Changes"
-        }
-    }
-
-    var detailText: String {
-        switch self {
-        case .routineCommute:
-            return "Start from a known route and adjust the live window before monitoring."
-        case .oneOffDirect:
-            return "Pick a route and compare direct trains by catchability and live confidence."
-        case .connectionSensitive:
-            return "Compare routes with changes by first action and transfer risk."
-        }
-    }
-
-    var primaryActionText: String {
-        switch self {
-        case .routineCommute:
-            return "Find commute options"
-        case .oneOffDirect:
-            return "Find direct trains"
-        case .connectionSensitive:
-            return "Find routes with changes"
-        }
-    }
-
-    var defaultWindowMinutes: Int {
-        switch self {
-        case .routineCommute, .oneOffDirect:
-            return 120
-        case .connectionSensitive:
-            return 180
-        }
-    }
-
-    var searchMode: JourneySearchMode {
-        switch self {
-        case .routineCommute, .oneOffDirect:
-            return .direct
-        case .connectionSensitive:
-            return .anyRoute
-        }
-    }
 }
 
 @MainActor
@@ -127,36 +52,14 @@ final class WindowSetupViewModel {
             clearSearchResults()
         }
     }
-    var directRoutesOnly: Bool = true {
-        didSet {
-            if !directRoutesOnly && !multiLegRoutingEnabled {
-                directRoutesOnly = true
-            }
-            guard directRoutesOnly != oldValue else {
-                return
-            }
-            if directRoutesOnly {
-                if activeSetupIntent == .connectionSensitive {
-                    activeSetupIntent = .oneOffDirect
-                }
-            } else {
-                activeSetupIntent = .connectionSensitive
-            }
-            clearSearchResults()
-            operationState.alertState = nil
-        }
-    }
     private(set) var multiLegRoutingEnabled = false {
         didSet {
-            if !multiLegRoutingEnabled {
-                directRoutesOnly = true
-                if activeSetupIntent == .connectionSensitive {
-                    activeSetupIntent = .oneOffDirect
-                }
+            guard multiLegRoutingEnabled != oldValue else {
+                return
             }
+            clearSearchResults()
         }
     }
-    private(set) var activeSetupIntent: JourneySetupIntent = .oneOffDirect
     private(set) var recommendationResponse: DirectWindowRecommendationResponse?
     private(set) var journeyPlanResponse: JourneyPlanResponse?
 
@@ -191,55 +94,17 @@ final class WindowSetupViewModel {
     }
 
     var searchMode: JourneySearchMode {
-        directRoutesOnly ? .direct : .anyRoute
-    }
-
-    var setupIntentContent: JourneySetupIntent {
-        activeSetupIntent
+        multiLegRoutingEnabled ? .anyRoute : .direct
     }
 
     var canUseMultiLegRouting: Bool {
         multiLegRoutingEnabled
     }
 
+    /// The destination list is no longer filtered to stations with a direct
+    /// train, so it needs a query like any other search.
     var destinationMinQueryLength: Int {
-        directRoutesOnly && origin != nil ? 0 : 2
-    }
-
-    func routeModeTitle(_ mode: JourneySearchMode) -> String {
-        mode.title(multiLegRoutingEnabled: multiLegRoutingEnabled)
-    }
-
-    func isRouteModeEnabled(_ mode: JourneySearchMode) -> Bool {
-        mode == .direct || multiLegRoutingEnabled
-    }
-
-    func setSearchMode(_ mode: JourneySearchMode) {
-        guard isRouteModeEnabled(mode) else {
-            directRoutesOnly = true
-            activeSetupIntent = .oneOffDirect
-            operationState.alertState = .validation("All routes are coming soon.")
-            return
-        }
-        directRoutesOnly = mode == .direct
-        if mode == .anyRoute {
-            activeSetupIntent = .connectionSensitive
-        } else if activeSetupIntent == .connectionSensitive {
-            activeSetupIntent = .oneOffDirect
-        }
-    }
-
-    func selectSetupIntent(_ intent: JourneySetupIntent) {
-        guard intent != .connectionSensitive || multiLegRoutingEnabled else {
-            activeSetupIntent = .oneOffDirect
-            directRoutesOnly = true
-            operationState.alertState = .validation("Routes with changes are coming soon.")
-            return
-        }
-        activeSetupIntent = intent
-        directRoutesOnly = intent.searchMode == .direct
-        windowMinutes = intent.defaultWindowMinutes
-        operationState.alertState = nil
+        searchMode == .direct && origin != nil ? 0 : 2
     }
 
     func loadAppCapabilities() async {
@@ -264,8 +129,6 @@ final class WindowSetupViewModel {
         destinationStation: StationSuggestion?,
         now: Date = Date()
     ) {
-        activeSetupIntent = .routineCommute
-        directRoutesOnly = true
         origin = originStation ?? stationSuggestion(crs: routine.originCrs)
         destination = destinationStation ?? stationSuggestion(crs: routine.destinationCrs)
         departureStart = nextRoutineDeparture(
@@ -287,7 +150,7 @@ final class WindowSetupViewModel {
 
     func searchDestinationStations(query: String) async throws -> [StationSuggestion] {
         let trimmed = query.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard directRoutesOnly, let origin else {
+        guard searchMode == .direct, let origin else {
             guard trimmed.count >= 2 else {
                 return []
             }
@@ -305,7 +168,7 @@ final class WindowSetupViewModel {
     func stationPickerContext(for role: StationPickerSelectionRole) -> StationPickerContext {
         StationPickerContext(
             selectionRole: role,
-            routeMode: directRoutesOnly ? .direct : .anyRoute,
+            routeMode: searchMode == .direct ? .direct : .anyRoute,
             selectedCounterpartCRS: role == .origin ? destination?.crs : origin?.crs,
             departureStart: departureStart,
             windowMinutes: windowMinutes,
@@ -333,11 +196,6 @@ final class WindowSetupViewModel {
         let searchDepartureStart = effectiveDepartureStart()
         operationState.alertState = nil
         var didLoadResults = false
-        guard searchMode == .direct || multiLegRoutingEnabled else {
-            operationState.alertState = .validation("All routes are coming soon.")
-            directRoutesOnly = true
-            return false
-        }
 
         await operationState.withLoading {
             switch searchMode {
@@ -368,19 +226,6 @@ final class WindowSetupViewModel {
         return didLoadResults
     }
 
-    /// Runs the same route again allowing changes. The direct results screen
-    /// offers this when it finds nothing, so a dead end does not send the
-    /// user back to the setup form to flip the trip type by hand.
-    @discardableResult
-    func searchRoutesWithChanges() async -> Bool {
-        guard multiLegRoutingEnabled else {
-            operationState.alertState = .validation("All routes are coming soon.")
-            return false
-        }
-        directRoutesOnly = false
-        return await loadRecommendations()
-    }
-
     func createActiveWindow(replacingActiveJourney: Bool = false) async {
         guard let origin, let destination else {
             operationState.alertState = .validation("Choose both stations before creating a Pin.")
@@ -388,11 +233,6 @@ final class WindowSetupViewModel {
         }
         guard isSignedInProvider() else {
             operationState.alertState = .auth("Sign in to create a Pin.")
-            return
-        }
-        guard searchMode == .direct || multiLegRoutingEnabled else {
-            operationState.alertState = .validation("All routes are coming soon.")
-            directRoutesOnly = true
             return
         }
         let searchDepartureStart = effectiveDepartureStart()
@@ -481,11 +321,36 @@ final class WindowSetupViewModel {
         }
         guard multiLegRoutingEnabled else {
             operationState.alertState = .validation("All routes are coming soon.")
-            directRoutesOnly = true
             return
         }
         let searchDepartureStart = effectiveDepartureStart()
         let selectedStableKey = itinerary.stableKey.trimmingCharacters(in: .whitespacesAndNewlines)
+
+        // A result with no changes is a direct train, whatever search found
+        // it, so it is monitored as one. The user is not shown this branch:
+        // they picked a journey, not a subscription kind.
+        if itinerary.legs.count == 1, let leg = itinerary.legs.first {
+            await operationState.withLoading {
+                if replacingActiveJourney {
+                    try await activeWindowViewModel.replaceActiveJourneyIfNeeded()
+                }
+                _ = try await activeWindowViewModel.createWindow(
+                    input: CreateWindowSubscriptionRequest(
+                        originCrs: leg.originCrs,
+                        destinationCrs: leg.destinationCrs,
+                        originTpl: leg.originTpl,
+                        destinationTpl: leg.destinationTpl,
+                        departureStart: searchDepartureStart,
+                        windowMinutes: windowMinutes,
+                        selectedTrainServiceId: leg.serviceId
+                    )
+                )
+                // The itinerary list stays on screen with the pinned row
+                // marked; swapping it for the direct results would redraw
+                // every row for a journey the user has already chosen.
+            }
+            return
+        }
 
         await operationState.withLoading {
             if replacingActiveJourney {
@@ -521,8 +386,6 @@ final class WindowSetupViewModel {
         destination = nil
         departureStart = Date()
         windowMinutes = 120
-        directRoutesOnly = true
-        activeSetupIntent = .oneOffDirect
         operationState.alertState = nil
         clearSearchResults()
     }

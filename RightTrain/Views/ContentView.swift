@@ -376,8 +376,6 @@ private struct PlanSearchResultsView: View {
             if let response = viewModel.recommendationResponse {
                 RecommendationResultsView(
                     response: response,
-                    canSearchRoutesWithChanges: viewModel.canUseMultiLegRouting,
-                    searchRoutesWithChanges: { await viewModel.searchRoutesWithChanges() },
                     pinWindow: requestPinDirectWindow,
                     isJourneyPinned: isPinnedDirectJourney,
                     toggleJourneyPin: toggleDirectJourneyPin
@@ -466,10 +464,14 @@ private struct PlanSearchResultsView: View {
     }
 
     private func toggleRouteJourneyPin(_ itinerary: ItineraryRecommendation) async {
-        if isPinnedRouteJourney(itinerary) {
+        guard isPinnedRouteJourney(itinerary) else {
+            await requestPinRoute(itinerary)
+            return
+        }
+        if activeWindowViewModel.activeItinerary != nil {
             await activeWindowViewModel.deleteActiveItinerary()
         } else {
-            await requestPinRoute(itinerary)
+            await activeWindowViewModel.clearPinnedTrain(windowID: activeWindowViewModel.activeWindow?.id)
         }
     }
 
@@ -483,11 +485,20 @@ private struct PlanSearchResultsView: View {
     }
 
     private func isPinnedRouteJourney(_ itinerary: ItineraryRecommendation) -> Bool {
-        guard activeWindowViewModel.activeWindow == nil,
-              let activeItinerary = activeWindowViewModel.activeItinerary else {
+        if activeWindowViewModel.activeWindow == nil,
+           let activeItinerary = activeWindowViewModel.activeItinerary {
+            return activeItinerary.selectedItinerary.stableKey == itinerary.stableKey
+        }
+        // A result with no changes is monitored as a direct window, so its pin
+        // lives on the active window's pinned train, not on an itinerary.
+        guard itinerary.legs.count == 1,
+              let leg = itinerary.legs.first,
+              let activeWindow = activeWindowViewModel.activeWindow,
+              activeWindowViewModel.activeItinerary == nil,
+              let pinnedServiceID = activeWindow.pinnedTrainServiceId else {
             return false
         }
-        return activeItinerary.selectedItinerary.stableKey == itinerary.stableKey
+        return pinnedServiceID == leg.serviceId
     }
 
     private func requestPin(_ action: PendingPinAction) async {

@@ -14,23 +14,6 @@ struct WindowSetupView: View {
         @Bindable var viewModel = viewModel
         return Form {
             Section {
-                Picker("Trip type", selection: intentSelection) {
-                    ForEach(availableIntents) { intent in
-                        Text(intent.shortTitle).tag(intent)
-                    }
-                }
-                .pickerStyle(.segmented)
-                .listRowInsets(EdgeInsets())
-                .listRowBackground(Color.clear)
-                .accessibilityHint(viewModel.setupIntentContent.detailText)
-            } footer: {
-                if !viewModel.canUseMultiLegRouting {
-                    Label("Direct trains only for now. Journeys that need a change aren't supported yet.", systemImage: "info.circle")
-                }
-            }
-            .listSectionSpacing(.compact)
-
-            Section {
                 StationFormRow(title: "From", station: viewModel.origin, placeholder: "Choose origin") {
                     onStationFieldEditingBegan(.originStationField)
                     openStationPicker(.origin)
@@ -66,7 +49,11 @@ struct WindowSetupView: View {
                 .pickerStyle(.menu)
                 .sensoryFeedback(.selection, trigger: viewModel.windowMinutes)
             } footer: {
-                Text("RightTrain compares trains leaving within this window.")
+                if viewModel.canUseMultiLegRouting {
+                    Text("RightTrain compares every journey leaving within this window, direct or with a change.")
+                } else {
+                    Label("Direct trains only for now. Journeys that need a change aren't supported yet.", systemImage: "info.circle")
+                }
             }
         }
         .readableContentMargins()
@@ -77,22 +64,6 @@ struct WindowSetupView: View {
         .tint(Color.rightTrainActionInk)
         .task {
             await viewModel.loadAppCapabilities()
-        }
-    }
-
-    private var availableIntents: [JourneySetupIntent] {
-        JourneySetupIntent.allCases.filter { intent in
-            intent != .connectionSensitive
-                || viewModel.canUseMultiLegRouting
-                || viewModel.activeSetupIntent == intent
-        }
-    }
-
-    private var intentSelection: Binding<JourneySetupIntent> {
-        Binding {
-            viewModel.activeSetupIntent
-        } set: { intent in
-            viewModel.selectSetupIntent(intent)
         }
     }
 
@@ -110,11 +81,15 @@ struct WindowSetupView: View {
         FloatingPrimaryAction {
             Task { await searchJourneys() }
         } label: {
-            // Every search is direct while routes with changes are off, so
-            // the button says so whichever trip type is chosen.
-            Text(viewModel.canUseMultiLegRouting ? viewModel.setupIntentContent.primaryActionText : "Find direct trains")
+            // One search now, so the button no longer names a route shape the
+            // user had to pick before seeing what actually runs.
+            Text(viewModel.canUseMultiLegRouting ? "Find trains" : "Find direct trains")
         }
-        .accessibilityHint("Searches for direct trains in the departure window.")
+        .accessibilityHint(
+            viewModel.canUseMultiLegRouting
+                ? "Searches for journeys in the departure window, direct or with a change."
+                : "Searches for direct trains in the departure window."
+        )
     }
 
     private func searchJourneys() async {
