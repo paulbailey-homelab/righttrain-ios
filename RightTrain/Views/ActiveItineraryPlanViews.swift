@@ -646,8 +646,18 @@ private struct ActiveItineraryPlanHeroCard: View {
         itinerary.legs.first
     }
 
+    // `expectedDeparture` on a leg is a clock string like "12:22", which
+    // `DateFormatting` cannot parse, so this used to be nil every time: the
+    // countdown fell back to "Dep 12:22" in amber, repeating the line
+    // directly beneath it and implying something was wrong. The timestamp
+    // field is the one to read, with the clock string resolved against now
+    // for anything that does not carry it.
     private var departureDate: Date? {
-        DateFormatting.date(from: firstLeg?.expectedDeparture ?? itinerary.expectedDeparture)
+        if let timestamp = firstLeg?.expectedDepartureAt, let date = DateFormatting.date(from: timestamp) {
+            return date
+        }
+        let clock = firstLeg?.expectedDeparture ?? itinerary.expectedDeparture
+        return JourneyFormatting.railDate(from: clock, near: now)
     }
 
     private var countdownText: String {
