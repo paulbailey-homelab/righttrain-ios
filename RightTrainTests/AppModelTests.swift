@@ -68,7 +68,6 @@ final class AppModelTests: XCTestCase {
         setup.destination = destination
         setup.departureStart = departure
         setup.windowMinutes = 180
-        setup.setSearchMode(.anyRoute)
 
         let context = setup.stationPickerContext(for: .destination)
         setup.applyStationPickerSelection(replacement, role: .destination)
@@ -83,7 +82,7 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(setup.destination, replacement)
         XCTAssertEqual(setup.departureStart, departure)
         XCTAssertEqual(setup.windowMinutes, 180)
-        XCTAssertFalse(setup.directRoutesOnly)
+        XCTAssertEqual(setup.searchMode, .anyRoute)
     }
 
     @MainActor
@@ -1145,11 +1144,10 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
-    func testAnyRouteModeUsesGeneralDestinationSearchAndJourneyPlanner() async throws {
+    func testMultiLegCapabilityUsesGeneralDestinationSearchAndJourneyPlanner() async throws {
         let apiClient = FakeAPIClient()
         let model = makeModel(apiClient: apiClient)
         model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: true))
-        model.directRoutesOnly = false
         model.origin = TestFactory.station(crs: "AAA", name: "Origin")
         model.destination = TestFactory.station(crs: "ZZZ", name: "Indirect Destination")
         model.departureStart = TestFactory.now
@@ -1179,14 +1177,13 @@ final class AppModelTests: XCTestCase {
         let apiClient = FakeAPIClient()
         let model = makeModel(apiClient: apiClient)
         model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: false))
-        model.windowSetupViewModel.setSearchMode(.anyRoute)
         model.origin = TestFactory.station(crs: "AAA", name: "Origin")
         model.destination = TestFactory.station(crs: "ZZZ", name: "Indirect Destination")
         apiClient.recommendationsResult = .success(TestFactory.emptyRecommendationResponse())
 
         await model.loadRecommendations()
 
-        XCTAssertTrue(model.directRoutesOnly)
+        XCTAssertEqual(model.windowSetupViewModel.searchMode, .direct)
         XCTAssertTrue(apiClient.journeyPlanRequests.isEmpty)
         XCTAssertEqual(apiClient.recommendationRequests.last?.originCRS, "AAA")
         XCTAssertNil(model.alertState)
@@ -1198,12 +1195,11 @@ final class AppModelTests: XCTestCase {
         apiClient.appCapabilitiesResult = .failure(TestFailure.unimplemented)
         let model = makeModel(apiClient: apiClient)
         model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: true))
-        model.directRoutesOnly = false
 
         await model.windowSetupViewModel.loadAppCapabilities()
 
         XCTAssertEqual(apiClient.appCapabilitiesCallCount, 1)
-        XCTAssertTrue(model.directRoutesOnly)
+        XCTAssertEqual(model.windowSetupViewModel.searchMode, .direct)
         XCTAssertFalse(model.windowSetupViewModel.canUseMultiLegRouting)
     }
 
@@ -1219,7 +1215,6 @@ final class AppModelTests: XCTestCase {
         let model = makeModel(apiClient: apiClient, sessionStore: sessionStore)
         await model.bootstrap()
         model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: true))
-        model.directRoutesOnly = false
         model.origin = TestFactory.station(crs: "AAA", name: "Origin")
         model.destination = TestFactory.station(crs: "ZZZ", name: "Indirect Destination")
 
@@ -1237,6 +1232,78 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
+    func testPinningAResultWithNoChangesCreatesAWindowSubscription() async {
+        // One search now returns direct journeys as one-leg itineraries. Those
+        // are still monitored as direct windows, and the user never sees the
+        // difference: they picked a journey, not a subscription kind.
+        let apiClient = FakeAPIClient()
+        let sessionStore = FakeSessionStore()
+        sessionStore.session = TestFactory.storedSession(accessToken: "create-token")
+        apiClient.currentUserResult = .success(TestFactory.user())
+        apiClient.activeWindowResult = .failure(TestFactory.notFoundError())
+        apiClient.createWindowResult = .success(TestFactory.window(id: "window-1"))
+        let model = makeModel(apiClient: apiClient, sessionStore: sessionStore)
+        await model.bootstrap()
+        model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: true))
+        model.origin = TestFactory.station(crs: "AAA", name: "Origin")
+        model.destination = TestFactory.station(crs: "ZZZ", name: "Destination")
+        let leg = TestFactory.itineraryLeg()
+        let directRoute = TestFactory.itinerary(stableKey: "route-direct", legs: [leg])
+
+        await model.createActiveItinerary(for: directRoute)
+
+        XCTAssertTrue(apiClient.createItineraryRequests.isEmpty)
+        XCTAssertEqual(apiClient.createWindowRequests.last?.accessToken, "create-token")
+        XCTAssertEqual(apiClient.createWindowRequests.last?.input.originCrs, leg.originCrs)
+        XCTAssertEqual(apiClient.createWindowRequests.last?.input.destinationCrs, leg.destinationCrs)
+        XCTAssertEqual(apiClient.createWindowRequests.last?.input.selectedTrainServiceId, leg.serviceId)
+        XCTAssertEqual(model.activeWindow?.id, "window-1")
+        XCTAssertNil(model.activeItinerary)
+        XCTAssertNil(model.alertState)
+    }
+
+    @MainActor
+    func testPinningAResultWithChangesStillCreatesAnItinerarySubscription() async {
+        let apiClient = FakeAPIClient()
+        let sessionStore = FakeSessionStore()
+        sessionStore.session = TestFactory.storedSession(accessToken: "create-token")
+        apiClient.currentUserResult = .success(TestFactory.user())
+        apiClient.activeWindowResult = .failure(TestFactory.notFoundError())
+        let legs = [TestFactory.itineraryLeg(legIndex: 0), TestFactory.itineraryLeg(legIndex: 1)]
+        let route = TestFactory.itinerary(stableKey: "route-changes", legs: legs, connections: [TestFactory.itineraryConnection()])
+        apiClient.createItineraryResult = .success(TestFactory.itinerarySubscription(id: "itinerary-9", selectedItinerary: route))
+        let model = makeModel(apiClient: apiClient, sessionStore: sessionStore)
+        await model.bootstrap()
+        model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: true))
+        model.origin = TestFactory.station(crs: "AAA", name: "Origin")
+        model.destination = TestFactory.station(crs: "ZZZ", name: "Destination")
+
+        await model.createActiveItinerary(for: route)
+
+        XCTAssertTrue(apiClient.createWindowRequests.isEmpty)
+        XCTAssertEqual(apiClient.createItineraryRequests.last?.input.selectedItineraryStableKey, "route-changes")
+        XCTAssertEqual(model.activeItinerary?.id, "itinerary-9")
+        XCTAssertNil(model.activeWindow)
+    }
+
+    @MainActor
+    func testDestinationPickerIsNotRestrictedToDirectDestinations() async throws {
+        // Restricting the destination list to stations with a direct train is
+        // what made a journey needing a change look like it did not exist.
+        let apiClient = FakeAPIClient()
+        let model = makeModel(apiClient: apiClient)
+        model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: true))
+        model.origin = TestFactory.station(crs: "AAA", name: "Origin")
+        apiClient.stationSearchResultsByQuery["pet"] = [TestFactory.station(crs: "PBO", name: "Peterborough")]
+
+        let results = try await model.windowSetupViewModel.searchDestinationStations(query: "pet")
+
+        XCTAssertEqual(results.first?.crs, "PBO")
+        XCTAssertTrue(apiClient.directDestinationStationRequests.isEmpty)
+        XCTAssertEqual(model.windowSetupViewModel.stationPickerContext(for: .destination).routeMode, .anyRoute)
+    }
+
+    @MainActor
     func testCreateActiveItineraryForSelectedRouteReplacesExistingActiveWindow() async {
         let apiClient = FakeAPIClient()
         let sessionStore = FakeSessionStore()
@@ -1248,7 +1315,6 @@ final class AppModelTests: XCTestCase {
         let model = makeModel(apiClient: apiClient, sessionStore: sessionStore)
         await model.bootstrap()
         model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: true))
-        model.directRoutesOnly = false
         model.origin = TestFactory.station(crs: "AAA", name: "Origin")
         model.destination = TestFactory.station(crs: "ZZZ", name: "Indirect Destination")
 
@@ -1386,31 +1452,26 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
-    func testUS2SetupModelCoversIntentWindowValidationAndRoutingCapabilities() {
+    func testUS2SetupModelClampsWindowAndTakesSearchModeFromCapability() {
         let model = makeModel()
 
-        XCTAssertEqual(model.windowSetupViewModel.activeSetupIntent, .oneOffDirect)
         model.windowSetupViewModel.setWindowMinutes(5)
         XCTAssertEqual(model.windowMinutes, 30)
         model.windowSetupViewModel.setWindowMinutes(377)
         XCTAssertEqual(model.windowMinutes, 360)
 
-        model.windowSetupViewModel.setSearchMode(.anyRoute)
-        XCTAssertTrue(model.directRoutesOnly)
-        XCTAssertEqual(model.windowSetupViewModel.activeSetupIntent, .oneOffDirect)
-        XCTAssertEqual(model.alertState, .validation("All routes are coming soon."))
+        // The user no longer picks a route shape, so nothing here can put the
+        // app into a mode the backend cannot serve, and nothing warns them off
+        // a choice they were never offered.
+        XCTAssertEqual(model.windowSetupViewModel.searchMode, .direct)
+        XCTAssertNil(model.alertState)
 
         model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: true))
-        model.windowSetupViewModel.selectSetupIntent(.connectionSensitive)
-        XCTAssertFalse(model.directRoutesOnly)
-        XCTAssertEqual(model.windowSetupViewModel.activeSetupIntent, .connectionSensitive)
-        XCTAssertEqual(model.windowMinutes, JourneySetupIntent.connectionSensitive.defaultWindowMinutes)
-        XCTAssertEqual(model.windowSetupViewModel.setupIntentContent.primaryActionText, "Find routes with changes")
+        XCTAssertEqual(model.windowSetupViewModel.searchMode, .anyRoute)
+        XCTAssertTrue(model.windowSetupViewModel.canUseMultiLegRouting)
 
-        model.windowSetupViewModel.selectSetupIntent(.oneOffDirect)
-        XCTAssertTrue(model.directRoutesOnly)
-        XCTAssertEqual(model.windowSetupViewModel.activeSetupIntent, .oneOffDirect)
-        XCTAssertEqual(model.windowSetupViewModel.setupIntentContent.primaryActionText, "Find direct trains")
+        model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: false))
+        XCTAssertEqual(model.windowSetupViewModel.searchMode, .direct)
     }
 
     @MainActor
@@ -1432,8 +1493,6 @@ final class AppModelTests: XCTestCase {
             now: now
         )
 
-        XCTAssertEqual(model.windowSetupViewModel.activeSetupIntent, .routineCommute)
-        XCTAssertTrue(model.directRoutesOnly)
         XCTAssertEqual(model.origin?.crs, "EUS")
         XCTAssertEqual(model.origin?.displayName, "London Euston")
         XCTAssertEqual(model.destination?.crs, "MAN")
@@ -1444,7 +1503,6 @@ final class AppModelTests: XCTestCase {
         model.startJourneyPlan(from: routine)
 
         XCTAssertEqual(model.selectedTab, .plan)
-        XCTAssertEqual(model.windowSetupViewModel.activeSetupIntent, .routineCommute)
         XCTAssertEqual(model.origin?.crs, "EUS")
         XCTAssertEqual(model.destination?.crs, "MAN")
     }

@@ -2,10 +2,11 @@ import SwiftUI
 
 /// Direct-train search results, rendered as inset-grouped list sections.
 /// Host inside a `List`.
+///
+/// Only reached when the backend has multi-leg routing turned off; otherwise
+/// every search returns itineraries and `ItineraryResultsView` renders them.
 struct RecommendationResultsView: View {
     var response: DirectWindowRecommendationResponse
-    var canSearchRoutesWithChanges: Bool
-    var searchRoutesWithChanges: () async -> Void
     var pinWindow: () async -> Void
     var isJourneyPinned: (DirectWindowRecommendation) -> Bool
     var toggleJourneyPin: (DirectWindowRecommendation) async -> Void
@@ -18,21 +19,9 @@ struct RecommendationResultsView: View {
 
         if recommendations.isEmpty {
             Section {
-                // Telling someone to switch to routes with changes and then
-                // making them walk back to the setup form to do it is the
-                // dead end, not the empty result. Offer the search here.
                 EmptyStateView(
                     title: "No direct trains found",
-                    message: canSearchRoutesWithChanges
-                        ? "There may still be a route with a change. Try that, or widen the departure window."
-                        : "RightTrain only finds direct trains for now, so journeys that need a change won't appear. Try a wider departure window.",
-                    primaryAction: canSearchRoutesWithChanges
-                        ? EmptyStateView.PrimaryAction(
-                            label: "Search routes with changes",
-                            systemImage: "arrow.triangle.branch",
-                            perform: { Task { await searchRoutesWithChanges() } }
-                        )
-                        : nil
+                    message: "RightTrain only finds direct trains for now, so journeys that need a change won't appear. Try a wider departure window."
                 )
                 .listRowInsets(EdgeInsets())
             }
@@ -100,8 +89,8 @@ struct ItineraryResultsView: View {
         if itineraries.isEmpty {
             Section {
                 EmptyStateView(
-                    title: "No trains found",
-                    message: "Try adjusting your departure time or widening the departure window."
+                    title: "No journeys found",
+                    message: "Nothing runs between these stations in this departure window, direct or with a change. Try a later departure or a wider window."
                 )
                 .listRowInsets(EdgeInsets())
             }
@@ -116,7 +105,7 @@ struct ItineraryResultsView: View {
                     )
                 }
             } header: {
-                Text("\(itineraries.count) \(itineraries.count == 1 ? "route" : "routes")")
+                Text("\(itineraries.count) \(itineraries.count == 1 ? "journey" : "journeys")")
             }
         }
     }
