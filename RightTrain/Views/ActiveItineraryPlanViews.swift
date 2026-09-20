@@ -133,13 +133,9 @@ struct ActiveItineraryPresentation {
         guard selected.score.changeCount > 0 else {
             return nil
         }
-        if let connection = selected.connections.first {
-            let station = JourneyFormatting.stationDisplayName(
-                name: connection.atName,
-                fallback: connection.atCrs
-            )
-            return "\(ItineraryFormatting.changesText(selected)) via \(station)"
-        }
+        // The interchange used to be named here as well. The route chain on
+        // the card below says where the change is, so this line only carries
+        // how many there are.
         return ItineraryFormatting.changesText(selected)
     }
 
@@ -320,6 +316,10 @@ private struct ActiveItineraryStatusHeader: View {
 /// with alternate options directly available below it.
 struct ActiveItineraryView: View {
     @Environment(ActiveWindowViewModel.self) private var activeWindowViewModel
+    // Empty until the traveller taps: the card opens collapsed. Its route
+    // chain names every station the journey touches, which is what someone
+    // checking a pin wants, and the per-leg detail that used to be expanded
+    // by default was pushing the other routes off the screen.
     @State private var expandedItineraryIDs: Set<String> = []
     @State private var showsAlternatives = false
     @State private var pendingSwitch: ItineraryRecommendation?
@@ -344,12 +344,6 @@ struct ActiveItineraryView: View {
         }
         .background {
             ActiveItineraryHeader(presentation: presentation)
-        }
-        .onAppear {
-            expandSelectedItineraryIfNeeded()
-        }
-        .onChange(of: presentation.selectedItinerary?.id) { _, selectedID in
-            expandSelectedItinerary(selectedID)
         }
     }
 
@@ -466,21 +460,6 @@ struct ActiveItineraryView: View {
         Task {
             await activeWindowViewModel.switchSelectedItinerary(to: alternative)
         }
-    }
-
-    private func expandSelectedItineraryIfNeeded() {
-        guard expandedItineraryIDs.isEmpty,
-              let selectedID = presentation.selectedItinerary?.id else {
-            return
-        }
-        expandSelectedItinerary(selectedID)
-    }
-
-    private func expandSelectedItinerary(_ selectedID: String?) {
-        guard let selectedID else {
-            return
-        }
-        expandedItineraryIDs.insert(selectedID)
     }
 
     private func isExpanded(_ option: ItineraryRecommendation) -> Bool {
@@ -704,8 +683,14 @@ private struct ActiveItineraryPlanHeroCard: View {
                     .minimumScaleFactor(0.72)
                     .frame(maxWidth: .infinity, alignment: .leading)
 
-                CaptionedPlatformTile(platform: platform.value, size: .medium)
+                CaptionedPlatformTile(
+                    platform: platform.value,
+                    size: .small,
+                    captionFont: .caption.weight(.medium)
+                )
             }
+
+            let routeChainText = ItineraryFormatting.routeChainText(itinerary)
 
             HStack(spacing: RTSpacing.small) {
                 Text(detailLine)
@@ -715,14 +700,37 @@ private struct ActiveItineraryPlanHeroCard: View {
                     .lineLimit(1)
                     .minimumScaleFactor(0.82)
                 Spacer(minLength: 0)
-                Label(isExpanded ? "Hide legs" : "Show legs", systemImage: isExpanded ? "chevron.up" : "chevron.down")
-                    .labelStyle(.iconOnly)
-                    .font(.footnote.weight(.semibold))
-                    .foregroundStyle(.tertiary)
+                // A direct journey has no route chain, so the disclosure
+                // stays here for it: without a chevron somewhere there is
+                // nothing to say the card opens.
+                if routeChainText == nil {
+                    disclosure
+                }
+            }
+
+            // Standing in for the leg list while the card is collapsed: the
+            // stations, in order, including the one being changed at.
+            if let routeChainText {
+                HStack(alignment: .firstTextBaseline, spacing: RTSpacing.small) {
+                    Text(routeChainText)
+                        .font(.subheadline.weight(.medium))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    disclosure
+                }
+                .padding(.top, 2)
             }
         }
         .contentShape(Rectangle())
         .lightSurfaceForeground()
+    }
+
+    private var disclosure: some View {
+        Label(isExpanded ? "Hide legs" : "Show legs", systemImage: isExpanded ? "chevron.up" : "chevron.down")
+            .labelStyle(.iconOnly)
+            .font(.footnote.weight(.semibold))
+            .foregroundStyle(.tertiary)
     }
 
     private var detailLine: String {
