@@ -914,9 +914,12 @@ struct PreviewAPIClient: APIClienting {
 
     func planJourney(originCRS: String, destinationCRS: String, departureStart: Date, windowMinutes: Int, maxChanges: Int, limit: Int) async throws -> JourneyPlanResponse {
         let itinerary = activeItinerary ?? PreviewFixtures.activeItinerary()
+        let direct = itinerary.itineraries.filter { $0.score.changeCount == 0 }
         return JourneyPlanResponse(
             topItinerary: itinerary.selectedItinerary,
             itineraries: itinerary.itineraries,
+            topDirectItinerary: direct.first,
+            directItineraries: direct,
             timetableId: "preview",
             generatedAt: PreviewFixtures.iso(minutesFromBase: 0)
         )

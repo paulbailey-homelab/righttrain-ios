@@ -73,15 +73,15 @@ struct SearchPinToolbarButton: View {
 }
 
 struct ItineraryResultsView: View {
-    var response: JourneyPlanResponse
+    var presentation: ItinerarySearchPresentation
     var isJourneyPinned: (ItineraryRecommendation) -> Bool
     var toggleJourneyPin: (ItineraryRecommendation) async -> Void
     var openLegDetail: (ItineraryLeg) async -> Void
 
     private var itineraries: [ItineraryRecommendation] {
         ItineraryFormatting.chronologicalItineraries(
-            topItinerary: response.topItinerary,
-            itineraries: response.itineraries
+            topItinerary: presentation.topItinerary,
+            itineraries: presentation.itineraries
         )
     }
 
@@ -90,7 +90,9 @@ struct ItineraryResultsView: View {
             Section {
                 EmptyStateView(
                     title: "No journeys found",
-                    message: "Nothing runs between these stations in this departure window, direct or with a change. Try a later departure or a wider window."
+                    message: presentation.quickerWithChange == nil
+                        ? "Nothing runs between these stations in this departure window. Try a later departure or a wider window."
+                        : "No direct trains in this departure window, but there is a route with a change below."
                 )
                 .listRowInsets(EdgeInsets())
             }
@@ -108,10 +110,28 @@ struct ItineraryResultsView: View {
                 Text("\(itineraries.count) \(itineraries.count == 1 ? "journey" : "journeys")")
             }
         }
+
+        // Only present when the user asked for direct trains and a journey
+        // with a change still beats the best of them by a wide margin, so
+        // hiding changes never hides a much faster way home.
+        if let quicker = presentation.quickerWithChange {
+            Section {
+                SearchItineraryJourneyRow(
+                    itinerary: quicker,
+                    emphasized: false,
+                    isPinned: isJourneyPinned(quicker),
+                    pinJourney: { await toggleJourneyPin(quicker) }
+                )
+            } header: {
+                Text(presentation.quickerWithChangeSavingMinutes > 0
+                    ? "\(presentation.quickerWithChangeSavingMinutes) min sooner with a change"
+                    : "With a change")
+            }
+        }
     }
 
     private func isTopItinerary(_ itinerary: ItineraryRecommendation) -> Bool {
-        guard let topItinerary = response.topItinerary else {
+        guard let topItinerary = presentation.topItinerary else {
             return itinerary.recommended
         }
         return itinerary.stableKey == topItinerary.stableKey

@@ -2862,7 +2862,8 @@ final class AppModelTests: XCTestCase {
         notificationFeedbackGenerator: FakeNotificationFeedbackGenerator = FakeNotificationFeedbackGenerator(),
         applicationStateProvider: FakeApplicationStateProvider = FakeApplicationStateProvider(),
         activeJourneyCache: ActiveJourneyCache? = nil,
-        journeyMutationQueue: JourneyMutationQueue? = nil
+        journeyMutationQueue: JourneyMutationQueue? = nil,
+        preferences: UserDefaults? = nil
     ) -> AppModel {
         let storeKitSubscriptionService = storeKitSubscriptionService ?? FakeStoreKitSubscriptionService()
         let journeyMutationQueue = journeyMutationQueue ?? JourneyMutationQueue(defaults: makeIsolatedDefaults())
@@ -2878,7 +2879,8 @@ final class AppModelTests: XCTestCase {
             notificationFeedbackGenerator: notificationFeedbackGenerator,
             applicationStateProvider: applicationStateProvider,
             activeJourneyCache: activeJourneyCache,
-            journeyMutationQueue: journeyMutationQueue
+            journeyMutationQueue: journeyMutationQueue,
+            searchPreferences: preferences ?? makeIsolatedDefaults()
         )
     }
 
@@ -2971,5 +2973,102 @@ final class AppModelTests: XCTestCase {
         let defaults = UserDefaults(suiteName: suiteName)!
         defaults.removePersistentDomain(forName: suiteName)
         return defaults
+    }
+}
+
+// MARK: - Direct trains only
+
+extension AppModelTests {
+    private func planResponseWithDirectAndChange(
+        directArrival: String,
+        changeArrival: String
+    ) -> JourneyPlanResponse {
+        let direct = TestFactory.scoredItinerary(stableKey: "direct", reliableArrival: directArrival, changeCount: 0)
+        let withChange = TestFactory.scoredItinerary(stableKey: "change", reliableArrival: changeArrival, changeCount: 1)
+        return TestFactory.journeyPlanResponse([withChange, direct], direct: [direct])
+    }
+
+    @MainActor
+    func testDirectOnlyOffShowsEveryJourneyAndSuggestsNothing() {
+        let response = planResponseWithDirectAndChange(
+            directArrival: "2026-01-10T11:00:00.000Z",
+            changeArrival: "2026-01-10T10:00:00.000Z"
+        )
+
+        let presentation = ItinerarySearchPresentation.make(response: response, directTrainsOnly: false)
+
+        XCTAssertEqual(presentation.itineraries.count, 2)
+        XCTAssertNil(presentation.quickerWithChange, "journeys with changes are already in the list")
+    }
+
+    @MainActor
+    func testDirectOnlySuggestsAChangeWhenItSavesEnoughTime() {
+        // An hour quicker is well past the margin.
+        let response = planResponseWithDirectAndChange(
+            directArrival: "2026-01-10T11:00:00.000Z",
+            changeArrival: "2026-01-10T10:00:00.000Z"
+        )
+
+        let presentation = ItinerarySearchPresentation.make(response: response, directTrainsOnly: true)
+
+        XCTAssertEqual(presentation.itineraries.map(\.stableKey), ["direct"])
+        XCTAssertEqual(presentation.quickerWithChange?.stableKey, "change")
+        XCTAssertEqual(presentation.quickerWithChangeSavingMinutes, 60)
+    }
+
+    @MainActor
+    func testDirectOnlyStaysQuietWhenTheChangeBarelyHelps() {
+        // Five minutes is inside the margin: not worth changing trains for.
+        let response = planResponseWithDirectAndChange(
+            directArrival: "2026-01-10T11:00:00.000Z",
+            changeArrival: "2026-01-10T10:55:00.000Z"
+        )
+
+        let presentation = ItinerarySearchPresentation.make(response: response, directTrainsOnly: true)
+
+        XCTAssertNil(presentation.quickerWithChange)
+    }
+
+    @MainActor
+    func testDirectOnlyStillOffersAChangeWhenThereAreNoDirectTrains() {
+        // Otherwise the screen is empty and the journey that does exist is
+        // invisible, which is the bug the direct set was added to avoid.
+        let withChange = TestFactory.scoredItinerary(
+            stableKey: "change",
+            reliableArrival: "2026-01-10T10:00:00.000Z",
+            changeCount: 1
+        )
+        let response = TestFactory.journeyPlanResponse([withChange], direct: [])
+
+        let presentation = ItinerarySearchPresentation.make(response: response, directTrainsOnly: true)
+
+        XCTAssertTrue(presentation.itineraries.isEmpty)
+        XCTAssertEqual(presentation.quickerWithChange?.stableKey, "change")
+        XCTAssertEqual(presentation.quickerWithChangeSavingMinutes, 0)
+    }
+
+    @MainActor
+    func testDirectOnlyFallsBackToTheMixedListWhenTheBackendSendsNoDirectSet() {
+        // An older backend does not send directItineraries; the toggle then
+        // has nothing to filter by and must not blank the screen.
+        let direct = TestFactory.scoredItinerary(stableKey: "direct", reliableArrival: "2026-01-10T11:00:00.000Z", changeCount: 0)
+        let response = TestFactory.journeyPlanResponse([direct])
+
+        let presentation = ItinerarySearchPresentation.make(response: response, directTrainsOnly: true)
+
+        XCTAssertEqual(presentation.itineraries.map(\.stableKey), ["direct"])
+    }
+
+    @MainActor
+    func testDirectTrainsOnlyPreferenceIsRememberedAndDefaultsOff() {
+        let defaults = makeIsolatedDefaults()
+        let model = makeModel(preferences: defaults)
+
+        XCTAssertFalse(model.windowSetupViewModel.directTrainsOnly)
+
+        model.windowSetupViewModel.directTrainsOnly = true
+
+        let reloaded = makeModel(preferences: defaults)
+        XCTAssertTrue(reloaded.windowSetupViewModel.directTrainsOnly)
     }
 }

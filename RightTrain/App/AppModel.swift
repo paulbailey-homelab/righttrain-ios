@@ -80,7 +80,8 @@ final class AppCoordinator {
         stationProximityMonitor: any StationProximityMonitoring = SystemStationProximityMonitor(),
         connectivityService: ConnectivityService? = nil,
         activeJourneyCache: ActiveJourneyCache? = nil,
-        journeyMutationQueue: JourneyMutationQueue? = nil
+        journeyMutationQueue: JourneyMutationQueue? = nil,
+        searchPreferences: UserDefaults = .standard
     ) {
         let operationState = AppOperationState()
         let connectivityService = connectivityService ?? ConnectivityService()
@@ -140,7 +141,8 @@ final class AppCoordinator {
             apiClient: apiClient,
             operationState: operationState,
             activeWindowViewModel: activeWindowViewModel,
-            isSignedInProvider: { authViewModel.isSignedIn }
+            isSignedInProvider: { authViewModel.isSignedIn },
+            preferences: searchPreferences
         )
 
         self.operationState = operationState
