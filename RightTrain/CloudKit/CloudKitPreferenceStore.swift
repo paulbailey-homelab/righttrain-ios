@@ -69,6 +69,7 @@ final class CloudKitPreferenceStore: CloudKitPreferenceStoring {
         } catch {
             availability = .unavailable(error.localizedDescription)
         }
+        logger.notice("CloudKit account status: \(String(describing: self.availability), privacy: .public)")
     }
 
     func saveStationDefaults(homeStationCRS: String?, workStationCRS: String?) async {
@@ -122,12 +123,15 @@ final class CloudKitPreferenceStore: CloudKitPreferenceStoring {
             await refreshAvailability()
         }
         guard availability == .available else {
-            logger.debug("skipping CloudKit \(description, privacy: .public): iCloud unavailable")
+            // Deliberately not debug level: when nothing shows up in the
+            // CloudKit Console, this line is the whole explanation.
+            logger.notice("skipped CloudKit \(description, privacy: .public): \(String(describing: self.availability), privacy: .public)")
             return
         }
         do {
             try await ensureZone()
             try await body()
+            logger.notice("wrote CloudKit \(description, privacy: .public) to \(self.container.containerIdentifier ?? "unknown container", privacy: .public)")
         } catch {
             logger.error("CloudKit \(description, privacy: .public) failed: \(error.localizedDescription, privacy: .public)")
         }
