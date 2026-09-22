@@ -66,6 +66,9 @@
 		7B0000000000000000000191 /* AppEnvironment.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000190 /* AppEnvironment.swift */; };
 		7B0000000000000000000193 /* ActiveTrainComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000192 /* ActiveTrainComponents.swift */; };
 		7B0000000000000000000195 /* ItineraryFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000194 /* ItineraryFormatting.swift */; };
+		7B0000000000000000000C02 /* CloudKitPreferenceRecords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000C01 /* CloudKitPreferenceRecords.swift */; };
+		7B0000000000000000000C04 /* CloudKitPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000C03 /* CloudKitPreferenceStore.swift */; };
+		7B1000000000000000000C02 /* CloudKitPreferenceRecordsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1000000000000000000C01 /* CloudKitPreferenceRecordsTests.swift */; };
 		7B0000000000000000000197 /* JourneyDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000196 /* JourneyDetailView.swift */; };
 		7B0000000000000000000181 /* ItineraryActiveJourneyViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000180 /* ItineraryActiveJourneyViews.swift */; };
 		7B00000000000000000001A1 /* StationPickerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B00000000000000000001A0 /* StationPickerViewModel.swift */; };
@@ -202,6 +205,9 @@
 		7B0000000000000000000190 /* AppEnvironment.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEnvironment.swift; sourceTree = "<group>"; };
 		7B0000000000000000000192 /* ActiveTrainComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveTrainComponents.swift; sourceTree = "<group>"; };
 		7B0000000000000000000194 /* ItineraryFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItineraryFormatting.swift; sourceTree = "<group>"; };
+		7B0000000000000000000C01 /* CloudKitPreferenceRecords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitPreferenceRecords.swift; sourceTree = "<group>"; };
+		7B0000000000000000000C03 /* CloudKitPreferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitPreferenceStore.swift; sourceTree = "<group>"; };
+		7B1000000000000000000C01 /* CloudKitPreferenceRecordsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitPreferenceRecordsTests.swift; sourceTree = "<group>"; };
 		7B0000000000000000000196 /* JourneyDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyDetailView.swift; sourceTree = "<group>"; };
 		7B0000000000000000000180 /* ItineraryActiveJourneyViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItineraryActiveJourneyViews.swift; sourceTree = "<group>"; };
 		7B00000000000000000001A0 /* StationPickerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationPickerViewModel.swift; sourceTree = "<group>"; };
@@ -302,6 +308,7 @@
 				7B000000000000000000000A /* App */,
 				7B000000000000000000000B /* API */,
 				7B000000000000000000000C /* Auth */,
+				7B0000000000000000000C05 /* CloudKit */,
 				7B0000000000000000000214 /* LiveActivity */,
 				7B0000000000000000000304 /* PushNotifications */,
 				7B000000000000000000000D /* Views */,
@@ -338,6 +345,15 @@
 				7B0000000000000000000188 /* BackgroundSyncScheduler.swift */,
 			);
 			path = App;
+			sourceTree = "<group>";
+		};
+		7B0000000000000000000C05 /* CloudKit */ = {
+			isa = PBXGroup;
+			children = (
+				7B0000000000000000000C01 /* CloudKitPreferenceRecords.swift */,
+				7B0000000000000000000C03 /* CloudKitPreferenceStore.swift */,
+			);
+			path = CloudKit;
 			sourceTree = "<group>";
 		};
 		7B000000000000000000000B /* API */ = {
@@ -439,6 +455,7 @@
 			children = (
 				7B1000000000000000000112 /* APIClientTests.swift */,
 				7B1000000000000000000100 /* AppModelTests.swift */,
+				7B1000000000000000000C01 /* CloudKitPreferenceRecordsTests.swift */,
 				7B1000000000000000000114 /* ConnectivityServiceTests.swift */,
 				7B1000000000000000000102 /* JourneyFormattingTests.swift */,
 				7B1000000000000000000106 /* LiveActivityLayoutTests.swift */,
@@ -660,6 +677,8 @@
 				7B0000000000000000000311 /* LocalInterchangeNotification.swift in Sources */,
 				7B0000000000000000000181 /* ItineraryActiveJourneyViews.swift in Sources */,
 				7B0000000000000000000195 /* ItineraryFormatting.swift in Sources */,
+				7B0000000000000000000C02 /* CloudKitPreferenceRecords.swift in Sources */,
+				7B0000000000000000000C04 /* CloudKitPreferenceStore.swift in Sources */,
 				7B0000000000000000000197 /* JourneyDetailView.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -682,6 +701,7 @@
 			files = (
 				7B1000000000000000000113 /* APIClientTests.swift in Sources */,
 				7B1000000000000000000101 /* AppModelTests.swift in Sources */,
+				7B1000000000000000000C02 /* CloudKitPreferenceRecordsTests.swift in Sources */,
 				7B1000000000000000000115 /* ConnectivityServiceTests.swift in Sources */,
 				7B1000000000000000000103 /* JourneyFormattingTests.swift in Sources */,
 				7B1000000000000000000107 /* LiveActivityLayoutTests.swift in Sources */,
