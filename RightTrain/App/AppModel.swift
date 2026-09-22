@@ -123,11 +123,15 @@ final class AppCoordinator {
             registrationContextFactory: registrationContextFactory,
             accessTokenProvider: { authViewModel.usableAccessToken }
         )
+        let cloudKitPreferenceStore = CloudKitPreferenceStore(
+            containerIdentifier: AppConfig.cloudKitContainerIdentifier
+        )
         let commuteRoutinesViewModel = CommuteRoutinesViewModel(
             apiClient: apiClient,
             operationState: operationState,
             accessTokenProvider: { authViewModel.usableAccessToken },
-            userUpdateHandler: { authViewModel.replaceCurrentUser($0) }
+            userUpdateHandler: { authViewModel.replaceCurrentUser($0) },
+            cloudKitStore: cloudKitPreferenceStore
         )
         let subscriptionViewModel = SubscriptionViewModel(
             apiClient: apiClient,

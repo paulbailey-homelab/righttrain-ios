@@ -10,17 +10,20 @@ final class CommuteRoutinesViewModel {
     @ObservationIgnored private let operationState: AppOperationState
     @ObservationIgnored private let accessTokenProvider: () -> String?
     @ObservationIgnored private let userUpdateHandler: (User) -> Void
+    @ObservationIgnored private let cloudKitStore: (any CloudKitPreferenceStoring)?
 
     init(
         apiClient: any APIClienting,
         operationState: AppOperationState,
         accessTokenProvider: @escaping () -> String?,
-        userUpdateHandler: @escaping (User) -> Void
+        userUpdateHandler: @escaping (User) -> Void,
+        cloudKitStore: (any CloudKitPreferenceStoring)? = nil
     ) {
         self.apiClient = apiClient
         self.operationState = operationState
         self.accessTokenProvider = accessTokenProvider
         self.userUpdateHandler = userUpdateHandler
+        self.cloudKitStore = cloudKitStore
     }
 
     func refresh() async {
@@ -65,6 +68,10 @@ final class CommuteRoutinesViewModel {
                 accessToken: accessToken
             )
             userUpdateHandler(updatedUser)
+            await cloudKitStore?.saveStationDefaults(
+                homeStationCRS: updatedUser.stationDefaults.homeStationCrs,
+                workStationCRS: updatedUser.stationDefaults.workStationCrs
+            )
         }
     }
 
@@ -96,6 +103,7 @@ final class CommuteRoutinesViewModel {
         await operationState.withLoading {
             let routine = try await apiClient.createCommuteRoutine(input: input, accessToken: accessToken)
             routines.insert(routine, at: 0)
+            await cloudKitStore?.saveRoutine(routine)
         }
     }
 
@@ -108,6 +116,7 @@ final class CommuteRoutinesViewModel {
             } else {
                 routines.insert(routine, at: 0)
             }
+            await cloudKitStore?.saveRoutine(routine)
         }
     }
 
@@ -116,6 +125,7 @@ final class CommuteRoutinesViewModel {
         await operationState.withLoading {
             try await apiClient.deleteCommuteRoutine(id: id, accessToken: accessToken)
             routines.removeAll { $0.id == id }
+            await cloudKitStore?.deleteRoutine(id: id)
         }
     }
 
