@@ -920,13 +920,9 @@ enum TestFactory {
         )
     }
 
-    static func user(id: String = "user-1", name: String = "Test User") -> User {
+    static func user(id: String = "user-1") -> User {
         User(
             id: id,
-            displayName: name,
-            email: "\(id)@example.com",
-            emailVerified: true,
-            isPrivateEmail: false,
             entitlements: UserEntitlements(tier: "beta", status: "active", activeWindowLimit: 1, commuteRoutineLimit: 2),
             stationDefaults: UserStationDefaults(homeStationCrs: nil, workStationCrs: nil),
             createdAt: now,

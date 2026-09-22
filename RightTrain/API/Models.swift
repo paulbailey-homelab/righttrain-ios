@@ -251,12 +251,11 @@ struct Session: Codable {
     }
 }
 
+/// A ClearSignal account. It carries no name, email address or phone number:
+/// accounts are created by App Attest device registration and are identified
+/// only by their opaque ID.
 struct User: Codable, Identifiable {
     var id: String
-    var displayName: String?
-    var email: String?
-    var emailVerified: Bool
-    var isPrivateEmail: Bool
     var entitlements: UserEntitlements
     var stationDefaults: UserStationDefaults
     var createdAt: Date

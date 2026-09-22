@@ -300,13 +300,13 @@ final class APIClientTests: XCTestCase {
             """.utf8)),
             .success(statusCode: 200, body: Data("""
             {
-              "user": {"id": "user-1", "emailVerified": false, "isPrivateEmail": false, "entitlements": {"tier": "free_beta", "status": "active", "activeWindowLimit": 1, "commuteRoutineLimit": 2}, "stationDefaults": {}, "createdAt": "2026-06-16T12:00:00Z", "updatedAt": "2026-06-16T12:00:00Z"},
+              "user": {"id": "user-1", "entitlements": {"tier": "free_beta", "status": "active", "activeWindowLimit": 1, "commuteRoutineLimit": 2}, "stationDefaults": {}, "createdAt": "2026-06-16T12:00:00Z", "updatedAt": "2026-06-16T12:00:00Z"},
               "session": {"id": "session-1", "accessToken": "account-token", "tokenType": "Bearer", "expiresAt": "2026-07-16T12:00:00Z", "createdAt": "2026-06-16T12:00:00Z"}
             }
             """.utf8)),
             .success(statusCode: 200, body: Data("""
             {
-              "user": {"id": "user-1", "emailVerified": false, "isPrivateEmail": false, "entitlements": {"tier": "free_beta", "status": "active", "activeWindowLimit": 1, "commuteRoutineLimit": 2}, "stationDefaults": {}, "createdAt": "2026-06-16T12:00:00Z", "updatedAt": "2026-06-16T12:00:00Z"},
+              "user": {"id": "user-1", "entitlements": {"tier": "free_beta", "status": "active", "activeWindowLimit": 1, "commuteRoutineLimit": 2}, "stationDefaults": {}, "createdAt": "2026-06-16T12:00:00Z", "updatedAt": "2026-06-16T12:00:00Z"},
               "session": {"id": "session-2", "accessToken": "recovered-token", "tokenType": "Bearer", "expiresAt": "2026-07-16T12:00:00Z", "createdAt": "2026-06-16T12:00:00Z"}
             }
             """.utf8))
