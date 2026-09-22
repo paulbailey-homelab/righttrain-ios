@@ -378,6 +378,12 @@ struct DirectWindowRecommendationResponse: Decodable {
 struct JourneyPlanResponse: Decodable {
     var topItinerary: ItineraryRecommendation?
     var itineraries: [ItineraryRecommendation]
+    /// Journeys with no changes, planned in their own pass rather than
+    /// filtered out of `itineraries` — that list is capped and can fill up
+    /// with journeys that change while direct trains exist. Optional so a
+    /// response from a backend that predates it still decodes.
+    var topDirectItinerary: ItineraryRecommendation? = nil
+    var directItineraries: [ItineraryRecommendation]? = nil
     var timetableId: String?
     var generatedAt: String
 }

@@ -60,6 +60,21 @@ final class WindowSetupViewModel {
             clearSearchResults()
         }
     }
+
+    /// Shows only journeys with no changes. This filters what the results
+    /// screen leads with; it does not narrow the search, so a journey with a
+    /// change can still be offered when it is meaningfully quicker. Off by
+    /// default, and remembered once set.
+    var directTrainsOnly: Bool = false {
+        didSet {
+            guard directTrainsOnly != oldValue else {
+                return
+            }
+            preferences.set(directTrainsOnly, forKey: Self.directTrainsOnlyKey)
+        }
+    }
+
+    static let directTrainsOnlyKey = "rightTrain.search.directTrainsOnly"
     private(set) var recommendationResponse: DirectWindowRecommendationResponse?
     private(set) var journeyPlanResponse: JourneyPlanResponse?
 
@@ -67,17 +82,23 @@ final class WindowSetupViewModel {
     @ObservationIgnored private let operationState: AppOperationState
     @ObservationIgnored private let activeWindowViewModel: ActiveWindowViewModel
     @ObservationIgnored private let isSignedInProvider: () -> Bool
+    @ObservationIgnored private let preferences: UserDefaults
 
     init(
         apiClient: any APIClienting,
         operationState: AppOperationState,
         activeWindowViewModel: ActiveWindowViewModel,
-        isSignedInProvider: @escaping () -> Bool
+        isSignedInProvider: @escaping () -> Bool,
+        preferences: UserDefaults = .standard
     ) {
         self.apiClient = apiClient
         self.operationState = operationState
         self.activeWindowViewModel = activeWindowViewModel
         self.isSignedInProvider = isSignedInProvider
+        self.preferences = preferences
+        // Assigned after the store is in place so the didSet that persists it
+        // is writing to the right defaults.
+        directTrainsOnly = preferences.bool(forKey: Self.directTrainsOnlyKey)
     }
 
     var canCreateActiveWindow: Bool {
@@ -272,6 +293,8 @@ final class WindowSetupViewModel {
                 journeyPlanResponse = JourneyPlanResponse(
                     topItinerary: subscription.selectedItinerary,
                     itineraries: subscription.itineraries,
+                    topDirectItinerary: journeyPlanResponse?.topDirectItinerary,
+                    directItineraries: journeyPlanResponse?.directItineraries,
                     timetableId: journeyPlanResponse?.timetableId,
                     generatedAt: subscription.createdAt
                 )
@@ -370,6 +393,8 @@ final class WindowSetupViewModel {
             journeyPlanResponse = JourneyPlanResponse(
                 topItinerary: subscription.selectedItinerary,
                 itineraries: subscription.itineraries,
+                topDirectItinerary: journeyPlanResponse?.topDirectItinerary,
+                directItineraries: journeyPlanResponse?.directItineraries,
                 timetableId: journeyPlanResponse?.timetableId,
                 generatedAt: subscription.createdAt
             )

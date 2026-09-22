@@ -49,10 +49,19 @@ struct WindowSetupView: View {
                 .pickerStyle(.menu)
                 .sensoryFeedback(.selection, trigger: viewModel.windowMinutes)
             } footer: {
-                if viewModel.canUseMultiLegRouting {
-                    Text("RightTrain compares every journey leaving within this window, direct or with a change.")
-                } else {
+                if !viewModel.canUseMultiLegRouting {
                     Label("Direct trains only for now. Journeys that need a change aren't supported yet.", systemImage: "info.circle")
+                }
+            }
+
+            if viewModel.canUseMultiLegRouting {
+                Section {
+                    Toggle("Direct trains only", isOn: $viewModel.directTrainsOnly)
+                        .sensoryFeedback(.selection, trigger: viewModel.directTrainsOnly)
+                } footer: {
+                    Text(viewModel.directTrainsOnly
+                        ? "Journeys with a change are hidden, but one is still offered if it gets you there much sooner."
+                        : "RightTrain compares every journey leaving within this window, direct or with a change.")
                 }
             }
         }

@@ -382,7 +382,10 @@ private struct PlanSearchResultsView: View {
                 )
             } else if let response = viewModel.journeyPlanResponse {
                 ItineraryResultsView(
-                    response: response,
+                    presentation: ItinerarySearchPresentation.make(
+                        response: response,
+                        directTrainsOnly: viewModel.directTrainsOnly
+                    ),
                     isJourneyPinned: isPinnedRouteJourney,
                     toggleJourneyPin: toggleRouteJourneyPin,
                     openLegDetail: openItineraryLegDetail

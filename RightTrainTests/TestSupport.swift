@@ -1488,13 +1488,35 @@ enum TestFactory {
         )
     }
 
-    static func journeyPlanResponse(_ itineraries: [ItineraryRecommendation]) -> JourneyPlanResponse {
+    static func journeyPlanResponse(
+        _ itineraries: [ItineraryRecommendation],
+        direct: [ItineraryRecommendation]? = nil
+    ) -> JourneyPlanResponse {
         JourneyPlanResponse(
             topItinerary: itineraries.first,
             itineraries: itineraries,
+            topDirectItinerary: direct?.first,
+            directItineraries: direct,
             timetableId: "test-timetable",
             generatedAt: "2026-01-10T09:00:00.000Z"
         )
+    }
+
+    /// An itinerary whose score carries a specific reliable arrival, which is
+    /// what the direct-only suggestion weighs journeys by.
+    static func scoredItinerary(
+        stableKey: String,
+        reliableArrival: String,
+        changeCount: Int,
+        usable: Bool = true
+    ) -> ItineraryRecommendation {
+        let legs = (0...changeCount).map { itineraryLeg(legIndex: $0) }
+        var itinerary = itinerary(stableKey: stableKey, legs: legs)
+        itinerary.score.reliableArrival = reliableArrival
+        itinerary.score.expectedArrival = reliableArrival
+        itinerary.score.changeCount = changeCount
+        itinerary.score.usable = usable
+        return itinerary
     }
 
     static func emptyJourneyPlanResponse() -> JourneyPlanResponse {

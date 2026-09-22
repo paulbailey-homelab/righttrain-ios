@@ -503,3 +503,92 @@ enum ItineraryFormatting {
         return max(0, Int(departure.timeIntervalSince(arrival) / 60))
     }
 }
+
+/// What the results screen shows for one search, once the "direct trains only"
+/// preference has been applied.
+///
+/// The preference filters what is shown; it does not narrow the search. The
+/// backend plans direct journeys as their own set precisely so that hiding
+/// journeys with changes never hides the fact that a much quicker one exists —
+/// so when direct-only is on, the best journey with a change is still offered
+/// if it saves enough time to be worth the change.
+struct ItinerarySearchPresentation {
+    /// How much time a journey with a change has to save before it is worth
+    /// offering to someone who asked for direct trains. Below this the change
+    /// costs more in hassle than the minutes it wins back.
+    static let suggestionMarginMinutes = 10
+
+    var itineraries: [ItineraryRecommendation]
+    var topItinerary: ItineraryRecommendation? = nil
+    /// Offered beneath a direct-only list. Nil whenever direct-only is off,
+    /// because then it is already in the list above.
+    var quickerWithChange: ItineraryRecommendation? = nil
+    var quickerWithChangeSavingMinutes: Int = 0
+
+    static func make(
+        response: JourneyPlanResponse,
+        directTrainsOnly: Bool
+    ) -> ItinerarySearchPresentation {
+        guard directTrainsOnly, let direct = response.directItineraries else {
+            return ItinerarySearchPresentation(
+                itineraries: response.itineraries,
+                topItinerary: response.topItinerary
+            )
+        }
+
+        var presentation = ItinerarySearchPresentation(
+            itineraries: direct,
+            topItinerary: response.topDirectItinerary ?? direct.first { $0.recommended }
+        )
+
+        guard let bestOverall = bestOverallWithChange(response) else {
+            return presentation
+        }
+
+        // With no direct trains at all there is nothing to weigh against, and
+        // an empty screen would hide a journey that exists. Offer it whatever
+        // the margin.
+        guard let bestDirect = presentation.topItinerary ?? direct.first else {
+            presentation.quickerWithChange = bestOverall
+            return presentation
+        }
+
+        guard let saving = savingMinutes(from: bestDirect, to: bestOverall),
+              saving >= suggestionMarginMinutes else {
+            return presentation
+        }
+        presentation.quickerWithChange = bestOverall
+        presentation.quickerWithChangeSavingMinutes = saving
+        return presentation
+    }
+
+    /// The best usable journey that actually involves a change. The mixed list
+    /// contains direct journeys too, and suggesting one of those to someone
+    /// already looking at direct trains would be noise.
+    private static func bestOverallWithChange(_ response: JourneyPlanResponse) -> ItineraryRecommendation? {
+        let candidates = ItineraryFormatting.chronologicalItineraries(
+            topItinerary: response.topItinerary,
+            itineraries: response.itineraries
+        )
+        return candidates
+            .filter { $0.score.changeCount > 0 && $0.score.usable }
+            .min { left, right in
+                (reliableArrival(left) ?? .distantFuture) < (reliableArrival(right) ?? .distantFuture)
+            }
+    }
+
+    private static func savingMinutes(
+        from direct: ItineraryRecommendation,
+        to candidate: ItineraryRecommendation
+    ) -> Int? {
+        guard let directArrival = reliableArrival(direct),
+              let candidateArrival = reliableArrival(candidate) else {
+            return nil
+        }
+        return Int(directArrival.timeIntervalSince(candidateArrival) / 60)
+    }
+
+    private static func reliableArrival(_ itinerary: ItineraryRecommendation) -> Date? {
+        DateFormatting.date(from: itinerary.score.reliableArrival)
+    }
+}
