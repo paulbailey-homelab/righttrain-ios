@@ -75,10 +75,6 @@ enum PreviewFixtures {
     static var user: User {
         User(
             id: "00000000-0000-0000-0000-000000000001",
-            displayName: "Preview Rider",
-            email: "preview@righttrain.app",
-            emailVerified: true,
-            isPrivateEmail: false,
             entitlements: UserEntitlements(
                 tier: "pro",
                 status: "active",
