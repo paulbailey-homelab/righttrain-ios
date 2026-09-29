@@ -974,6 +974,52 @@ struct CommuteRoutineMutationRequest: Encodable {
     var notificationsEnabled: Bool
 }
 
+/// One concrete departure the app wants monitored, sent ahead of time.
+///
+/// This is not a subscription. The backend queues it and creates the window
+/// subscription later, when its lead time arrives, so the active-window
+/// entitlement is spent then rather than a week early.
+struct PreArmCommuteDeparture: Encodable, Equatable {
+    var originCrs: String
+    var destinationCrs: String
+    var departureStart: Date
+    var windowMinutes: Int
+    var armLeadMinutes: Int
+    var notificationsEnabled: Bool
+}
+
+struct PreArmCommuteDeparturesRequest: Encodable, Equatable {
+    var departures: [PreArmCommuteDeparture]
+}
+
+/// A departure the backend declined to queue, with the reason. Skips are
+/// expected rather than exceptional: a rolling window re-posted every launch
+/// always contains departures that have since passed.
+struct PreArmCommuteDepartureSkip: Decodable, Equatable {
+    var originCrs: String
+    var destinationCrs: String
+    var departureStart: Date
+    var reason: String
+}
+
+struct PreArmCommuteDeparturesResponse: Decodable, Equatable {
+    var scheduled: [ScheduledArm]
+    var skipped: [PreArmCommuteDepartureSkip]
+}
+
+struct ScheduledArm: Decodable, Identifiable, Equatable {
+    var id: String
+    var originCrs: String
+    var destinationCrs: String
+    var departureStart: Date
+    var windowMinutes: Int
+    var armLeadMinutes: Int
+    var notificationsEnabled: Bool
+    var windowSubscriptionId: String?
+    var armedAt: Date?
+    var expiresAt: Date
+}
+
 struct RegisterLiveActivityTokenRequest: Encodable {
     var token: String
     var environment: String

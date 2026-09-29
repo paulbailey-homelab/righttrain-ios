@@ -107,6 +107,8 @@ final class FakeAPIClient: APIClienting {
     var deleteWindowError: Error?
     var deleteItineraryError: Error?
     var deleteCommuteRoutineError: Error?
+    var preArmError: Error?
+    var preArmResponse: PreArmCommuteDeparturesResponse?
     var deleteUserError: Error?
     var registerLiveActivityTokenError: Error?
     var registerLiveActivityPushToStartTokenError: Error?
@@ -168,6 +170,7 @@ final class FakeAPIClient: APIClienting {
     var createCommuteRoutineRequests: [(input: CommuteRoutineMutationRequest, accessToken: String)] = []
     var updateCommuteRoutineRequests: [(id: String, input: CommuteRoutineMutationRequest, accessToken: String)] = []
     var deleteCommuteRoutineRequests: [(id: String, accessToken: String)] = []
+    var preArmRequests: [(input: PreArmCommuteDeparturesRequest, accessToken: String)] = []
     var registerLiveActivityTokenRequests: [(windowID: String, activityKind: String, input: RegisterLiveActivityTokenRequest, accessToken: String)] = []
     var registerItineraryLiveActivityTokenRequests: [(itineraryID: String, activityKind: String, input: RegisterLiveActivityTokenRequest, accessToken: String)] = []
     var registerLiveActivityPushToStartTokenRequests: [(clientDeviceID: String, activityID: String, input: RegisterLiveActivityTokenRequest, accessToken: String)] = []
@@ -545,6 +548,17 @@ final class FakeAPIClient: APIClienting {
         if let deleteCommuteRoutineError {
             throw deleteCommuteRoutineError
         }
+    }
+
+    func preArmCommuteDepartures(input: PreArmCommuteDeparturesRequest, accessToken: String) async throws -> PreArmCommuteDeparturesResponse {
+        preArmRequests.append((input, accessToken))
+        if let preArmError {
+            throw preArmError
+        }
+        return preArmResponse ?? PreArmCommuteDeparturesResponse(
+            scheduled: [],
+            skipped: []
+        )
     }
 
     func registerLiveActivityToken(

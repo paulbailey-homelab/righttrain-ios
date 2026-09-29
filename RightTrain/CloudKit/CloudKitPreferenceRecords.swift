@@ -22,6 +22,11 @@ enum CloudKitSchema {
         static let notificationPreferences = "notificationPreferences"
         static let productPreferences = "productPreferences"
         static let updatedAt = "updatedAt"
+        /// When the server's copy was first written into this zone. Its
+        /// absence is what says the account has never been migrated, and it
+        /// lives here rather than in UserDefaults so a second device does not
+        /// repeat the migration.
+        static let seededAt = "seededAt"
     }
 
     enum Routine {
@@ -119,6 +124,52 @@ extension CommuteRoutine {
         record[CloudKitSchema.Routine.autoArmLeadMinutes] = Int64(autoArmLeadMinutes)
         record[CloudKitSchema.Routine.notificationsEnabled] = CloudKitBool.encode(notificationsEnabled)
         record[CloudKitSchema.Routine.updatedAt] = now
+    }
+}
+
+extension CommuteRoutine {
+    /// Reads a routine back out of a record.
+    ///
+    /// The account id is supplied by the caller rather than stored: it is the
+    /// same for every record in a private database, and leaving it off the
+    /// record keeps stage 2 free of any schema change, so the production
+    /// schema deployed for stage 1 still fits.
+    ///
+    /// The timestamps come from CloudKit's own record metadata, for the same
+    /// reason. `deletedAt` is always nil, because a deleted routine is a
+    /// deleted record here rather than a tombstone.
+    init?(record: CKRecord, userID: String) {
+        guard let originCRS = record[CloudKitSchema.Routine.originCRS] as? String,
+              let destinationCRS = record[CloudKitSchema.Routine.destinationCRS] as? String,
+              let departureTime = record[CloudKitSchema.Routine.departureTime] as? String else {
+            return nil
+        }
+        let updatedAt = record[CloudKitSchema.Routine.updatedAt] as? Date
+            ?? record.modificationDate
+            ?? Date()
+        self.init(
+            id: record.recordID.recordName,
+            userId: userID,
+            name: record[CloudKitSchema.Routine.name] as? String ?? "",
+            status: record[CloudKitSchema.Routine.status] as? String ?? "active",
+            originCrs: originCRS,
+            destinationCrs: destinationCRS,
+            departureTime: departureTime,
+            windowMinutes: Int(record[CloudKitSchema.Routine.windowMinutes] as? Int64 ?? 120),
+            activeWeekdays: (record[CloudKitSchema.Routine.activeWeekdays] as? [Int64] ?? []).map { Int($0) },
+            autoArmEnabled: CloudKitBool.decode(record[CloudKitSchema.Routine.autoArmEnabled], default: false),
+            autoArmLeadMinutes: Int(record[CloudKitSchema.Routine.autoArmLeadMinutes] as? Int64 ?? 30),
+            notificationsEnabled: CloudKitBool.decode(record[CloudKitSchema.Routine.notificationsEnabled], default: true),
+            createdAt: record.creationDate ?? updatedAt,
+            updatedAt: updatedAt,
+            deletedAt: nil
+        )
+    }
+}
+
+extension CloudKitPreferences {
+    var stationDefaults: UserStationDefaults {
+        UserStationDefaults(homeStationCrs: homeStationCRS, workStationCrs: workStationCRS)
     }
 }
 
