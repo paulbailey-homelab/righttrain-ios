@@ -132,7 +132,6 @@ final class AppCoordinator {
             operationState: operationState,
             accessTokenProvider: { authViewModel.usableAccessToken },
             userProvider: { authViewModel.user },
-            userUpdateHandler: { authViewModel.replaceCurrentUser($0) },
             cloudKitStore: cloudKitPreferenceStore,
             preArmScheduler: commutePreArmScheduler
         )

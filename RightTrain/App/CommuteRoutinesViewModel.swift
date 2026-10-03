@@ -9,17 +9,15 @@ final class CommuteRoutinesViewModel {
     /// The preferences CloudKit holds, once they have been read successfully.
     private(set) var cloudKitPreferences: CloudKitPreferences?
 
-    /// Whether the last read of the private database succeeded. Everything
-    /// that moves work off the server is gated on this: when iCloud cannot be
-    /// reached the app behaves exactly as it did before, reading routines from
-    /// the server and leaving the server's own auto-arm to do the arming.
-    private(set) var isCloudKitAuthoritative = false
+    /// Whether the private database could be read. There is no longer anywhere
+    /// else for commutes to live, so when this is false the app has no
+    /// routines to show rather than a server copy to fall back on.
+    private(set) var isCloudKitAvailable = false
 
     @ObservationIgnored private let apiClient: any APIClienting
     @ObservationIgnored private let operationState: AppOperationState
     @ObservationIgnored private let accessTokenProvider: () -> String?
     @ObservationIgnored private let userProvider: () -> User?
-    @ObservationIgnored private let userUpdateHandler: (User) -> Void
     @ObservationIgnored private let cloudKitStore: (any CloudKitPreferenceStoring)?
     @ObservationIgnored private let preArmScheduler: CommutePreArmScheduler?
 
@@ -28,7 +26,6 @@ final class CommuteRoutinesViewModel {
         operationState: AppOperationState,
         accessTokenProvider: @escaping () -> String?,
         userProvider: @escaping () -> User? = { nil },
-        userUpdateHandler: @escaping (User) -> Void,
         cloudKitStore: (any CloudKitPreferenceStoring)? = nil,
         preArmScheduler: CommutePreArmScheduler? = nil
     ) {
@@ -36,42 +33,41 @@ final class CommuteRoutinesViewModel {
         self.operationState = operationState
         self.accessTokenProvider = accessTokenProvider
         self.userProvider = userProvider
-        self.userUpdateHandler = userUpdateHandler
         self.cloudKitStore = cloudKitStore
         self.preArmScheduler = preArmScheduler
     }
 
-    /// Home and work station, from CloudKit when it can be read and from the
-    /// server account otherwise. Reading through here rather than off the user
-    /// is what makes CloudKit the source of truth for them.
+    /// Home and work station, from CloudKit. Empty when iCloud cannot be read,
+    /// which is the same answer the rest of this screen gives.
     var stationDefaults: UserStationDefaults {
-        if let cloudKitPreferences {
-            return cloudKitPreferences.stationDefaults
-        }
-        return userProvider()?.stationDefaults ?? UserStationDefaults(homeStationCrs: nil, workStationCrs: nil)
+        cloudKitPreferences?.stationDefaults
+            ?? UserStationDefaults(homeStationCrs: nil, workStationCrs: nil)
+    }
+
+    /// True when the user's commutes are unreachable because iCloud is off or
+    /// signed out, which the screen says out loud rather than showing an empty
+    /// list that looks like deleted data.
+    var isWaitingOnICloud: Bool {
+        cloudKitStore != nil && !isCloudKitAvailable
     }
 
     func refresh() async {
-        guard let accessToken = requireAccessToken() else { return }
         await operationState.withLoading {
-            let serverRoutines = try await apiClient.listCommuteRoutines(accessToken: accessToken)
-            let loadedRoutines = await resolveRoutines(serverRoutines: serverRoutines)
+            let loadedRoutines = await loadRoutines()
             routines = loadedRoutines
-            await handOverArmingIfNeeded(serverRoutines: serverRoutines, accessToken: accessToken)
             do {
                 try await hydrateStations(for: loadedRoutines.flatMap { [$0.originCrs, $0.destinationCrs] })
             } catch {
                 operationState.recordSilentOperationError(error)
             }
-            await preArm(accessToken: accessToken)
+            await preArm()
         }
     }
 
     /// Re-posts the rolling week without reloading anything. Cheap enough to
     /// call on foreground and from the background refresh task.
     func refreshPreArmedDepartures() async {
-        guard let accessToken = accessTokenProvider() else { return }
-        await preArm(accessToken: accessToken)
+        await preArm()
     }
 
     func searchStations(query: String) async throws -> [StationSuggestion] {
@@ -93,25 +89,14 @@ final class CommuteRoutinesViewModel {
     }
 
     func updateStationDefaults(homeStationCRS: String?, workStationCRS: String?) async {
-        guard let accessToken = requireAccessToken() else { return }
-        await operationState.withLoading {
-            let updatedUser = try await apiClient.updateStationDefaults(
-                input: UpdateStationDefaultsRequest(
-                    homeStationCrs: normalizedOptionalCRS(homeStationCRS),
-                    workStationCrs: normalizedOptionalCRS(workStationCRS)
-                ),
-                accessToken: accessToken
-            )
-            userUpdateHandler(updatedUser)
-            await cloudKitStore?.saveStationDefaults(
-                homeStationCRS: updatedUser.stationDefaults.homeStationCrs,
-                workStationCRS: updatedUser.stationDefaults.workStationCrs
-            )
-            if cloudKitPreferences != nil {
-                cloudKitPreferences?.homeStationCRS = updatedUser.stationDefaults.homeStationCrs
-                cloudKitPreferences?.workStationCRS = updatedUser.stationDefaults.workStationCrs
-            }
-        }
+        guard requireCloudKit() else { return }
+        let home = normalizedOptionalCRS(homeStationCRS)
+        let work = normalizedOptionalCRS(workStationCRS)
+        await cloudKitStore?.saveStationDefaults(homeStationCRS: home, workStationCRS: work)
+        var preferences = cloudKitPreferences ?? CloudKitPreferences()
+        preferences.homeStationCRS = home
+        preferences.workStationCRS = work
+        cloudKitPreferences = preferences
     }
 
     func hydrateDefaultStations(homeStationCRS: String?, workStationCRS: String?) async {
@@ -138,45 +123,44 @@ final class CommuteRoutinesViewModel {
     }
 
     func createRoutine(_ input: CommuteRoutineMutationRequest) async {
-        guard let accessToken = requireAccessToken() else { return }
+        guard requireCloudKit() else { return }
+        // The backend no longer issues routine ids, because it no longer holds
+        // routines. A UUID made here is the record name in CloudKit and the
+        // only identity the routine has.
+        let routine = CommuteRoutine(input: input, id: UUID().uuidString, userID: userProvider()?.id ?? "")
         await operationState.withLoading {
-            let created = try await apiClient.createCommuteRoutine(
-                input: serverCopy(of: input),
-                accessToken: accessToken
-            )
-            let routine = withIntendedAutoArm(created, from: input)
-            routines.insert(routine, at: 0)
             await cloudKitStore?.saveRoutine(routine)
-            await preArm(accessToken: accessToken)
+            routines.insert(routine, at: 0)
+            await preArm()
         }
     }
 
     func updateRoutine(id: String, input: CommuteRoutineMutationRequest) async {
-        guard let accessToken = requireAccessToken() else { return }
+        guard requireCloudKit() else { return }
+        let existing = routines.first { $0.id == id }
+        let routine = CommuteRoutine(
+            input: input,
+            id: id,
+            userID: existing?.userId ?? userProvider()?.id ?? "",
+            createdAt: existing?.createdAt
+        )
         await operationState.withLoading {
-            let updated = try await apiClient.updateCommuteRoutine(
-                id: id,
-                input: serverCopy(of: input),
-                accessToken: accessToken
-            )
-            let routine = withIntendedAutoArm(updated, from: input)
+            await cloudKitStore?.saveRoutine(routine)
             if let index = routines.firstIndex(where: { $0.id == id }) {
                 routines[index] = routine
             } else {
                 routines.insert(routine, at: 0)
             }
-            await cloudKitStore?.saveRoutine(routine)
-            await preArm(accessToken: accessToken)
+            await preArm()
         }
     }
 
     func deleteRoutine(id: String) async {
-        guard let accessToken = requireAccessToken() else { return }
+        guard requireCloudKit() else { return }
         await operationState.withLoading {
-            try await apiClient.deleteCommuteRoutine(id: id, accessToken: accessToken)
-            routines.removeAll { $0.id == id }
             await cloudKitStore?.deleteRoutine(id: id)
-            await preArm(accessToken: accessToken)
+            routines.removeAll { $0.id == id }
+            await preArm()
         }
     }
 
@@ -190,46 +174,42 @@ final class CommuteRoutinesViewModel {
         routines = []
         stationsByCRS = [:]
         cloudKitPreferences = nil
-        isCloudKitAuthoritative = false
+        isCloudKitAvailable = false
         preArmScheduler?.clearState()
     }
 
     // MARK: - CloudKit
 
-    /// Decides which copy of the routines the app is going to use, and copies
-    /// the server's into CloudKit the first time round.
+    /// Reads the routines out of the private database, migrating an account
+    /// that has never been migrated.
     ///
-    /// The migration runs once per account, not once per device, and is marked
-    /// in CloudKit itself. Afterwards the zone is authoritative and the server
-    /// copy is never read again, so that a routine deleted on one device is
-    /// not resurrected by the next launch of another.
-    private func resolveRoutines(serverRoutines: [CommuteRoutine]) async -> [CommuteRoutine] {
+    /// The migration is the only thing left that asks the backend about
+    /// routines, and it runs once per account. It tolerates the endpoint being
+    /// gone: by the time the backend drops it, every account that had routines
+    /// to migrate has migrated, and an account that reaches here afterwards
+    /// genuinely has nothing to copy.
+    private func loadRoutines() async -> [CommuteRoutine] {
         guard let cloudKitStore, let userID = userProvider()?.id else {
-            isCloudKitAuthoritative = false
-            return serverRoutines
+            isCloudKitAvailable = false
+            return []
         }
         guard let snapshot = await cloudKitStore.loadSnapshot(userID: userID) else {
-            // iCloud is off, signed out or unreachable. Nothing changes: the
-            // server copy is read as before and keeps arming itself.
-            isCloudKitAuthoritative = false
+            isCloudKitAvailable = false
             cloudKitPreferences = nil
-            return serverRoutines
+            return []
         }
+        isCloudKitAvailable = true
 
         guard snapshot.seededAt == nil else {
             cloudKitPreferences = snapshot.preferences
-            isCloudKitAuthoritative = true
             return snapshot.routines
         }
 
-        // Never migrated. Copy the server's state in, keeping anything the
-        // zone already holds: stage one wrote station defaults here, and a
-        // value already in CloudKit is the newer of the two.
-        let serverDefaults = userProvider()?.stationDefaults
-            ?? UserStationDefaults(homeStationCrs: nil, workStationCrs: nil)
+        let serverRoutines = await legacyServerRoutines()
         var preferences = snapshot.preferences ?? CloudKitPreferences()
-        preferences.homeStationCRS = preferences.homeStationCRS ?? serverDefaults.homeStationCrs
-        preferences.workStationCRS = preferences.workStationCRS ?? serverDefaults.workStationCrs
+        let serverDefaults = userProvider()?.stationDefaults
+        preferences.homeStationCRS = preferences.homeStationCRS ?? serverDefaults?.homeStationCrs
+        preferences.workStationCRS = preferences.workStationCRS ?? serverDefaults?.workStationCrs
 
         let existingRoutineIDs = Set(snapshot.routines.map(\.id))
         let seeded = await cloudKitStore.seed(
@@ -238,77 +218,46 @@ final class CommuteRoutinesViewModel {
             skippingRoutineIDs: existingRoutineIDs
         )
         guard seeded else {
-            // The copy did not finish. Nothing may move off the server until
-            // it does, or arming would be handed over to a CloudKit zone that
-            // does not hold the routines.
-            isCloudKitAuthoritative = false
-            cloudKitPreferences = nil
-            return serverRoutines
+            // Leave the account unmigrated so the next launch tries again,
+            // rather than marking it done with nothing copied.
+            cloudKitPreferences = snapshot.preferences
+            return snapshot.routines
         }
         cloudKitPreferences = preferences
-        isCloudKitAuthoritative = true
         let copied = serverRoutines.filter { !existingRoutineIDs.contains($0.id) }
         return (snapshot.routines + copied).sorted { $0.createdAt > $1.createdAt }
     }
 
-    /// Turns the server's own auto-arm off, once the app is doing the arming.
-    ///
-    /// Both would otherwise arm the same departure, and each window
-    /// subscription spends the account's active-window entitlement, so the
-    /// second one either fails or crowds out a window the user set by hand.
-    /// The routine's real auto-arm setting lives in CloudKit from here on; the
-    /// server row keeps only what the server still needs.
-    ///
-    /// This runs on every refresh and is a no-op once every routine is off,
-    /// which also repairs a handover that was interrupted halfway.
-    private func handOverArmingIfNeeded(serverRoutines: [CommuteRoutine], accessToken: String) async {
-        guard isCloudKitAuthoritative else { return }
-        for routine in serverRoutines where routine.autoArmEnabled {
-            do {
-                _ = try await apiClient.updateCommuteRoutine(
-                    id: routine.id,
-                    input: serverCopy(of: CommuteRoutineMutationRequest(routine: routine)),
-                    accessToken: accessToken
-                )
-            } catch {
-                operationState.recordSilentOperationError(error)
-            }
+    /// The backend's copy of the routines, for the one-time migration only.
+    /// Any failure, including the endpoint no longer existing, means there is
+    /// nothing to migrate.
+    private func legacyServerRoutines() async -> [CommuteRoutine] {
+        guard let accessToken = accessTokenProvider() else { return [] }
+        do {
+            return try await apiClient.listCommuteRoutines(accessToken: accessToken)
+        } catch {
+            operationState.recordSilentOperationError(error)
+            return []
         }
     }
 
-    private func preArm(accessToken: String) async {
-        guard isCloudKitAuthoritative else { return }
+    private func preArm() async {
+        guard isCloudKitAvailable, let accessToken = accessTokenProvider() else { return }
         await preArmScheduler?.synchronise(routines: routines, accessToken: accessToken)
     }
 
-    /// The routine as the server should hold it: auto-arm off, because the app
-    /// arms now. Every other field is unchanged, since the server still needs
-    /// them until stage 4 removes the table.
-    private func serverCopy(of input: CommuteRoutineMutationRequest) -> CommuteRoutineMutationRequest {
-        guard isCloudKitAuthoritative else { return input }
-        var copy = input
-        copy.autoArmEnabled = false
-        return copy
-    }
-
-    private func withIntendedAutoArm(
-        _ routine: CommuteRoutine,
-        from input: CommuteRoutineMutationRequest
-    ) -> CommuteRoutine {
-        var routine = routine
-        routine.autoArmEnabled = input.autoArmEnabled
-        return routine
+    /// Commutes cannot be edited without somewhere to put them.
+    private func requireCloudKit() -> Bool {
+        guard isCloudKitAvailable else {
+            operationState.alertState = .network(
+                "Sign in to iCloud to use commutes. RightTrain keeps them in your own iCloud account rather than on its servers."
+            )
+            return false
+        }
+        return true
     }
 
     // MARK: - Internals
-
-    private func requireAccessToken() -> String? {
-        guard let accessToken = accessTokenProvider() else {
-            operationState.alertState = .auth("Sign in to manage commutes.")
-            return nil
-        }
-        return accessToken
-    }
 
     private func hydrateStations(for codes: [String]) async throws {
         let uniqueCodes = Set(codes.compactMap { normalizedOptionalCRS($0) })
@@ -341,6 +290,32 @@ extension CommuteRoutineMutationRequest {
             autoArmEnabled: routine.autoArmEnabled,
             autoArmLeadMinutes: routine.autoArmLeadMinutes,
             notificationsEnabled: routine.notificationsEnabled
+        )
+    }
+}
+
+extension CommuteRoutine {
+    /// Builds the routine the app is about to store. Timestamps are the app's
+    /// own now that no server issues them; CloudKit keeps its own record
+    /// metadata alongside.
+    init(input: CommuteRoutineMutationRequest, id: String, userID: String, createdAt: Date? = nil) {
+        let now = Date()
+        self.init(
+            id: id,
+            userId: userID,
+            name: input.name,
+            status: input.status ?? "active",
+            originCrs: normalizedOptionalCRS(input.originCrs) ?? input.originCrs,
+            destinationCrs: normalizedOptionalCRS(input.destinationCrs) ?? input.destinationCrs,
+            departureTime: input.departureTime,
+            windowMinutes: input.windowMinutes,
+            activeWeekdays: input.activeWeekdays,
+            autoArmEnabled: input.autoArmEnabled,
+            autoArmLeadMinutes: input.autoArmLeadMinutes,
+            notificationsEnabled: input.notificationsEnabled,
+            createdAt: createdAt ?? now,
+            updatedAt: now,
+            deletedAt: nil
         )
     }
 }

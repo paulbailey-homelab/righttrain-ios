@@ -45,7 +45,9 @@ struct AccountCredentialAttestation: Codable, Equatable {
 
 struct RegisterAccountResponse: Decodable, Equatable {
     var account: PrivacyAccount
-    var preferenceSet: AccountPreferenceSet
+    /// Optional because the backend stops sending it once the preference-set
+    /// tables are dropped. Nothing reads it any more.
+    var preferenceSet: AccountPreferenceSet?
     var recoveryCode: String
 }
 
@@ -200,7 +202,9 @@ struct LinkedDevice: Codable, Identifiable, Equatable {
 struct AccountExportResponse: Codable, Equatable {
     var generatedAt: Date
     var account: PrivacyAccount
-    var preferenceSet: AccountPreferenceSet
+    /// Optional for the same reason: an export generated after the tables go
+    /// away has no preference set in it.
+    var preferenceSet: AccountPreferenceSet?
     var linkedDevices: [ExportLinkedDevice]
     var retainedRecords: [RetainedMinimalRecord]?
 }
