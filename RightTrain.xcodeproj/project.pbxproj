@@ -56,6 +56,7 @@
 		7B000000000000000000016F /* BetaOnboardingView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000016E /* BetaOnboardingView.swift */; };
 		7B0000000000000000000171 /* SettingsProfileView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000170 /* SettingsProfileView.swift */; };
 		7B0000000000000000000173 /* CommuteRoutinesViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000172 /* CommuteRoutinesViewModel.swift */; };
+		7B0000000000000000000C07 /* CommutePreArmScheduler.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000C06 /* CommutePreArmScheduler.swift */; };
 		7B0000000000000000000175 /* CommuteRoutinesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000174 /* CommuteRoutinesView.swift */; };
 		7B0000000000000000000177 /* SubscriptionViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000176 /* SubscriptionViewModel.swift */; };
 		7B0000000000000000000179 /* StoreKitSubscriptionService.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000178 /* StoreKitSubscriptionService.swift */; };
@@ -69,6 +70,8 @@
 		7B0000000000000000000C02 /* CloudKitPreferenceRecords.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000C01 /* CloudKitPreferenceRecords.swift */; };
 		7B0000000000000000000C04 /* CloudKitPreferenceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000C03 /* CloudKitPreferenceStore.swift */; };
 		7B1000000000000000000C02 /* CloudKitPreferenceRecordsTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1000000000000000000C01 /* CloudKitPreferenceRecordsTests.swift */; };
+		7B1000000000000000000C04 /* CommutePreArmPlannerTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1000000000000000000C03 /* CommutePreArmPlannerTests.swift */; };
+		7B1000000000000000000C06 /* CommuteRoutinesCloudKitTests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B1000000000000000000C05 /* CommuteRoutinesCloudKitTests.swift */; };
 		7B0000000000000000000197 /* JourneyDetailView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000196 /* JourneyDetailView.swift */; };
 		7B0000000000000000000181 /* ItineraryActiveJourneyViews.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000180 /* ItineraryActiveJourneyViews.swift */; };
 		7B00000000000000000001A1 /* StationPickerViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B00000000000000000001A0 /* StationPickerViewModel.swift */; };
@@ -195,6 +198,7 @@
 		7B000000000000000000016E /* BetaOnboardingView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BetaOnboardingView.swift; sourceTree = "<group>"; };
 		7B0000000000000000000170 /* SettingsProfileView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SettingsProfileView.swift; sourceTree = "<group>"; };
 		7B0000000000000000000172 /* CommuteRoutinesViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommuteRoutinesViewModel.swift; sourceTree = "<group>"; };
+		7B0000000000000000000C06 /* CommutePreArmScheduler.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommutePreArmScheduler.swift; sourceTree = "<group>"; };
 		7B0000000000000000000174 /* CommuteRoutinesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommuteRoutinesView.swift; sourceTree = "<group>"; };
 		7B0000000000000000000176 /* SubscriptionViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SubscriptionViewModel.swift; sourceTree = "<group>"; };
 		7B0000000000000000000178 /* StoreKitSubscriptionService.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StoreKitSubscriptionService.swift; sourceTree = "<group>"; };
@@ -208,6 +212,8 @@
 		7B0000000000000000000C01 /* CloudKitPreferenceRecords.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitPreferenceRecords.swift; sourceTree = "<group>"; };
 		7B0000000000000000000C03 /* CloudKitPreferenceStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitPreferenceStore.swift; sourceTree = "<group>"; };
 		7B1000000000000000000C01 /* CloudKitPreferenceRecordsTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CloudKitPreferenceRecordsTests.swift; sourceTree = "<group>"; };
+		7B1000000000000000000C03 /* CommutePreArmPlannerTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommutePreArmPlannerTests.swift; sourceTree = "<group>"; };
+		7B1000000000000000000C05 /* CommuteRoutinesCloudKitTests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = CommuteRoutinesCloudKitTests.swift; sourceTree = "<group>"; };
 		7B0000000000000000000196 /* JourneyDetailView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyDetailView.swift; sourceTree = "<group>"; };
 		7B0000000000000000000180 /* ItineraryActiveJourneyViews.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ItineraryActiveJourneyViews.swift; sourceTree = "<group>"; };
 		7B00000000000000000001A0 /* StationPickerViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StationPickerViewModel.swift; sourceTree = "<group>"; };
@@ -337,6 +343,7 @@
 					7B00000000000000000001A4 /* StationLocationProvider.swift */,
 					7B000000000000000000015C /* JourneyDetailViewModel.swift */,
 				7B0000000000000000000172 /* CommuteRoutinesViewModel.swift */,
+				7B0000000000000000000C06 /* CommutePreArmScheduler.swift */,
 				7B0000000000000000000176 /* SubscriptionViewModel.swift */,
 				7B0000000000000000000178 /* StoreKitSubscriptionService.swift */,
 				7B0000000000000000000182 /* ActiveJourneyCache.swift */,
@@ -456,6 +463,8 @@
 				7B1000000000000000000112 /* APIClientTests.swift */,
 				7B1000000000000000000100 /* AppModelTests.swift */,
 				7B1000000000000000000C01 /* CloudKitPreferenceRecordsTests.swift */,
+				7B1000000000000000000C03 /* CommutePreArmPlannerTests.swift */,
+				7B1000000000000000000C05 /* CommuteRoutinesCloudKitTests.swift */,
 				7B1000000000000000000114 /* ConnectivityServiceTests.swift */,
 				7B1000000000000000000102 /* JourneyFormattingTests.swift */,
 				7B1000000000000000000106 /* LiveActivityLayoutTests.swift */,
@@ -622,6 +631,7 @@
 					7B00000000000000000001A5 /* StationLocationProvider.swift in Sources */,
 					7B000000000000000000015D /* JourneyDetailViewModel.swift in Sources */,
 				7B0000000000000000000173 /* CommuteRoutinesViewModel.swift in Sources */,
+				7B0000000000000000000C07 /* CommutePreArmScheduler.swift in Sources */,
 				7B0000000000000000000177 /* SubscriptionViewModel.swift in Sources */,
 				7B0000000000000000000179 /* StoreKitSubscriptionService.swift in Sources */,
 				7B0000000000000000000183 /* ActiveJourneyCache.swift in Sources */,
@@ -702,6 +712,8 @@
 				7B1000000000000000000113 /* APIClientTests.swift in Sources */,
 				7B1000000000000000000101 /* AppModelTests.swift in Sources */,
 				7B1000000000000000000C02 /* CloudKitPreferenceRecordsTests.swift in Sources */,
+				7B1000000000000000000C04 /* CommutePreArmPlannerTests.swift in Sources */,
+				7B1000000000000000000C06 /* CommuteRoutinesCloudKitTests.swift in Sources */,
 				7B1000000000000000000115 /* ConnectivityServiceTests.swift in Sources */,
 				7B1000000000000000000103 /* JourneyFormattingTests.swift in Sources */,
 				7B1000000000000000000107 /* LiveActivityLayoutTests.swift in Sources */,

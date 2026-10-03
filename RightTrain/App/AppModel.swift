@@ -126,12 +126,15 @@ final class AppCoordinator {
         let cloudKitPreferenceStore = CloudKitPreferenceStore(
             containerIdentifier: AppConfig.cloudKitContainerIdentifier
         )
+        let commutePreArmScheduler = CommutePreArmScheduler(apiClient: apiClient)
         let commuteRoutinesViewModel = CommuteRoutinesViewModel(
             apiClient: apiClient,
             operationState: operationState,
             accessTokenProvider: { authViewModel.usableAccessToken },
+            userProvider: { authViewModel.user },
             userUpdateHandler: { authViewModel.replaceCurrentUser($0) },
-            cloudKitStore: cloudKitPreferenceStore
+            cloudKitStore: cloudKitPreferenceStore,
+            preArmScheduler: commutePreArmScheduler
         )
         let subscriptionViewModel = SubscriptionViewModel(
             apiClient: apiClient,
@@ -215,6 +218,10 @@ final class AppCoordinator {
             return
         }
         await refreshConnectivityAndFlushQueuedMutations()
+        // The rolling week is what keeps commutes armed now that the server no
+        // longer holds the routine, so a background refresh is a chance to
+        // extend it without the user opening the app.
+        await commuteRoutinesViewModel.refreshPreArmedDepartures()
     }
 
     func openDeepLink(_ url: URL) async {
@@ -433,8 +440,8 @@ extension AppCoordinator {
 
     func stationFavourites() -> [StationFavourite] {
         StationFavoritesProvider.favourites(
-            homeStationCRS: user?.stationDefaults.homeStationCrs,
-            workStationCRS: user?.stationDefaults.workStationCrs,
+            homeStationCRS: commuteRoutinesViewModel.stationDefaults.homeStationCrs,
+            workStationCRS: commuteRoutinesViewModel.stationDefaults.workStationCrs,
             routines: commuteRoutines,
             stationResolver: { [commuteRoutinesViewModel] crs in
                 commuteRoutinesViewModel.stationSuggestion(for: crs)

@@ -299,8 +299,8 @@ struct CommuteRoutinesView: View {
     }
 
     private func syncDefaultsFromUser() {
-        homeStation = viewModel.stationSuggestion(for: authViewModel.user?.stationDefaults.homeStationCrs)
-        workStation = viewModel.stationSuggestion(for: authViewModel.user?.stationDefaults.workStationCrs)
+        homeStation = viewModel.stationSuggestion(for: viewModel.stationDefaults.homeStationCrs)
+        workStation = viewModel.stationSuggestion(for: viewModel.stationDefaults.workStationCrs)
     }
 
     private func refreshRoutines() async {
@@ -311,18 +311,18 @@ struct CommuteRoutinesView: View {
         syncDefaultsFromUser()
         await viewModel.refresh()
         await viewModel.hydrateDefaultStations(
-            homeStationCRS: authViewModel.user?.stationDefaults.homeStationCrs,
-            workStationCRS: authViewModel.user?.stationDefaults.workStationCrs
+            homeStationCRS: viewModel.stationDefaults.homeStationCrs,
+            workStationCRS: viewModel.stationDefaults.workStationCrs
         )
         syncDefaultsFromUser()
     }
 
     private var currentHomeDefault: String? {
-        authViewModel.user?.stationDefaults.homeStationCrs
+        viewModel.stationDefaults.homeStationCrs
     }
 
     private var currentWorkDefault: String? {
-        authViewModel.user?.stationDefaults.workStationCrs
+        viewModel.stationDefaults.workStationCrs
     }
 
     private var localStationFavourites: [StationFavourite] {

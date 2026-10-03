@@ -1053,6 +1053,9 @@ struct PreviewAPIClient: APIClienting {
     func createCommuteRoutine(input: CommuteRoutineMutationRequest, accessToken: String) async throws -> CommuteRoutine { routines[0] }
     func updateCommuteRoutine(id: String, input: CommuteRoutineMutationRequest, accessToken: String) async throws -> CommuteRoutine { routines[0] }
     func deleteCommuteRoutine(id: String, accessToken: String) async throws {}
+    func preArmCommuteDepartures(input: PreArmCommuteDeparturesRequest, accessToken: String) async throws -> PreArmCommuteDeparturesResponse {
+        PreArmCommuteDeparturesResponse(scheduled: [], skipped: [])
+    }
     func registerLiveActivityToken(windowSubscriptionID: String, activityKind: String, input: RegisterLiveActivityTokenRequest, accessToken: String) async throws {}
     func registerItineraryLiveActivityToken(itinerarySubscriptionID: String, activityKind: String, input: RegisterLiveActivityTokenRequest, accessToken: String) async throws {}
     func registerLiveActivityPushToStartToken(clientDeviceID: String, input: RegisterLiveActivityTokenRequest, accessToken: String) async throws {}

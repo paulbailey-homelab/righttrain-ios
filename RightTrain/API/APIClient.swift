@@ -101,6 +101,7 @@ protocol APIClienting {
     func createCommuteRoutine(input: CommuteRoutineMutationRequest, accessToken: String) async throws -> CommuteRoutine
     func updateCommuteRoutine(id: String, input: CommuteRoutineMutationRequest, accessToken: String) async throws -> CommuteRoutine
     func deleteCommuteRoutine(id: String, accessToken: String) async throws
+    func preArmCommuteDepartures(input: PreArmCommuteDeparturesRequest, accessToken: String) async throws -> PreArmCommuteDeparturesResponse
     func registerLiveActivityToken(
         windowSubscriptionID: String,
         activityKind: String,
@@ -749,6 +750,15 @@ struct APIClient {
 
     func listCommuteRoutines(accessToken: String) async throws -> [CommuteRoutine] {
         try await send(path: "/v1/commute/routines", accessToken: accessToken)
+    }
+
+    func preArmCommuteDepartures(input: PreArmCommuteDeparturesRequest, accessToken: String) async throws -> PreArmCommuteDeparturesResponse {
+        try await send(
+            path: "/v1/commute/pre-arms",
+            method: "POST",
+            accessToken: accessToken,
+            body: input
+        )
     }
 
     func createCommuteRoutine(input: CommuteRoutineMutationRequest, accessToken: String) async throws -> CommuteRoutine {
