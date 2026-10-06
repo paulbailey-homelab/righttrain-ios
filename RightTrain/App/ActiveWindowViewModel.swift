@@ -311,7 +311,26 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
             markOriginPresence(at: latest.timestamp)
         }
         evaluateCaughtTrainDetection(with: latest, now: now)
+        forgetOriginPresenceIfLeftWithoutTrain(latest, origin: origin, now: now)
         updateLocationUpdates(now: now)
+    }
+
+    /// Once the user is clearly away from the station and has been for
+    /// longer than any train could still be matched, nothing can be
+    /// detected, so stop GPS and motion until the geofence sees them back.
+    private func forgetOriginPresenceIfLeftWithoutTrain(_ location: CLLocation, origin: CLLocation, now: Date) {
+        guard let detection = caughtDetection,
+              !detection.didEmit,
+              let lastSeenAtOrigin = detection.lastSeenAtOrigin,
+              now.timeIntervalSince(lastSeenAtOrigin) > originPresenceStaleness,
+              location.distance(from: origin) - location.horizontalAccuracy > monitoredRadius else {
+            return
+        }
+        caughtDetection?.lastSeenAtOrigin = nil
+        caughtDetection?.consecutiveFastSamples = 0
+        caughtDetection?.firstFastSampleAt = nil
+        caughtDetection?.lastFastSampleAt = nil
+        BetaDiagnostics.record("station_proximity_left_origin_undetected", details: detectionDiagnostics(detection))
     }
 
     func locationManager(_ manager: CLLocationManager, didFailWithError error: Error) {
