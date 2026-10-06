@@ -43,6 +43,8 @@
 	<string>RightTrain uses location in the background while you have a pinned journey to detect when you reach your origin station and whether you caught the selected train.</string>
 	<key>NSLocationWhenInUseUsageDescription</key>
 	<string>RightTrain uses your location when you choose nearest stations, and after you create a journey to update station guidance near your origin station.</string>
+	<key>NSMotionUsageDescription</key>
+	<string>RightTrain uses motion activity while you have a pinned journey to tell when you're on a moving train, even where GPS is weak.</string>
 	<key>NSSupportsLiveActivities</key>
 	<true/>
 	<key>NSSupportsLiveActivitiesFrequentUpdates</key>
