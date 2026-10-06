@@ -1,3 +1,4 @@
+import CoreLocation
 import SwiftUI
 
 struct ActiveWindowView: View {
@@ -465,6 +466,8 @@ struct ActiveOnTrainJourneyView: View {
     @Environment(ActiveWindowViewModel.self) private var activeWindowViewModel
     @State private var isClearingPinned = false
     @State private var isConfirmingUnpin = false
+    @State private var locationFeed = OnTrainLocationFeed()
+    @State private var riderLocation: CLLocation?
 
     var window: WindowSubscription
     var recommendation: DirectWindowRecommendation
@@ -500,6 +503,13 @@ struct ActiveOnTrainJourneyView: View {
         }
         .task(id: identity) {
             await refreshDetailPeriodically()
+        }
+        .onAppear {
+            locationFeed.onUpdate = { riderLocation = $0 }
+            locationFeed.start()
+        }
+        .onDisappear {
+            locationFeed.stop()
         }
         .task(id: liveDetailRefreshKey) {
             guard liveDetailRefreshKey.hasPrefix("live|") else { return }
@@ -613,8 +623,17 @@ struct ActiveOnTrainJourneyView: View {
         )
 
         return VStack(alignment: .leading, spacing: RTSpacing.listItem) {
-            Text("Stations")
-                .font(.headline)
+            VStack(alignment: .leading, spacing: 2) {
+                Text("Stations")
+                    .font(.headline)
+
+                if let distance = stationDistanceSummary(entries: entries, now: now) {
+                    Text(distance.text)
+                        .font(.subheadline.weight(.medium))
+                        .foregroundStyle(.secondary)
+                        .accessibilityLabel(distance.text.replacingOccurrences(of: " mi", with: " miles"))
+                }
+            }
 
             LazyVStack(alignment: .leading, spacing: 0) {
                 ForEach(entries) { entry in
@@ -636,6 +655,28 @@ struct ActiveOnTrainJourneyView: View {
             .background(Color.rightTrainSurface, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
             .lightSurfaceForeground()
         }
+    }
+
+    /// How far the rider is from the stations either side, from a location
+    /// fix no more than five minutes old. Hidden once the train has arrived.
+    private func stationDistanceSummary(entries: [OnTrainStopEntry], now: Date) -> StationDistanceSummary? {
+        guard !JourneyFormatting.isArrived(journey),
+              let riderLocation,
+              now.timeIntervalSince(riderLocation.timestamp) <= 5 * 60 else {
+            return nil
+        }
+        let stops = entries.compactMap { entry -> StationDistanceCalculator.StopPoint? in
+            guard let latitude = entry.stop.latitude,
+                  let longitude = entry.stop.longitude else {
+                return nil
+            }
+            return StationDistanceCalculator.StopPoint(name: entry.stop.name, latitude: latitude, longitude: longitude)
+        }
+        return StationDistanceCalculator.summary(
+            latitude: riderLocation.coordinate.latitude,
+            longitude: riderLocation.coordinate.longitude,
+            stops: stops
+        )
     }
 
     private var loadingStationsSection: some View {
