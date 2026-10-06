@@ -70,7 +70,9 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
     private var locationUpdatesActive = false
     private var didRequestAlwaysAuthorizationThisSession = false
 
-    private let walkingSpeedThreshold: CLLocationSpeed = 2.8
+    // Above a sprint along the platform, below what a departing train
+    // reaches within its first few seconds.
+    private let trainSpeedThreshold: CLLocationSpeed = 6
     private let maximumLocationAge: TimeInterval = 30
     private let maximumHorizontalAccuracy: CLLocationAccuracy = 160
     private let detectionLeadTime: TimeInterval = 2 * 60
@@ -96,11 +98,19 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
         var legIndex: Int
     }
 
+    private struct DetectionCandidate: Equatable {
+        var serviceID: Int
+        var departureDate: Date
+    }
+
     private struct CaughtTrainDetectionState {
         var kind: MonitoredKind
-        var serviceID: Int
         var legIndex: Int
-        var departureDate: Date
+        // Every train the user could plausibly board. A window offers all of
+        // its trains, not just the recommended one: the recommendation moves
+        // on to the next train as soon as Darwin reports this one departed,
+        // which is exactly when detection needs to keep watching it.
+        var candidates: [DetectionCandidate]
         var startDate: Date
         var endDate: Date
         var lastSeenAtOrigin: Date?
@@ -475,28 +485,45 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
     }
 
     private func updateCaughtDetectionContextForWindow(_ window: WindowSubscription) {
-        let journey = window.selectedRecommendation.journey
-        let departureDisplay = JourneyFormatting.departureDisplay(journey)
-        guard journey.serviceId > 0,
-              let departureDate = departureDisplay.currentDate ?? departureDisplay.scheduledDate else {
+        let recommendations = [window.selectedRecommendation] + window.recommendations
+        var candidates: [DetectionCandidate] = []
+        for recommendation in recommendations {
+            let journey = recommendation.journey
+            guard journey.serviceId > 0,
+                  !JourneyFormatting.isCancelled(journey),
+                  recommendation.score.reasons?.contains("cancelled") != true,
+                  !candidates.contains(where: { $0.serviceID == journey.serviceId }) else {
+                continue
+            }
+            let departureDisplay = JourneyFormatting.departureDisplay(journey)
+            guard let departureDate = departureDisplay.currentDate ?? departureDisplay.scheduledDate else {
+                continue
+            }
+            candidates.append(DetectionCandidate(serviceID: journey.serviceId, departureDate: departureDate))
+        }
+        applyCaughtDetectionContext(kind: .window(id: window.id), legIndex: 0, candidates: candidates)
+    }
+
+    /// Refreshes the candidate trains while keeping what has been observed
+    /// for the same subscription (origin presence, fast samples, emission),
+    /// so a refresh mid-departure never throws away the evidence.
+    private func applyCaughtDetectionContext(kind: MonitoredKind, legIndex: Int, candidates: [DetectionCandidate]) {
+        guard let earliest = candidates.map(\.departureDate).min(),
+              let latest = candidates.map(\.departureDate).max() else {
             caughtDetection = nil
             return
         }
-
-        let target = MonitoredKind.window(id: window.id)
-        let previous = caughtDetection
-        let sameTrain = previous?.kind == target && previous?.serviceID == journey.serviceId
+        let previous = caughtDetection?.kind == kind && caughtDetection?.legIndex == legIndex ? caughtDetection : nil
         caughtDetection = CaughtTrainDetectionState(
-            kind: target,
-            serviceID: journey.serviceId,
-            legIndex: 0,
-            departureDate: departureDate,
-            startDate: departureDate.addingTimeInterval(-detectionLeadTime),
-            endDate: departureDate.addingTimeInterval(detectionTailTime),
-            lastSeenAtOrigin: sameTrain ? previous?.lastSeenAtOrigin : nil,
-            firstFastSampleAt: sameTrain ? previous?.firstFastSampleAt : nil,
-            consecutiveFastSamples: sameTrain ? previous?.consecutiveFastSamples ?? 0 : 0,
-            didEmit: sameTrain ? previous?.didEmit ?? false : false
+            kind: kind,
+            legIndex: legIndex,
+            candidates: candidates,
+            startDate: earliest.addingTimeInterval(-detectionLeadTime),
+            endDate: latest.addingTimeInterval(detectionTailTime),
+            lastSeenAtOrigin: previous?.lastSeenAtOrigin,
+            firstFastSampleAt: previous?.firstFastSampleAt,
+            consecutiveFastSamples: previous?.consecutiveFastSamples ?? 0,
+            didEmit: previous?.didEmit ?? false
         )
     }
 
@@ -547,19 +574,16 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
             return
         }
 
-        let previous = caughtDetection
-        let sameLeg = previous?.kind == target && previous?.serviceID == leg.serviceId
-        caughtDetection = CaughtTrainDetectionState(
+        // A switched route is a different train: start its evidence afresh.
+        if let previous = caughtDetection,
+           previous.kind == target,
+           previous.candidates.map(\.serviceID) != [leg.serviceId] {
+            caughtDetection = nil
+        }
+        applyCaughtDetectionContext(
             kind: target,
-            serviceID: leg.serviceId,
             legIndex: legIndex,
-            departureDate: departureDate,
-            startDate: departureDate.addingTimeInterval(-detectionLeadTime),
-            endDate: departureDate.addingTimeInterval(detectionTailTime),
-            lastSeenAtOrigin: sameLeg ? previous?.lastSeenAtOrigin : nil,
-            firstFastSampleAt: sameLeg ? previous?.firstFastSampleAt : nil,
-            consecutiveFastSamples: sameLeg ? previous?.consecutiveFastSamples ?? 0 : 0,
-            didEmit: sameLeg ? previous?.didEmit ?? false : false
+            candidates: [DetectionCandidate(serviceID: leg.serviceId, departureDate: departureDate)]
         )
     }
 
@@ -602,16 +626,20 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
             stopLocationUpdates()
             return
         }
+        let eligible = detection.candidates.filter { candidateIsEligible($0, detection: detection, now: now) }
         guard now >= detection.startDate,
-              now >= detection.departureDate.addingTimeInterval(-30),
-              originPresenceIsCloseEnoughToDeparture(detection, now: now) else {
+              !eligible.isEmpty else {
             caughtDetection = detection
             return
         }
 
-        guard location.speed >= walkingSpeedThreshold,
-              location.speedAccuracy < 0 || location.speedAccuracy <= max(location.speed, 4) else {
-            if location.speed >= 0 {
+        let reportedSpeed = reportedSpeed(of: location)
+        let impliedSpeed = impliedSpeedSinceOrigin(of: location, detection: detection)
+        let isFast = (reportedSpeed ?? 0) >= trainSpeedThreshold || (impliedSpeed ?? 0) >= trainSpeedThreshold
+        guard isFast else {
+            // Only a trustworthy slow reading cancels a run; a fix with no
+            // speed (Wi-Fi or cell positioning in a carriage) proves nothing.
+            if reportedSpeed != nil {
                 detection.consecutiveFastSamples = 0
                 detection.firstFastSampleAt = nil
             }
@@ -627,31 +655,76 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
             detection.consecutiveFastSamples = 1
         }
 
-        if detection.consecutiveFastSamples >= requiredFastSamples {
-            detection.didEmit = true
+        // The train that carried the user away is the latest one already
+        // due while they were still at the station: an earlier one they
+        // were still on the platform after has left without them.
+        guard detection.consecutiveFastSamples >= requiredFastSamples,
+              let caught = eligible.max(by: { $0.departureDate < $1.departureDate }) else {
             caughtDetection = detection
-            switch detection.kind {
-            case .window(let windowID):
-                onCaughtTrainDetected?(windowID, detection.serviceID)
-            case .itineraryOrigin(let itineraryID):
-                // Silent fallback: phase advance only, never auto-pin.
-                onItineraryOnwardBoardDetected?(itineraryID, detection.legIndex)
-            case .itineraryInterchange(let itineraryID, _, _):
-                onItineraryOnwardBoardDetected?(itineraryID, detection.legIndex)
-            }
-            stopLocationUpdates()
-        } else {
-            caughtDetection = detection
+            return
         }
+
+        detection.didEmit = true
+        caughtDetection = detection
+        BetaDiagnostics.record(
+            "station_proximity_caught_train_matched",
+            details: "service=\(caught.serviceID); \(detectionDiagnostics(detection))"
+        )
+        switch detection.kind {
+        case .window(let windowID):
+            onCaughtTrainDetected?(windowID, caught.serviceID)
+        case .itineraryOrigin(let itineraryID):
+            // Silent fallback: phase advance only, never auto-pin.
+            onItineraryOnwardBoardDetected?(itineraryID, detection.legIndex)
+        case .itineraryInterchange(let itineraryID, _, _):
+            onItineraryOnwardBoardDetected?(itineraryID, detection.legIndex)
+        }
+        stopLocationUpdates()
     }
 
-    private func originPresenceIsCloseEnoughToDeparture(_ detection: CaughtTrainDetectionState, now: Date) -> Bool {
-        guard let lastSeenAtOrigin = detection.lastSeenAtOrigin else {
+    /// The fix's own speed, when Core Location measured one well enough.
+    private func reportedSpeed(of location: CLLocation) -> CLLocationSpeed? {
+        guard location.speed >= 0,
+              location.speedAccuracy < 0 || location.speedAccuracy <= max(location.speed, 4) else {
+            return nil
+        }
+        return location.speed
+    }
+
+    /// A lower bound on average speed since the user was last inside the
+    /// station radius. Works from any fix good enough to pass the accuracy
+    /// filter, including the speedless ones a phone gets inside a carriage.
+    private func impliedSpeedSinceOrigin(of location: CLLocation, detection: CaughtTrainDetectionState) -> CLLocationSpeed? {
+        guard let coordinate = monitoredCoordinate,
+              let lastSeenAtOrigin = detection.lastSeenAtOrigin else {
+            return nil
+        }
+        let elapsed = location.timestamp.timeIntervalSince(lastSeenAtOrigin)
+        let origin = CLLocation(latitude: coordinate.latitude, longitude: coordinate.longitude)
+        let travelled = location.distance(from: origin) - monitoredRadius - location.horizontalAccuracy
+        guard elapsed >= 15, travelled > 0 else {
+            return nil
+        }
+        return travelled / elapsed
+    }
+
+    private func candidateIsEligible(_ candidate: DetectionCandidate, detection: CaughtTrainDetectionState, now: Date) -> Bool {
+        guard now >= candidate.departureDate.addingTimeInterval(-30),
+              now <= candidate.departureDate.addingTimeInterval(detectionTailTime),
+              let lastSeenAtOrigin = detection.lastSeenAtOrigin else {
             return false
         }
-        return lastSeenAtOrigin >= detection.departureDate.addingTimeInterval(-originPresenceTolerance) &&
+        return lastSeenAtOrigin >= candidate.departureDate.addingTimeInterval(-originPresenceTolerance) &&
             lastSeenAtOrigin <= now &&
             now.timeIntervalSince(lastSeenAtOrigin) <= originPresenceStaleness
+    }
+
+    private func detectionDiagnostics(_ detection: CaughtTrainDetectionState) -> String {
+        let candidates = detection.candidates
+            .map { "\($0.serviceID)@\(Int($0.departureDate.timeIntervalSince1970))" }
+            .joined(separator: ",")
+        let lastSeen = detection.lastSeenAtOrigin.map { String(Int($0.timeIntervalSince1970)) } ?? "none"
+        return "last_seen=\(lastSeen); candidates=\(candidates)"
     }
 
     private func updateLocationUpdates(now: Date) {
