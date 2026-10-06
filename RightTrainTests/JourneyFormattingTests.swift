@@ -1632,3 +1632,39 @@ final class JourneyFormattingTests: XCTestCase {
         )
     }
 }
+
+final class StationDistanceCalculatorTests: XCTestCase {
+    // Roughly on the line Woking → Worplesdon → Guildford.
+    private let stops = [
+        StationDistanceCalculator.StopPoint(name: "Woking", latitude: 51.3185, longitude: -0.5570),
+        StationDistanceCalculator.StopPoint(name: "Worplesdon", latitude: 51.2890, longitude: -0.5826),
+        StationDistanceCalculator.StopPoint(name: "Guildford", latitude: 51.2367, longitude: -0.5803),
+    ]
+
+    func testBetweenStationsNamesLastAndNext() throws {
+        let summary = try XCTUnwrap(StationDistanceCalculator.summary(latitude: 51.2620, longitude: -0.5815, stops: stops))
+        XCTAssertNil(summary.atStation)
+        XCTAssertEqual(summary.last?.name, "Worplesdon")
+        XCTAssertEqual(summary.next?.name, "Guildford")
+        XCTAssertEqual(summary.last?.miles ?? 0, 1.87, accuracy: 0.1)
+        XCTAssertEqual(summary.next?.miles ?? 0, 1.74, accuracy: 0.1)
+        XCTAssertTrue(summary.text.hasPrefix("1.9 mi past Worplesdon · 1.7 mi to Guildford"))
+    }
+
+    func testAtStationNamesItAndTheNextStop() throws {
+        let summary = try XCTUnwrap(StationDistanceCalculator.summary(latitude: 51.2891, longitude: -0.5825, stops: stops))
+        XCTAssertEqual(summary.atStation, "Worplesdon")
+        XCTAssertEqual(summary.next?.name, "Guildford")
+        XCTAssertTrue(summary.text.hasPrefix("At Worplesdon · "))
+    }
+
+    func testBeyondTheLastStopOnlyNamesIt() throws {
+        let summary = try XCTUnwrap(StationDistanceCalculator.summary(latitude: 51.2000, longitude: -0.5790, stops: stops))
+        XCTAssertEqual(summary.last?.name, "Guildford")
+        XCTAssertNil(summary.next)
+    }
+
+    func testNoStopsGivesNoSummary() {
+        XCTAssertNil(StationDistanceCalculator.summary(latitude: 51.3, longitude: -0.5, stops: []))
+    }
+}

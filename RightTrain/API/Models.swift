@@ -818,6 +818,8 @@ struct JourneyStop: Codable, Hashable, Identifiable {
     var publicDeparture: String?
     var scheduledPlatform: String?
     var activities: String?
+    var latitude: Double? = nil
+    var longitude: Double? = nil
     var timing: JourneyStopTiming?
     var realtime: StopRealtime?
 
