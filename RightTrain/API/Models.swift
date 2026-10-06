@@ -33,7 +33,6 @@ struct AccountCredentialOptions: Decodable, Equatable {
 struct RegisterAccountRequest: Encodable, Equatable {
     var attemptId: String
     var credentialAttestation: AccountCredentialAttestation
-    var migrateCurrentDevicePreferences: Bool
     var clientDeviceId: String?
 }
 

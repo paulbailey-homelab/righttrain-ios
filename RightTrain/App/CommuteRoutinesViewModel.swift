@@ -14,6 +14,11 @@ final class CommuteRoutinesViewModel {
     /// routines to show rather than a server copy to fall back on.
     private(set) var isCloudKitAvailable = false
 
+    /// The iCloud account status, as distinct from whether the zone could be
+    /// read. Settings shows this, because "you are signed out of iCloud" and
+    /// "the read failed" need different things from the user.
+    private(set) var cloudKitAvailability: CloudKitAvailability = .unknown
+
     @ObservationIgnored private let apiClient: any APIClienting
     @ObservationIgnored private let operationState: AppOperationState
     @ObservationIgnored private let accessTokenProvider: () -> String?
@@ -51,7 +56,19 @@ final class CommuteRoutinesViewModel {
         cloudKitStore != nil && !isCloudKitAvailable
     }
 
+    /// Cheap enough for any screen that wants to report iCloud's state; it
+    /// asks the container for the account status and nothing more.
+    func refreshCloudKitAvailability() async {
+        guard let cloudKitStore else {
+            cloudKitAvailability = .unknown
+            return
+        }
+        await cloudKitStore.refreshAvailability()
+        cloudKitAvailability = cloudKitStore.availability
+    }
+
     func refresh() async {
+        await refreshCloudKitAvailability()
         await operationState.withLoading {
             let loadedRoutines = await loadRoutines()
             routines = loadedRoutines

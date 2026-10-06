@@ -778,12 +778,11 @@ final class AppModelTests: XCTestCase {
         )
         await model.bootstrap()
 
-        let didCreate = await model.authViewModel.createPortableAccount(migrateCurrentDevicePreferences: true)
+        let didCreate = await model.authViewModel.createPortableAccount()
 
         XCTAssertTrue(didCreate)
         XCTAssertEqual(credentialService.createCredentialOptions.count, 1)
         XCTAssertEqual(apiClient.registerAccountRequests.last?.accessToken, "device-token")
-        XCTAssertTrue(apiClient.registerAccountRequests.last?.input.migrateCurrentDevicePreferences == true)
         XCTAssertEqual(model.authViewModel.portableAccount?.account.state, "active")
         XCTAssertEqual(model.authViewModel.oneTimeRecoveryCode, "shown-once-to-user")
         XCTAssertEqual(model.authViewModel.accountStatusMessage, "Account preferences are ready to use on another device.")

@@ -266,7 +266,6 @@ final class APIClientTests: XCTestCase {
                     clientDataJSON: "client-data",
                     attestationObject: "attestation"
                 ),
-                migrateCurrentDevicePreferences: true,
                 clientDeviceId: "device-1"
             ),
             accessToken: "token-1"
@@ -282,7 +281,7 @@ final class APIClientTests: XCTestCase {
         XCTAssertEqual(requests[1].url?.path, "/v1/auth/account/register")
         let registerBody = try requestBodyDictionary(requests[1])
         XCTAssertEqual(registerBody["attemptId"] as? String, "attempt-account-1")
-        XCTAssertEqual(registerBody["migrateCurrentDevicePreferences"] as? Bool, true)
+        XCTAssertNil(registerBody["migrateCurrentDevicePreferences"])
     }
 
     func testAccountSignInAndRecoveryRequests() async throws {

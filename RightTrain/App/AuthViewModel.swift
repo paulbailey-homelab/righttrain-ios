@@ -210,7 +210,7 @@ final class AuthViewModel {
     }
 
     @discardableResult
-    func createPortableAccount(migrateCurrentDevicePreferences: Bool = true) async -> Bool {
+    func createPortableAccount() async -> Bool {
         guard let accessToken else {
             operationState.alertState = .auth("Continue with this device before creating an account.")
             return false
@@ -228,7 +228,6 @@ final class AuthViewModel {
                 input: RegisterAccountRequest(
                     attemptId: options.attemptId,
                     credentialAttestation: credential,
-                    migrateCurrentDevicePreferences: migrateCurrentDevicePreferences,
                     clientDeviceId: accountClientDeviceIDProvider()
                 ),
                 accessToken: accessToken
@@ -243,7 +242,7 @@ final class AuthViewModel {
             )
             try savePortableAccountMetadata(metadata)
             oneTimeRecoveryCode = response.recoveryCode
-            accountStatusMessage = "Account preferences are ready to use on another device."
+            accountStatusMessage = "Your account is ready to use on another device."
             await refreshLinkedDevicesSilently(accessToken: accessToken)
             didCreate = true
             BetaDiagnostics.record("portable_account_created")
