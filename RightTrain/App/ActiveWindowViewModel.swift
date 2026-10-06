@@ -1,4 +1,5 @@
 import CoreLocation
+import CoreMotion
 import Foundation
 import UIKit
 
@@ -57,6 +58,11 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
     private static let itineraryOriginPrefix = "righttrain.itinerary.origin."
     private static let itineraryInterchangePrefix = "righttrain.itinerary.interchange."
     private let manager = CLLocationManager()
+    // Motion & Fitness activity: a second, GPS-independent signal that the
+    // user is in a moving vehicle, and a record of when that began.
+    private let motionManager = CMMotionActivityManager()
+    private var latestMotionActivity: CMMotionActivity?
+    private var motionUpdatesActive = false
     private var monitoredKind: MonitoredKind?
     private var monitoredRadius: CLLocationDistance = 0
     private var monitoredCoordinate: CLLocationCoordinate2D?
@@ -80,6 +86,10 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
     private let originPresenceTolerance: TimeInterval = 2 * 60
     private let originPresenceStaleness: TimeInterval = 4 * 60
     private let fastSampleTolerance: TimeInterval = 90
+    private let minimumFastSampleSpacing: TimeInterval = 5
+    // How far a candidate's departure may sit from the moment motion
+    // history says the vehicle started moving and still be matched to it.
+    private let motionDepartureMatchTolerance: TimeInterval = 3 * 60
     private let requiredFastSamples = 2
 
     private enum MonitoredKind: Equatable {
@@ -115,6 +125,7 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
         var endDate: Date
         var lastSeenAtOrigin: Date?
         var firstFastSampleAt: Date?
+        var lastFastSampleAt: Date?
         var consecutiveFastSamples: Int
         var didEmit: Bool
     }
@@ -147,6 +158,7 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
 
         switch manager.authorizationStatus {
         case .authorizedAlways:
+            requestMotionAuthorizationIfNeeded()
             if monitoredKind == .window(id: window.id) {
                 manager.requestLocation()
                 updateLocationUpdates(now: Date())
@@ -197,6 +209,7 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
 
         switch manager.authorizationStatus {
         case .authorizedAlways:
+            requestMotionAuthorizationIfNeeded()
             if monitoredKind == target.kind {
                 manager.requestLocation()
                 updateLocationUpdates(now: Date())
@@ -522,6 +535,7 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
             endDate: latest.addingTimeInterval(detectionTailTime),
             lastSeenAtOrigin: previous?.lastSeenAtOrigin,
             firstFastSampleAt: previous?.firstFastSampleAt,
+            lastFastSampleAt: previous?.lastFastSampleAt,
             consecutiveFastSamples: previous?.consecutiveFastSamples ?? 0,
             didEmit: previous?.didEmit ?? false
         )
@@ -616,7 +630,10 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
         caughtDetection?.lastSeenAtOrigin = date
     }
 
-    private func evaluateCaughtTrainDetection(with location: CLLocation, now: Date) {
+    /// Runs on every accepted location fix, and on every motion activity
+    /// update with `location` nil, since a carriage can go minutes without
+    /// a usable fix while the motion chip keeps reporting.
+    private func evaluateCaughtTrainDetection(with location: CLLocation?, now: Date) {
         guard var detection = caughtDetection,
               !detection.didEmit else {
             return
@@ -633,19 +650,31 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
             return
         }
 
-        let reportedSpeed = reportedSpeed(of: location)
-        let impliedSpeed = impliedSpeedSinceOrigin(of: location, detection: detection)
-        let isFast = (reportedSpeed ?? 0) >= trainSpeedThreshold || (impliedSpeed ?? 0) >= trainSpeedThreshold
+        let measuredSpeed = location.flatMap { self.reportedSpeed(of: $0) }
+        let travelSpeed = location.flatMap { self.impliedSpeedSinceOrigin(of: $0, detection: detection) }
+        let inMovingVehicle = motionShowsMovingVehicle(since: detection.lastSeenAtOrigin)
+        let isFast = (measuredSpeed ?? 0) >= trainSpeedThreshold ||
+            (travelSpeed ?? 0) >= trainSpeedThreshold ||
+            inMovingVehicle
         guard isFast else {
             // Only a trustworthy slow reading cancels a run; a fix with no
             // speed (Wi-Fi or cell positioning in a carriage) proves nothing.
-            if reportedSpeed != nil {
+            if measuredSpeed != nil {
                 detection.consecutiveFastSamples = 0
                 detection.firstFastSampleAt = nil
+                detection.lastFastSampleAt = nil
             }
             caughtDetection = detection
             return
         }
+        // GPS fixes and motion updates can arrive in bursts; a burst is
+        // one observation, not several.
+        if let lastFastSampleAt = detection.lastFastSampleAt,
+           now.timeIntervalSince(lastFastSampleAt) < minimumFastSampleSpacing {
+            caughtDetection = detection
+            return
+        }
+        detection.lastFastSampleAt = now
 
         if let firstFastSampleAt = detection.firstFastSampleAt,
            now.timeIntervalSince(firstFastSampleAt) <= fastSampleTolerance {
@@ -655,21 +684,33 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
             detection.consecutiveFastSamples = 1
         }
 
-        // The train that carried the user away is the latest one already
-        // due while they were still at the station: an earlier one they
-        // were still on the platform after has left without them.
-        guard detection.consecutiveFastSamples >= requiredFastSamples,
-              let caught = eligible.max(by: { $0.departureDate < $1.departureDate }) else {
+        guard detection.consecutiveFastSamples >= requiredFastSamples else {
             caughtDetection = detection
             return
         }
 
+        // Marked before the (asynchronous) motion history lookup so later
+        // fixes can't emit twice.
         detection.didEmit = true
         caughtDetection = detection
-        BetaDiagnostics.record(
-            "station_proximity_caught_train_matched",
-            details: "service=\(caught.serviceID); \(detectionDiagnostics(detection))"
-        )
+        stopLocationUpdates()
+        resolveCaughtCandidate(from: eligible, detection: detection, now: now) { [weak self] caught, movementStartedAt in
+            guard let self,
+                  let current = self.caughtDetection,
+                  current.kind == detection.kind,
+                  current.didEmit else {
+                return
+            }
+            let movement = movementStartedAt.map { String(Int($0.timeIntervalSince1970)) } ?? "none"
+            BetaDiagnostics.record(
+                "station_proximity_caught_train_matched",
+                details: "service=\(caught.serviceID); moving_since=\(movement); \(self.detectionDiagnostics(detection))"
+            )
+            self.emitCaughtTrain(caught, detection: detection)
+        }
+    }
+
+    private func emitCaughtTrain(_ caught: DetectionCandidate, detection: CaughtTrainDetectionState) {
         switch detection.kind {
         case .window(let windowID):
             onCaughtTrainDetected?(windowID, caught.serviceID)
@@ -679,7 +720,116 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
         case .itineraryInterchange(let itineraryID, _, _):
             onItineraryOnwardBoardDetected?(itineraryID, detection.legIndex)
         }
-        stopLocationUpdates()
+    }
+
+    /// Picks the train that carried the user away. With motion history, the
+    /// one departing closest to when the vehicle started moving; without it,
+    /// the latest one already due while they were still at the station (an
+    /// earlier one they were still on the platform after left without them).
+    private func resolveCaughtCandidate(
+        from eligible: [DetectionCandidate],
+        detection: CaughtTrainDetectionState,
+        now: Date,
+        completion: @escaping (DetectionCandidate, Date?) -> Void
+    ) {
+        guard let fallback = eligible.max(by: { $0.departureDate < $1.departureDate }) else {
+            return
+        }
+        guard eligible.count > 1,
+              motionActivityAuthorized,
+              let lastSeenAtOrigin = detection.lastSeenAtOrigin else {
+            completion(fallback, nil)
+            return
+        }
+        let historyStart = lastSeenAtOrigin.addingTimeInterval(-10 * 60)
+        motionManager.queryActivityStarting(from: historyStart, to: now, to: .main) { [weak self] activities, _ in
+            guard let self,
+                  let movementStartedAt = Self.movingVehicleStart(in: activities ?? []) else {
+                completion(fallback, nil)
+                return
+            }
+            let nearest = eligible.min {
+                abs($0.departureDate.timeIntervalSince(movementStartedAt)) < abs($1.departureDate.timeIntervalSince(movementStartedAt))
+            }
+            if let nearest,
+               abs(nearest.departureDate.timeIntervalSince(movementStartedAt)) <= self.motionDepartureMatchTolerance {
+                completion(nearest, movementStartedAt)
+            } else {
+                completion(fallback, movementStartedAt)
+            }
+        }
+    }
+
+    /// When the current vehicle journey began: the start of the latest run
+    /// of automotive activity not broken by walking, running, cycling or
+    /// standing still outside a vehicle. A train halted at a signal reads
+    /// as automotive and stationary, and does not break the run.
+    private static func movingVehicleStart(in activities: [CMMotionActivity]) -> Date? {
+        var start: Date?
+        for activity in activities.sorted(by: { $0.startDate < $1.startDate }) {
+            if activity.automotive, activity.confidence != .low {
+                if start == nil, !activity.stationary {
+                    start = activity.startDate
+                }
+            } else if activity.walking || activity.running || activity.cycling || activity.stationary {
+                start = nil
+            }
+        }
+        return start
+    }
+
+    private var motionActivityAuthorized: Bool {
+        CMMotionActivityManager.isActivityAvailable() &&
+            CMMotionActivityManager.authorizationStatus() == .authorized
+    }
+
+    /// True when the motion chip currently has the user in a moving vehicle,
+    /// a classification that began around or after they were last at the
+    /// station (so a drive to the station doesn't count).
+    private func motionShowsMovingVehicle(since lastSeenAtOrigin: Date?) -> Bool {
+        guard let activity = latestMotionActivity,
+              let lastSeenAtOrigin,
+              activity.automotive,
+              !activity.stationary,
+              activity.confidence != .low else {
+            return false
+        }
+        return activity.startDate >= lastSeenAtOrigin.addingTimeInterval(-2 * 60)
+    }
+
+    private func requestMotionAuthorizationIfNeeded() {
+        guard pendingPermissionRequest,
+              CMMotionActivityManager.isActivityAvailable(),
+              CMMotionActivityManager.authorizationStatus() == .notDetermined else {
+            return
+        }
+        // A history query is what raises the Motion & Fitness prompt.
+        let now = Date()
+        motionManager.queryActivityStarting(from: now.addingTimeInterval(-60), to: now, to: .main) { _, _ in }
+        BetaDiagnostics.record("station_proximity_motion_authorization_requested")
+    }
+
+    private func startMotionUpdates() {
+        guard !motionUpdatesActive, motionActivityAuthorized else {
+            return
+        }
+        motionUpdatesActive = true
+        motionManager.startActivityUpdates(to: .main) { [weak self] activity in
+            guard let self else {
+                return
+            }
+            self.latestMotionActivity = activity
+            self.evaluateCaughtTrainDetection(with: nil, now: Date())
+        }
+    }
+
+    private func stopMotionUpdates() {
+        guard motionUpdatesActive else {
+            return
+        }
+        motionManager.stopActivityUpdates()
+        motionUpdatesActive = false
+        latestMotionActivity = nil
     }
 
     /// The fix's own speed, when Core Location measured one well enough.
@@ -746,6 +896,7 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
         manager.pausesLocationUpdatesAutomatically = false
         locationUpdatesActive = true
         manager.startUpdatingLocation()
+        startMotionUpdates()
     }
 
     private func stopLocationUpdates() {
@@ -755,6 +906,7 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
         manager.stopUpdatingLocation()
         manager.pausesLocationUpdatesAutomatically = true
         locationUpdatesActive = false
+        stopMotionUpdates()
     }
 }
 
