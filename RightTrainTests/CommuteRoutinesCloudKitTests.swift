@@ -197,4 +197,26 @@ final class CommuteRoutinesCloudKitTests: XCTestCase {
         XCTAssertNil(cloudKit.savedStationDefaults.last?.work)
         XCTAssertEqual(viewModel.stationDefaults.homeStationCrs, "FIN")
     }
+
+    /// The Settings row reports the iCloud account status, which is a different
+    /// question from whether the zone read succeeded: being signed out needs an
+    /// instruction, a failed read needs patience.
+    func testCloudKitAvailabilityIsReportedForSettings() async {
+        let apiClient = FakeAPIClient()
+        let cloudKit = FakeCloudKitPreferenceStore()
+        cloudKit.availability = .noAccount
+        cloudKit.snapshot = nil
+
+        let viewModel = makeViewModel(apiClient: apiClient, cloudKitStore: cloudKit)
+        await viewModel.refreshCloudKitAvailability()
+
+        XCTAssertEqual(viewModel.cloudKitAvailability, .noAccount)
+
+        cloudKit.availability = .available
+        cloudKit.snapshot = seededSnapshot(routines: [])
+        await viewModel.refresh()
+
+        XCTAssertEqual(viewModel.cloudKitAvailability, .available)
+        XCTAssertFalse(viewModel.isWaitingOnICloud)
+    }
 }

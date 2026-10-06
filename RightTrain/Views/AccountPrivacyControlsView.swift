@@ -24,12 +24,12 @@ struct AccountPrivacyControlsView: View {
                     }
                 }
                 .disabled(isGeneratingExport)
-                .accessibilityHint("Builds a JSON export of your account preferences and linked-device categories.")
+                .accessibilityHint("Builds a JSON export of the data RightTrain holds about your account.")
                 .accessibilityValue(isGeneratingExport ? "Generating" : "")
             } header: {
                 Label("Export", systemImage: "doc.text")
             } footer: {
-                Text(exportStatusText ?? "The export contains account preferences, linked-device categories, and retained-record explanations. It excludes access tokens, raw device identifiers, notification tokens, and credential material.")
+                Text(exportStatusText ?? "The export contains the journeys RightTrain is watching for you, your notification history, linked-device categories, and retained-record explanations. It excludes access tokens, raw device identifiers, notification tokens, and credential material. Your commutes are not in it because the service does not hold them — they are in your own iCloud.")
             }
 
             if let export = authViewModel.accountExport {

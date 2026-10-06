@@ -20,17 +20,18 @@ private enum SettingsConfirmation {
     var message: String {
         switch self {
         case .logOutAccount:
-            return "Your synced preferences stay in your account."
+            return "Your commutes stay in your iCloud, and come back when you log in again."
         case .clearDevice:
             return "This removes saved RightTrain data from this device."
         case .deleteAccount:
-            return "Your account and synced preferences will be deleted. This can't be undone."
+            return "Everything RightTrain holds about you is deleted, and this can't be undone. Your commutes are in your own iCloud, so they stay until you remove them in Settings › Apple Account › iCloud."
         }
     }
 }
 
 struct SettingsProfileView: View {
     @Environment(AuthViewModel.self) private var authViewModel
+    @Environment(CommuteRoutinesViewModel.self) private var commuteRoutinesViewModel
     @Environment(ActiveWindowViewModel.self) private var activeWindowViewModel
     @Environment(NotificationViewModel.self) private var notificationViewModel
     @Environment(SubscriptionViewModel.self) private var subscriptionViewModel
@@ -50,6 +51,7 @@ struct SettingsProfileView: View {
                 accountSection
             }
 
+            commuteStorageSection
             alertsSection
             supportSection
             aboutSection
@@ -61,6 +63,7 @@ struct SettingsProfileView: View {
         .navigationBarTitleDisplayMode(.large)
         .task {
             await notificationViewModel.refreshStatus()
+            await commuteRoutinesViewModel.refreshCloudKitAvailability()
             if authViewModel.isSignedIn {
                 await subscriptionViewModel.refresh()
             }
@@ -104,7 +107,7 @@ struct SettingsProfileView: View {
         } header: {
             Text("Account")
         } footer: {
-            Text(authViewModel.hasPortableAccount ? "Manage the devices and data linked to your account." : "Create or log in to an account to sync preferences on another device.")
+            Text(authViewModel.hasPortableAccount ? "Manage the devices and data linked to your account." : "Create or log in to an account to keep your pins and alerts when you change device.")
         }
     }
 
@@ -314,6 +317,62 @@ struct SettingsProfileView: View {
         }
     }
 
+    /// Where commutes actually live, and whether that place is reachable.
+    ///
+    /// The Commutes tab says this too, but only once something has broken.
+    /// Settings is where someone comes to find out why, so the state belongs
+    /// here whether it is working or not.
+    private var commuteStorageSection: some View {
+        Section {
+            SettingsAccountValueRow(
+                title: "Commutes",
+                systemImage: iCloudStatusIcon,
+                value: iCloudStatusValue
+            )
+        } header: {
+            Label("Storage", systemImage: "icloud")
+        } footer: {
+            Text(iCloudStatusFooter)
+        }
+    }
+
+    private var iCloudStatusIcon: String {
+        switch commuteRoutinesViewModel.cloudKitAvailability {
+        case .available, .unknown:
+            return "icloud"
+        case .noAccount, .restricted, .unavailable:
+            return "exclamationmark.icloud"
+        }
+    }
+
+    private var iCloudStatusValue: String {
+        switch commuteRoutinesViewModel.cloudKitAvailability {
+        case .available:
+            return "In your iCloud"
+        case .noAccount:
+            return "iCloud is off"
+        case .restricted:
+            return "iCloud not permitted"
+        case .unavailable:
+            return "iCloud unreachable"
+        case .unknown:
+            return "Checking"
+        }
+    }
+
+    private var iCloudStatusFooter: String {
+        switch commuteRoutinesViewModel.cloudKitAvailability {
+        case .available, .unknown:
+            return "Your commutes and station defaults are kept in your own private iCloud database. RightTrain's servers never hold them, and only see the individual departures it is asked to watch."
+        case .noAccount:
+            return "Commutes need iCloud, because RightTrain keeps them in your iCloud account rather than on its own servers. Sign in under Settings › Apple Account, and switch iCloud on for RightTrain, to use them."
+        case .restricted:
+            return "iCloud is not permitted on this device, so commutes are unavailable. Everything else in RightTrain still works."
+        case .unavailable:
+            return "iCloud could not be reached just now. Your commutes are safe; they will appear again once the connection recovers."
+        }
+    }
+
     private var dangerZoneSection: some View {
         Section {
             if authViewModel.hasPortableAccount {
@@ -336,7 +395,7 @@ struct SettingsProfileView: View {
                 }
             }
         } footer: {
-            Text(authViewModel.hasPortableAccount ? "Log out of this device or permanently delete the account." : "Clears saved RightTrain data from this device.")
+            Text(authViewModel.hasPortableAccount ? "Log out of this device or permanently delete the account. Neither touches the copy of your commutes in your iCloud." : "Clears saved RightTrain data from this device.")
         }
     }
 
