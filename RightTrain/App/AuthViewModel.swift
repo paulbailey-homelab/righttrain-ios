@@ -24,7 +24,6 @@ protocol SessionLifecycleObserver: AnyObject {
 final class AuthViewModel {
     private(set) var user: User?
     private(set) var portableAccount: PortableAccountSessionMetadata?
-    private(set) var accountPreferenceSet: AccountPreferenceSet?
     private(set) var linkedDevices: [LinkedDevice] = []
     private(set) var accountExport: AccountExportResponse?
     private(set) var oneTimeRecoveryCode: String?
@@ -236,8 +235,6 @@ final class AuthViewModel {
             )
             let metadata = PortableAccountSessionMetadata(
                 account: response.account,
-                lastSyncedPreferenceVersion: response.preferenceSet.version,
-                lastSyncedAt: response.preferenceSet.updatedAt,
                 recovery: PortableAccountRecoveryMetadata(
                     issuedAt: Date(),
                     acknowledgedAt: nil,
@@ -245,7 +242,6 @@ final class AuthViewModel {
                 )
             )
             try savePortableAccountMetadata(metadata)
-            accountPreferenceSet = response.preferenceSet
             oneTimeRecoveryCode = response.recoveryCode
             accountStatusMessage = "Account preferences are ready to use on another device."
             await refreshLinkedDevicesSilently(accessToken: accessToken)
@@ -305,19 +301,6 @@ final class AuthViewModel {
             BetaDiagnostics.record("portable_account_recovered")
         }
         return didRecover
-    }
-
-    func refreshAccountPreferences() async {
-        guard let accessToken else {
-            operationState.alertState = .auth("Sign in to refresh account preferences.")
-            return
-        }
-        await operationState.withLoading {
-            let preferenceSet = try await apiClient.getAccountPreferenceSet(accessToken: accessToken)
-            accountPreferenceSet = preferenceSet
-            updatePortablePreferenceMetadata(version: preferenceSet.version, syncedAt: preferenceSet.updatedAt)
-            accountStatusMessage = "Account preferences refreshed."
-        }
     }
 
     func refreshLinkedDevices() async {
@@ -412,7 +395,6 @@ final class AuthViewModel {
         storedSession = nil
         user = nil
         portableAccount = nil
-        accountPreferenceSet = nil
         linkedDevices = []
         accountExport = nil
         oneTimeRecoveryCode = nil
@@ -444,7 +426,6 @@ final class AuthViewModel {
         storedSession = stored
         user = auth.user
 
-        let preferenceSet = try await apiClient.getAccountPreferenceSet(accessToken: accessToken)
         let metadata = PortableAccountSessionMetadata(
             account: PrivacyAccount(
                 id: auth.user.id,
@@ -452,15 +433,12 @@ final class AuthViewModel {
                 createdAt: auth.user.createdAt,
                 updatedAt: auth.user.updatedAt
             ),
-            lastSyncedPreferenceVersion: preferenceSet.version,
-            lastSyncedAt: preferenceSet.updatedAt,
             recovery: nil
         )
         stored.portableAccount = metadata
         try sessionStore.save(stored)
         storedSession = stored
         portableAccount = metadata
-        accountPreferenceSet = preferenceSet
         accountExport = nil
         oneTimeRecoveryCode = nil
         await refreshLinkedDevicesSilently(accessToken: accessToken)
@@ -468,31 +446,13 @@ final class AuthViewModel {
     }
 
     private func refreshAccountStateSilently(accessToken: String) async {
-        do {
-            let preferenceSet = try await apiClient.getAccountPreferenceSet(accessToken: accessToken)
-            accountPreferenceSet = preferenceSet
-            updatePortablePreferenceMetadata(version: preferenceSet.version, syncedAt: preferenceSet.updatedAt)
-            await refreshLinkedDevicesSilently(accessToken: accessToken)
-        } catch {
-            operationState.recordSilentOperationError(error)
-        }
+        await refreshLinkedDevicesSilently(accessToken: accessToken)
     }
 
     private func refreshLinkedDevicesSilently(accessToken: String) async {
         do {
             let response = try await apiClient.listLinkedDevices(accessToken: accessToken)
             linkedDevices = response.devices
-        } catch {
-            operationState.recordSilentOperationError(error)
-        }
-    }
-
-    private func updatePortablePreferenceMetadata(version: Int, syncedAt: Date) {
-        guard var metadata = portableAccount else { return }
-        metadata.lastSyncedPreferenceVersion = version
-        metadata.lastSyncedAt = syncedAt
-        do {
-            try savePortableAccountMetadata(metadata)
         } catch {
             operationState.recordSilentOperationError(error)
         }

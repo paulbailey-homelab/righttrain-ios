@@ -785,7 +785,6 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(apiClient.registerAccountRequests.last?.accessToken, "device-token")
         XCTAssertTrue(apiClient.registerAccountRequests.last?.input.migrateCurrentDevicePreferences == true)
         XCTAssertEqual(model.authViewModel.portableAccount?.account.state, "active")
-        XCTAssertEqual(model.authViewModel.portableAccount?.lastSyncedPreferenceVersion, 1)
         XCTAssertEqual(model.authViewModel.oneTimeRecoveryCode, "shown-once-to-user")
         XCTAssertEqual(model.authViewModel.accountStatusMessage, "Account preferences are ready to use on another device.")
         XCTAssertEqual(sessionStore.session?.portableAccount?.account.state, "active")
@@ -816,13 +815,12 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
-    func testRestorePortableAccountInstallsSessionAndPreferenceFreshness() async {
+    func testRestorePortableAccountInstallsSession() async {
         let apiClient = FakeAPIClient()
         let sessionStore = FakeSessionStore()
         let credentialService = FakeAccountCredentialService()
         let restoredUser = TestFactory.user(id: "portable-user")
         apiClient.accountSignInResult = .success(TestFactory.authResponse(user: restoredUser, accessToken: "portable-token"))
-        apiClient.accountPreferenceSetResult = .success(TestFactory.accountPreferenceSet(version: 4))
         apiClient.linkedDevicesResult = .success(LinkedDevicesResponse(devices: [TestFactory.linkedDevice()]))
         let model = makeModel(
             apiClient: apiClient,
@@ -837,7 +835,6 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(apiClient.accountSignInRequests.count, 1)
         XCTAssertEqual(model.accessToken, "portable-token")
         XCTAssertEqual(model.user?.id, "portable-user")
-        XCTAssertEqual(model.authViewModel.portableAccount?.lastSyncedPreferenceVersion, 4)
         XCTAssertEqual(model.authViewModel.linkedDevices.count, 1)
         XCTAssertEqual(sessionStore.session?.portableAccount?.account.id, "portable-user")
     }
@@ -850,8 +847,6 @@ final class AppModelTests: XCTestCase {
             accessToken: "portable-token",
             portableAccount: PortableAccountSessionMetadata(
                 account: TestFactory.privacyAccount(),
-                lastSyncedPreferenceVersion: 1,
-                lastSyncedAt: TestFactory.now,
                 recovery: nil
             )
         )
@@ -880,8 +875,6 @@ final class AppModelTests: XCTestCase {
             accessToken: "portable-token",
             portableAccount: PortableAccountSessionMetadata(
                 account: TestFactory.privacyAccount(),
-                lastSyncedPreferenceVersion: 1,
-                lastSyncedAt: TestFactory.now,
                 recovery: nil
             )
         )

@@ -19,8 +19,6 @@ struct StoredSession: Codable {
 
 struct PortableAccountSessionMetadata: Codable, Equatable {
     var account: PrivacyAccount
-    var lastSyncedPreferenceVersion: Int
-    var lastSyncedAt: Date?
     var recovery: PortableAccountRecoveryMetadata?
 }
 

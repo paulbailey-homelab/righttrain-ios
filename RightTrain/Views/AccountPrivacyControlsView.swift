@@ -94,16 +94,6 @@ struct AccountPrivacyControlsView: View {
                     value: export.generatedAt.formatted(date: .abbreviated, time: .shortened)
                 )
                 SettingsAccountValueRow(
-                    title: "Preference Version",
-                    systemImage: "number",
-                    value: "\(export.preferenceSet.version)"
-                )
-                SettingsAccountValueRow(
-                    title: "Saved Commutes",
-                    systemImage: "calendar.badge.clock",
-                    value: "\(export.preferenceSet.commuteRoutines.count)"
-                )
-                SettingsAccountValueRow(
                     title: "Linked Devices",
                     systemImage: "iphone.gen3",
                     value: "\(export.linkedDevices.count)"

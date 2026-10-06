@@ -39,10 +39,10 @@ final class FakeCloudKitPreferenceStore: CloudKitPreferenceStoring {
     }
 }
 
-/// These cover the handover: which copy of the routines the app reads, when the
-/// server's copy is migrated into CloudKit, and when the server stops arming.
-/// Getting this wrong either loses a user's commutes or arms them twice, and
-/// neither shows up until a real morning.
+/// CloudKit is the only store for commutes now. These pin the two things that
+/// would be invisible until a real morning: that the backend is not consulted
+/// once an account has migrated, and that an account which never migrated
+/// still gets its routines copied across rather than silently losing them.
 @MainActor
 final class CommuteRoutinesCloudKitTests: XCTestCase {
     private func makeViewModel(
@@ -55,17 +55,39 @@ final class CommuteRoutinesCloudKitTests: XCTestCase {
             operationState: AppOperationState(),
             accessTokenProvider: { "token" },
             userProvider: { user },
-            userUpdateHandler: { _ in },
             cloudKitStore: cloudKitStore,
             preArmScheduler: CommutePreArmScheduler(apiClient: apiClient)
         )
     }
 
-    func testAnUnseededZoneIsFilledFromTheServerAndArmingIsHandedOver() async {
+    private func seededSnapshot(routines: [CommuteRoutine]) -> CloudKitSnapshot {
+        CloudKitSnapshot(
+            preferences: CloudKitPreferences(homeStationCRS: "HDW", workStationCRS: "KGX"),
+            routines: routines,
+            seededAt: Date()
+        )
+    }
+
+    func testAMigratedAccountNeverAsksTheBackendForRoutines() async {
+        let apiClient = FakeAPIClient()
+        apiClient.commuteRoutinesResult = .success([TestFactory.commuteRoutine(id: "server-only")])
+        let cloudKit = FakeCloudKitPreferenceStore()
+        cloudKit.snapshot = seededSnapshot(routines: [TestFactory.commuteRoutine(id: "cloudkit-one")])
+
+        let viewModel = makeViewModel(apiClient: apiClient, cloudKitStore: cloudKit)
+        await viewModel.refresh()
+
+        XCTAssertEqual(viewModel.routines.map(\.id), ["cloudkit-one"])
+        XCTAssertTrue(apiClient.listCommuteRoutineAccessTokens.isEmpty)
+        XCTAssertTrue(cloudKit.seedCalls.isEmpty)
+        XCTAssertEqual(viewModel.stationDefaults.homeStationCrs, "HDW")
+        XCTAssertFalse(apiClient.preArmRequests.isEmpty)
+    }
+
+    func testAnUnmigratedAccountIsMigratedFromTheBackendOnce() async {
         let apiClient = FakeAPIClient()
         let routine = TestFactory.commuteRoutine()
         apiClient.commuteRoutinesResult = .success([routine])
-        apiClient.commuteRoutineResult = .success(routine)
         let cloudKit = FakeCloudKitPreferenceStore()
 
         let viewModel = makeViewModel(apiClient: apiClient, cloudKitStore: cloudKit)
@@ -74,28 +96,20 @@ final class CommuteRoutinesCloudKitTests: XCTestCase {
         XCTAssertEqual(cloudKit.seedCalls.count, 1)
         XCTAssertEqual(cloudKit.seedCalls.first?.routines.map(\.id), [routine.id])
         XCTAssertEqual(viewModel.routines.map(\.id), [routine.id])
-        XCTAssertTrue(viewModel.isCloudKitAuthoritative)
-
-        // The server must stop arming the routine the app now arms, or both
-        // create a window subscription for the same train.
-        XCTAssertEqual(apiClient.updateCommuteRoutineRequests.count, 1)
-        XCTAssertEqual(apiClient.updateCommuteRoutineRequests.first?.input.autoArmEnabled, false)
-        XCTAssertFalse(apiClient.preArmRequests.isEmpty)
     }
 
-    /// Stage one wrote a preferences record on every device it ran on, so an
-    /// account can reach stage two with preferences in CloudKit and no
-    /// routines. That is not a migrated account, and reading it as one would
-    /// make the user's commutes disappear.
-    func testAZoneHoldingOnlyStageOnePreferencesIsStillSeeded() async {
+    /// The backend drops the routine endpoints after this ships. A migration
+    /// that cannot reach them has nothing to copy, which is correct by then —
+    /// but it must not take the whole screen down with it.
+    func testMigrationSurvivesTheBackendEndpointBeingGone() async {
         let apiClient = FakeAPIClient()
-        let routine = TestFactory.commuteRoutine()
-        apiClient.commuteRoutinesResult = .success([routine])
-        apiClient.commuteRoutineResult = .success(routine)
+        apiClient.commuteRoutinesResult = .failure(
+            APIError.server(statusCode: 404, code: nil, message: "not found", details: [:])
+        )
         let cloudKit = FakeCloudKitPreferenceStore()
         cloudKit.snapshot = CloudKitSnapshot(
-            preferences: CloudKitPreferences(homeStationCRS: "HDW", workStationCRS: "KGX"),
-            routines: [],
+            preferences: nil,
+            routines: [TestFactory.commuteRoutine(id: "already-here")],
             seededAt: nil
         )
 
@@ -103,54 +117,13 @@ final class CommuteRoutinesCloudKitTests: XCTestCase {
         await viewModel.refresh()
 
         XCTAssertEqual(cloudKit.seedCalls.count, 1)
-        XCTAssertEqual(viewModel.routines.map(\.id), [routine.id])
-        // The station defaults already in CloudKit are the newer copy and are
-        // kept rather than overwritten from the account.
-        XCTAssertEqual(cloudKit.seedCalls.first?.preferences.homeStationCRS, "HDW")
-        XCTAssertEqual(viewModel.stationDefaults.homeStationCrs, "HDW")
+        XCTAssertEqual(cloudKit.seedCalls.first?.routines, [])
+        XCTAssertEqual(viewModel.routines.map(\.id), ["already-here"])
     }
 
-    func testASeededZoneIsReadInsteadOfTheServer() async {
-        let apiClient = FakeAPIClient()
-        apiClient.commuteRoutinesResult = .success([TestFactory.commuteRoutine(id: "server-only")])
-        let cloudKit = FakeCloudKitPreferenceStore()
-        cloudKit.snapshot = CloudKitSnapshot(
-            preferences: CloudKitPreferences(homeStationCRS: "HDW", workStationCRS: nil),
-            routines: [TestFactory.commuteRoutine(id: "cloudkit-one")],
-            seededAt: Date()
-        )
-
-        let viewModel = makeViewModel(apiClient: apiClient, cloudKitStore: cloudKit)
-        await viewModel.refresh()
-
-        XCTAssertTrue(cloudKit.seedCalls.isEmpty)
-        XCTAssertEqual(viewModel.routines.map(\.id), ["cloudkit-one"])
-    }
-
-    /// With iCloud unreachable the app has to behave exactly as it did before
-    /// stage two: read the server's routines and leave the server arming them.
-    /// Pre-arming as well would double up.
-    func testAnUnreadableDatabaseLeavesEverythingOnTheServer() async {
-        let apiClient = FakeAPIClient()
-        let routine = TestFactory.commuteRoutine()
-        apiClient.commuteRoutinesResult = .success([routine])
-        let cloudKit = FakeCloudKitPreferenceStore()
-        cloudKit.snapshot = nil
-
-        let viewModel = makeViewModel(apiClient: apiClient, cloudKitStore: cloudKit)
-        await viewModel.refresh()
-
-        XCTAssertFalse(viewModel.isCloudKitAuthoritative)
-        XCTAssertEqual(viewModel.routines.map(\.id), [routine.id])
-        XCTAssertTrue(cloudKit.seedCalls.isEmpty)
-        XCTAssertTrue(apiClient.updateCommuteRoutineRequests.isEmpty)
-        XCTAssertTrue(apiClient.preArmRequests.isEmpty)
-    }
-
-    /// A seed that fails must not hand arming over, or the account ends up
-    /// with a server that has stopped arming and a CloudKit zone that does not
-    /// hold the routines.
-    func testAFailedSeedDoesNotHandOverArming() async {
+    /// A seed that fails leaves the account unmigrated so the next launch
+    /// tries again, rather than marking it done with nothing copied.
+    func testAFailedSeedLeavesTheAccountUnmigrated() async {
         let apiClient = FakeAPIClient()
         apiClient.commuteRoutinesResult = .success([TestFactory.commuteRoutine()])
         let cloudKit = FakeCloudKitPreferenceStore()
@@ -159,27 +132,69 @@ final class CommuteRoutinesCloudKitTests: XCTestCase {
         let viewModel = makeViewModel(apiClient: apiClient, cloudKitStore: cloudKit)
         await viewModel.refresh()
 
-        XCTAssertFalse(viewModel.isCloudKitAuthoritative)
-        XCTAssertTrue(apiClient.updateCommuteRoutineRequests.isEmpty)
-        XCTAssertTrue(apiClient.preArmRequests.isEmpty)
+        XCTAssertTrue(viewModel.routines.isEmpty)
+        XCTAssertEqual(cloudKit.seedCalls.count, 1)
     }
 
-    /// The user's auto-arm setting lives in CloudKit from here on. The server
-    /// copy is written with it off, because the server must not arm; the app's
-    /// own copy has to keep what the user actually asked for.
-    func testCreatingARoutineKeepsAutoArmLocallyAndClearsItOnTheServer() async {
+    func testWithoutICloudThereAreNoRoutinesAndTheScreenSaysSo() async {
         let apiClient = FakeAPIClient()
-        apiClient.commuteRoutinesResult = .success([])
-        let created = TestFactory.commuteRoutine(id: "new-routine")
-        apiClient.commuteRoutineResult = .success(created)
+        apiClient.commuteRoutinesResult = .success([TestFactory.commuteRoutine()])
         let cloudKit = FakeCloudKitPreferenceStore()
+        cloudKit.snapshot = nil
 
         let viewModel = makeViewModel(apiClient: apiClient, cloudKitStore: cloudKit)
         await viewModel.refresh()
-        await viewModel.createRoutine(CommuteRoutineMutationRequest(routine: created))
 
-        XCTAssertEqual(apiClient.createCommuteRoutineRequests.first?.input.autoArmEnabled, false)
-        XCTAssertEqual(cloudKit.savedRoutines.first?.autoArmEnabled, true)
-        XCTAssertEqual(viewModel.routines.first?.autoArmEnabled, true)
+        XCTAssertTrue(viewModel.routines.isEmpty)
+        XCTAssertTrue(viewModel.isWaitingOnICloud)
+        XCTAssertTrue(apiClient.preArmRequests.isEmpty)
+        XCTAssertTrue(cloudKit.seedCalls.isEmpty)
+    }
+
+    func testCreatingARoutineWritesOnlyToCloudKitAndMintsItsOwnID() async {
+        let apiClient = FakeAPIClient()
+        apiClient.commuteRoutinesResult = .success([])
+        let cloudKit = FakeCloudKitPreferenceStore()
+        cloudKit.snapshot = seededSnapshot(routines: [])
+
+        let viewModel = makeViewModel(apiClient: apiClient, cloudKitStore: cloudKit)
+        await viewModel.refresh()
+        await viewModel.createRoutine(CommuteRoutineMutationRequest(routine: TestFactory.commuteRoutine()))
+
+        XCTAssertTrue(apiClient.createCommuteRoutineRequests.isEmpty)
+        XCTAssertEqual(cloudKit.savedRoutines.count, 1)
+        let saved = cloudKit.savedRoutines[0]
+        XCTAssertNotNil(UUID(uuidString: saved.id))
+        XCTAssertEqual(viewModel.routines.map(\.id), [saved.id])
+    }
+
+    func testDeletingARoutineWritesOnlyToCloudKit() async {
+        let apiClient = FakeAPIClient()
+        let routine = TestFactory.commuteRoutine(id: "routine-to-go")
+        let cloudKit = FakeCloudKitPreferenceStore()
+        cloudKit.snapshot = seededSnapshot(routines: [routine])
+
+        let viewModel = makeViewModel(apiClient: apiClient, cloudKitStore: cloudKit)
+        await viewModel.refresh()
+        await viewModel.deleteRoutine(id: routine.id)
+
+        XCTAssertEqual(cloudKit.deletedRoutineIDs, [routine.id])
+        XCTAssertTrue(apiClient.deleteCommuteRoutineRequests.isEmpty)
+        XCTAssertTrue(viewModel.routines.isEmpty)
+    }
+
+    func testStationDefaultsGoToCloudKitRatherThanTheAccount() async {
+        let apiClient = FakeAPIClient()
+        let cloudKit = FakeCloudKitPreferenceStore()
+        cloudKit.snapshot = seededSnapshot(routines: [])
+
+        let viewModel = makeViewModel(apiClient: apiClient, cloudKitStore: cloudKit)
+        await viewModel.refresh()
+        await viewModel.updateStationDefaults(homeStationCRS: "fin", workStationCRS: nil)
+
+        XCTAssertTrue(apiClient.updateStationDefaultsRequests.isEmpty)
+        XCTAssertEqual(cloudKit.savedStationDefaults.last?.home, "FIN")
+        XCTAssertNil(cloudKit.savedStationDefaults.last?.work)
+        XCTAssertEqual(viewModel.stationDefaults.homeStationCrs, "FIN")
     }
 }

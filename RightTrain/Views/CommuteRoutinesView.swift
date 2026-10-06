@@ -50,11 +50,33 @@ struct CommuteRoutinesView: View {
         // Saved commutes are what people open this tab for, so they lead;
         // Home & Work is set once and sits below.
         List {
+            if viewModel.isWaitingOnICloud {
+                iCloudUnavailableSection
+            }
             routinesSection
             defaultsSection
         }
         .readableContentMargins()
         .listStyle(.insetGrouped)
+    }
+
+    /// Commutes live in the user's own iCloud account rather than on
+    /// RightTrain's servers, so with iCloud off there is nowhere to read them
+    /// from. Saying so matters: an empty list on its own reads as lost data.
+    private var iCloudUnavailableSection: some View {
+        Section {
+            Label {
+                VStack(alignment: .leading, spacing: 4) {
+                    Text("Commutes need iCloud")
+                        .font(.headline)
+                    Text("RightTrain keeps your commutes in your own iCloud account, not on its servers. Sign in to iCloud in Settings to see them here.")
+                        .font(.footnote)
+                        .foregroundStyle(.secondary)
+                }
+            } icon: {
+                Image(systemName: "icloud.slash")
+            }
+        }
     }
 
     @ToolbarContentBuilder

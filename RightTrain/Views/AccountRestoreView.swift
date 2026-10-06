@@ -34,16 +34,6 @@ struct AccountRestoreView: View {
                 Text("Recovery adds a replacement passkey. RightTrain does not use email or phone number lookup for this flow.")
             }
 
-            if let preferenceSet = authViewModel.accountPreferenceSet {
-                Section {
-                    SettingsAccountValueRow(title: "Preference version", systemImage: "number", value: "\(preferenceSet.version)")
-                    SettingsAccountValueRow(title: "Last synced", systemImage: "clock", value: preferenceSet.updatedAt.formatted(date: .abbreviated, time: .shortened))
-                    SettingsAccountValueRow(title: "Saved commutes", systemImage: "calendar.badge.clock", value: "\(preferenceSet.commuteRoutines.count)")
-                } header: {
-                    Label("Synced preferences", systemImage: "arrow.down.doc")
-                }
-            }
-
             if let message = authViewModel.accountStatusMessage {
                 Section {
                     Label(message, systemImage: "checkmark.seal")
