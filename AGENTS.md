@@ -42,16 +42,19 @@ to `design/review-screenshots/`, which is git-ignored.
 - Standard iOS system colours (grouped backgrounds, label colours) with dark mode
   support; green is the accent. Native structure: inset-grouped List/Form, system
   Picker, visible navigation bars, toolbar menus; compact departure-board rows.
-- Departures on Pinned, search results and the Lock Screen Live Activity are
-  drawn as UK station departure boards
-  (`RightTrain/Views/DepartureBoard.swift`): amber single-dot lettering on
-  black in both appearances, concourse columns (Time, Destination, Plat,
-  Expected), Darwin's sixteen-character station names, "Exp 08:36" /
-  "Cancelled" wording, a scrolling message line and a seconds clock (the
-  Live Activity can't animate, so it has neither). The
-  dot-matrix face (`BoardFont`, fonts and OFL licence in `RightTrain/Fonts`)
-  is used only inside a board, and everything inside a board uses it; the
-  rest of the app stays in the system face so the two never share a line.
+- The dot-matrix face appears only on a sign: a drawn UK platform indicator
+  (`DepartureBoard` in `RightTrain/Views/DepartureBoard.swift`) with a dark
+  housing, a recessed black display with an unlit dot grid, and amber
+  single-dot lettering that glows faintly. Everything on a sign uses the face;
+  nothing off a sign does. There are two signs: the pinned train on Pinned
+  (train line, scrolling message, double-height platform and countdown,
+  seconds clock) and the Lock Screen Live Activity, which is a sign in itself
+  (no scroller or clock, since it can't animate). One sign per screen at
+  most. Lists of trains, search results, journey detail and app chrome stay
+  in the system face. Signs keep amber on black in both appearances, use
+  sign wording ("Exp 08:36", "Cancelled", Darwin's sixteen-character station
+  names) and avoid £, middle dots and arrows, which the face lacks. Fonts and
+  OFL licence are in `RightTrain/Fonts`, loaded through `BoardFont`.
 - Do not reintroduce cream/editorial surfaces, tracked uppercase eyebrows,
   card-in-card chrome or light-only overrides.
 - Liquid Glass only on floating/navigation controls (safe-area-bar primary

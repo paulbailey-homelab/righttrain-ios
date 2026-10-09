@@ -5,11 +5,12 @@ import SwiftUI
 // in RightTrain/Fonts with its licence). Regular has the single-dot strokes
 // of real boards; Bold doubles them for the large lines.
 //
-// The rule: the board face appears only inside a DepartureBoard, and
-// everything inside a board uses it. Outside a board the app stays in the
-// system face, so the two never share a line. The face has no £, · or
-// arrows; board copy avoids them. A missing font falls back to the system
-// face rather than failing.
+// The rule: the face appears only on a sign, a drawn display object with a
+// lit dot-matrix face, and everything on a sign uses it. There are two
+// signs: the platform indicator for the pinned train on Pinned, and the Lock
+// Screen Live Activity. Lists, search results and app chrome stay in the
+// system face. The face has no £, · or arrows; sign copy avoids them. A
+// missing font falls back to the system face rather than failing.
 
 enum BoardFont {
     enum Weight {
@@ -62,4 +63,39 @@ enum DepartureBoardStyle {
     /// Column headings, expected platforms and stale values.
     static let dimAmber = amber.opacity(0.55)
     static let background = Color(red: 0.035, green: 0.035, blue: 0.03)
+    /// The unlit pixels behind the lettering.
+    static let unlit = amber.opacity(0.08)
+    /// The faint halo lit LEDs throw on the glass in front of them.
+    static let glow = amber.opacity(0.45)
+}
+
+/// The unlit pixels of a dot-matrix display: a faint grid behind the
+/// lettering, so a sign reads as a display rather than a black box.
+struct SignDotGrid: View {
+    /// Centre-to-centre distance between dots.
+    var pitch: CGFloat = 3.5
+
+    var body: some View {
+        Canvas { context, size in
+            let diameter = pitch * 0.5
+            var path = Path()
+            var y = pitch / 2
+            while y < size.height {
+                var x = pitch / 2
+                while x < size.width {
+                    path.addEllipse(in: CGRect(
+                        x: x - diameter / 2,
+                        y: y - diameter / 2,
+                        width: diameter,
+                        height: diameter
+                    ))
+                    x += pitch
+                }
+                y += pitch
+            }
+            context.fill(path, with: .color(DepartureBoardStyle.unlit))
+        }
+        .allowsHitTesting(false)
+        .accessibilityHidden(true)
+    }
 }

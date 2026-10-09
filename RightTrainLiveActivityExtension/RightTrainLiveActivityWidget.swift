@@ -1351,8 +1351,8 @@ private struct TimelineProgressHairline: View {
 
 // MARK: - Departure board (Lock Screen)
 
-/// A direct train on the Lock Screen as a station departure board shows it,
-/// matching the boards on Pinned: amber single-dot lettering on black, the
+/// A direct train on the Lock Screen as a platform indicator shows it,
+/// matching the sign on Pinned: amber single-dot lettering on black, the
 /// board time, Darwin's short destination name and the Expected wording,
 /// then platform and time left in double-height lettering, then one line of
 /// news. Before departure it's the departure board; on board it's the
@@ -1401,8 +1401,13 @@ private struct BoardTrainActivityView: View {
         }
         .font(BoardFont.font(.body))
         .foregroundStyle(DepartureBoardStyle.amber)
+        .compositingGroup()
+        .shadow(color: DepartureBoardStyle.glow, radius: 2.5)
         .padding(.horizontal, 16)
         .padding(.vertical, 14)
+        // The whole activity is the sign's display, so the unlit pixels
+        // fill it edge to edge.
+        .background { SignDotGrid() }
         // The Lock Screen gives a Live Activity a fixed height, so the board
         // stops growing at XXL.
         .dynamicTypeSize(...DynamicTypeSize.xxLarge)
