@@ -11,14 +11,6 @@ import SwiftUI
 // themed surface. Status is in words ("Exp 08:36", "Cancelled"), as on a
 // real board, not in colour.
 
-enum DepartureBoardStyle {
-    /// The amber of LED platform indicators.
-    static let amber = Color(red: 1.0, green: 0.69, blue: 0.0)
-    /// Column headings, expected platforms and stale values.
-    static let dimAmber = amber.opacity(0.55)
-    static let background = Color(red: 0.035, green: 0.035, blue: 0.03)
-}
-
 struct DepartureBoard<Content: View>: View {
     private let content: Content
 

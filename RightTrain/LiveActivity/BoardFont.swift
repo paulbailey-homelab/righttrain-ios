@@ -53,3 +53,13 @@ enum BoardFont {
         }
     }
 }
+
+/// Board colours, shared with the Live Activity. Boards keep amber on black
+/// in light and dark mode: they're a physical object, not a themed surface.
+enum DepartureBoardStyle {
+    /// The amber of LED platform indicators.
+    static let amber = Color(red: 1.0, green: 0.69, blue: 0.0)
+    /// Column headings, expected platforms and stale values.
+    static let dimAmber = amber.opacity(0.55)
+    static let background = Color(red: 0.035, green: 0.035, blue: 0.03)
+}
