@@ -10,9 +10,7 @@ design/review-screenshots/YYYY-MM-DD-HHMMSS/
 
 Each run writes screenshots plus an `index.html` gallery.
 
-For the iOS visual redesign in `specs/003-ios-visual-redesign/`, use
-`design/review-screenshots/ios-redesign-checklist.md` while reviewing the
-gallery. The review must cover first-screen manual setup, active direct and
+For an iOS visual review, check the gallery against the states below. The review must cover first-screen manual setup, active direct and
 itinerary guidance, stale/offline/platform states, action-needed push entry,
 Live Activity surfaces, and shared/deep-link views.
 
@@ -99,7 +97,7 @@ test -f design/review-screenshots/YYYY-MM-DD-HHMMSS/index.html
 Expected counts are `53`, `15`, `15`, and `15`.
 
 The redesign may add more app or Live Activity preview states. If it does,
-update `ios/RightTrain/scripts/capture-review-screenshots.sh`, record the new
+update `scripts/capture-review-screenshots.sh`, record the new
 expected state list here, and keep the checklist in
 `design/review-screenshots/ios-redesign-checklist.md` aligned with the gallery.
 
@@ -141,7 +139,7 @@ The main Makefile variables are:
 The script is:
 
 ```text
-ios/RightTrain/scripts/capture-review-screenshots.sh
+scripts/capture-review-screenshots.sh
 ```
 
 It builds the Debug simulator app unless `SKIP_BUILD=1`, installs it on the simulator, launches DEBUG preview states, captures screenshots, and generates the gallery.

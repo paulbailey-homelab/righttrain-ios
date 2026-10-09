@@ -2,7 +2,7 @@
 
 This document is prompt context for extending the existing native iPhone client
 against the current RightTrain backend. The app already exists in
-`ios/RightTrain/`; new iOS work should build on that project rather than
+this repository (`RightTrain.xcodeproj`); new iOS work should build on that project rather than
 starting a new client.
 
 ## Product Shape

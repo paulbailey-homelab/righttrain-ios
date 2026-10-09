@@ -2,12 +2,12 @@
 set -euo pipefail
 
 script_dir="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
-repo_root="$(cd "${script_dir}/../../.." && pwd)"
+repo_root="$(cd "${script_dir}/.." && pwd)"
 
-project_path="${repo_root}/ios/RightTrain/RightTrain.xcodeproj"
+project_path="${repo_root}/RightTrain.xcodeproj"
 archive_path="${RIGHTTRAIN_ARCHIVE_PATH:-${repo_root}/tmp/ios/RightTrain-TestFlight.xcarchive}"
 export_path="${RIGHTTRAIN_EXPORT_PATH:-${repo_root}/tmp/ios/testflight-export}"
-export_options="${RIGHTTRAIN_EXPORT_OPTIONS_PLIST:-${repo_root}/ios/RightTrain/TestFlightExportOptions.plist}"
+export_options="${RIGHTTRAIN_EXPORT_OPTIONS_PLIST:-${repo_root}/TestFlightExportOptions.plist}"
 
 configuration="${RIGHTTRAIN_CONFIGURATION:-Release}"
 api_base_url="${RIGHTTRAIN_API_BASE_URL:-https://api.righttrain.app}"

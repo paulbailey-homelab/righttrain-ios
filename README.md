@@ -1,10 +1,12 @@
 # RightTrain iOS
 
+The iPhone app for RightTrain. The backend lives in a separate private repository; this app talks to it over the HTTP API (`https://api.righttrain.app` in Release builds). The marketing and status sites are in `righttrain-web`.
+
 Native SwiftUI iPhone app shell for the RightTrain TestFlight beta.
 
 ## Project
 
-- Xcode project: `ios/RightTrain/RightTrain.xcodeproj`
+- Xcode project: `RightTrain.xcodeproj`
 - Scheme: `RightTrain`
 - Minimum iOS: 26.0
 - Release API base URL: `https://api.righttrain.app`
@@ -33,41 +35,11 @@ Debug builds default to `https://clearsignal-api.lan.dreamshake.net`, which work
 - Notification permission onboarding plus APNs alert-token registration via `PUT /v1/devices/{clientDeviceID}/apns/alert-token` (deleted on sign-out)
 - Live Activity update and push-to-start token registration/deletion as monitored-window activities start, switch, and end
 
-## Visual Redesign Implementation Context
-
-The completed redesign feature is tracked in `specs/003-ios-visual-redesign/`.
-Use `spec.md` for user value and success criteria, `plan.md` for technical
-scope, `contracts/ios-redesign-ui-contract.md` for observable surface rules,
-and `quickstart.md` for build, XCTest, screenshot, and product acceptance
-validation. The core product stance is manual plan-and-monitor first when no
-journey is active, active guidance first once monitoring exists, and
-action-needed-only push/Live Activity interruptions. The screenshot evidence
-checklist lives at `design/review-screenshots/ios-redesign-checklist.md`.
-
-The app follows the system appearance. Screens use native structure
-(inset-grouped lists and forms, visible navigation bars) and iOS semantic
-colours, so they read correctly in light and dark mode; brand identity comes
-from the green accent. The historical `Cream`/`Paper` token names in
-`Views/Theme.swift` now resolve to system colours — don't reintroduce fixed
-cream surfaces or per-view colour-scheme overrides. Liquid Glass is reserved
-for floating and navigation controls (tab bar accessory, bottom action bars,
-banners); content cards and rows stay solid. The Live Activity widget
-extension manages its own colours for the Lock Screen and Dynamic Island.
-
-Layouts must not assume a phone-sized screen. iPhone Duo's inner display
-ignores the portrait-only orientation setting and reports regular size
-classes, so apply `readableContentMargins()` to each screen's `ScrollView`,
-`List` or `Form` (and `readableWidthFrame()` to floating bars) to keep content
-in a centred readable column once the container is wider than
-`RTLayout.readableWidth`. Compact Dynamic Island content reads
-`isDynamicIslandLimitedInWidth` (iOS 27) to drop to a narrower form in
-landscape.
-
 ## Local Build
 
 ```sh
 xcodebuild \
-  -project ios/RightTrain/RightTrain.xcodeproj \
+  -project RightTrain.xcodeproj \
   -scheme RightTrain \
   -destination 'generic/platform=iOS Simulator' \
   CODE_SIGNING_ALLOWED=NO \
@@ -78,7 +50,7 @@ To point a local or staging build at another API without editing code:
 
 ```sh
 xcodebuild \
-  -project ios/RightTrain/RightTrain.xcodeproj \
+  -project RightTrain.xcodeproj \
   -scheme RightTrain \
   -configuration Debug \
   -destination 'generic/platform=iOS Simulator' \
@@ -92,7 +64,7 @@ Run unit tests with any available iPhone simulator:
 ```sh
 SIMULATOR_UDID="$(xcrun simctl list devices available | awk -F '[()]' '/iPhone/ && /Shutdown|Booted/ { print $2; exit }')"
 xcodebuild \
-  -project ios/RightTrain/RightTrain.xcodeproj \
+  -project RightTrain.xcodeproj \
   -scheme RightTrain \
   -destination "id=${SIMULATOR_UDID}" \
   CODE_SIGNING_ALLOWED=NO \
@@ -101,13 +73,13 @@ xcodebuild \
 
 ## Visual Review Screenshots
 
-Regenerate the app and Live Activity review gallery from the repository root:
+Regenerate the app and Live Activity review gallery (written to the git-ignored `design/review-screenshots/`):
 
 ```sh
 make ios-screenshots
 ```
 
-The command writes screenshots and an `index.html` gallery under `design/review-screenshots/`. See `docs/righttrain-screenshot-capture.md` for simulator permissions, Live Activity variants, and tuning options.
+The command writes screenshots and an `index.html` gallery under `design/review-screenshots/`, which is not tracked. See `docs/righttrain-screenshot-capture.md` for simulator permissions, Live Activity variants, and tuning options.
 The redesign app-only pass currently captures 43 in-app states covering the
 baseline app, first-screen guidance, setup/results, push entry, onboarding,
 settings, feedback, detail, and shared-link views.
@@ -119,10 +91,10 @@ RIGHTTRAIN_DEVELOPMENT_TEAM=ABCDE12345 \
 RIGHTTRAIN_BUNDLE_IDENTIFIER=com.example.righttrain \
 RIGHTTRAIN_MARKETING_VERSION=0.1.0 \
 RIGHTTRAIN_BUILD_NUMBER=42 \
-ios/RightTrain/scripts/archive-testflight.sh
+scripts/archive-testflight.sh
 ```
 
-The script writes archives under `tmp/ios/` and uses `ios/RightTrain/TestFlightExportOptions.plist` for App Store Connect upload. See `docs/testflight-readiness.md` for TestFlight metadata, privacy/support copy, and live-data incident handling.
+The script writes archives under `tmp/ios/` and uses `TestFlightExportOptions.plist` for App Store Connect upload. See `docs/testflight-readiness.md` for TestFlight metadata, privacy/support copy, and live-data incident handling.
 
 ## Xcode Cloud Upload
 

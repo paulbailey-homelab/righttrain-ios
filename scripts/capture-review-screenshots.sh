@@ -1,15 +1,15 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/../../.." && pwd)"
+ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 
-PROJECT_PATH="${PROJECT_PATH:-$ROOT_DIR/ios/RightTrain/RightTrain.xcodeproj}"
+PROJECT_PATH="${PROJECT_PATH:-$ROOT_DIR/RightTrain.xcodeproj}"
 SCHEME="${SCHEME:-RightTrain}"
 CONFIGURATION="${CONFIGURATION:-Debug}"
 BUNDLE_ID="${BUNDLE_ID:-com.righttrain.ios}"
 SIMULATOR_NAME="${SIMULATOR_NAME:-iPhone 17 Pro}"
 SIMULATOR_UDID="${SIMULATOR_UDID:-}"
-DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$ROOT_DIR/ios/RightTrain/DerivedData/ScreenshotCapture}"
+DERIVED_DATA_PATH="${DERIVED_DATA_PATH:-$ROOT_DIR/DerivedData/ScreenshotCapture}"
 OUTPUT_DIR="${OUTPUT_DIR:-$ROOT_DIR/design/review-screenshots/$(date +%F-%H%M%S)}"
 SCREENSHOT_TYPE="${SCREENSHOT_TYPE:-jpeg}"
 SCREENSHOT_EXT="${SCREENSHOT_EXT:-jpg}"

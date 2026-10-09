@@ -3,7 +3,7 @@
 // Generates the RightTrain app icon, web icons and Icon Composer layers from
 // one set of geometry. Run from anywhere:
 //
-//   swift apps/clearsignal/ios/RightTrain/scripts/generate-righttrain-icons.swift
+//   swift scripts/generate-righttrain-icons.swift
 //
 // The route mark: a white route (dot, line, arrowhead) chosen between two
 // diverging tracks, on the app's forest green. Artwork is flat and fills the
@@ -12,7 +12,7 @@
 //
 // The asset catalog icon (light / dark / tinted) is a flat stand-in. The
 // shippable Liquid Glass icon is assembled in Icon Composer from the layers
-// written to apps/clearsignal/design/app-icon/ (see the README there).
+// written to design/app-icon/ (see the README there).
 
 import AppKit
 import CoreGraphics
@@ -23,10 +23,21 @@ import ImageIO
 
 private let scriptURL = URL(fileURLWithPath: #filePath)
 private let iosProjectURL = scriptURL.deletingLastPathComponent().deletingLastPathComponent()
-private let clearsignalURL = iosProjectURL.deletingLastPathComponent().deletingLastPathComponent()
+private let clearsignalURL = iosProjectURL
 private let appIconURL = iosProjectURL.appendingPathComponent("RightTrain/Assets.xcassets/AppIcon.appiconset", isDirectory: true)
-private let webIconURL = clearsignalURL.appendingPathComponent("frontend/public/icons", isDirectory: true)
 private let layersURL = clearsignalURL.appendingPathComponent("design/app-icon", isDirectory: true)
+
+// The web favicon set lives in the righttrain-web repo. Written only when that
+// repo is checked out next to this one (../righttrain-web) or its icons
+// directory is given in RIGHTTRAIN_WEB_ICONS_DIR.
+private let webIconURL: URL? = {
+    if let override = ProcessInfo.processInfo.environment["RIGHTTRAIN_WEB_ICONS_DIR"], !override.isEmpty {
+        return URL(fileURLWithPath: override, isDirectory: true)
+    }
+    let sibling = iosProjectURL.deletingLastPathComponent()
+        .appendingPathComponent("righttrain-web/public/icons", isDirectory: true)
+    return FileManager.default.fileExists(atPath: sibling.deletingLastPathComponent().path) ? sibling : nil
+}()
 
 // MARK: - Geometry (1024 canvas, y down)
 //
@@ -274,10 +285,14 @@ let contents = """
 """
 try contents.write(to: appIconURL.appendingPathComponent("Contents.json"), atomically: true, encoding: .utf8)
 
-// Web: the light icon at the sizes the frontend references.
-try FileManager.default.createDirectory(at: webIconURL, withIntermediateDirectories: true)
-for px in [32, 60, 120, 180, 512, 1024] {
-    try writePNG(render(light, size: px), to: webIconURL.appendingPathComponent("righttrain-icon-\(px).png"))
+// Web: the light icon at the sizes the frontend references (see webIconURL).
+if let webIconURL {
+    try FileManager.default.createDirectory(at: webIconURL, withIntermediateDirectories: true)
+    for px in [32, 60, 120, 180, 512, 1024] {
+        try writePNG(render(light, size: px), to: webIconURL.appendingPathComponent("righttrain-icon-\(px).png"))
+    }
+} else {
+    print("Skipped web icons (no ../righttrain-web checkout; set RIGHTTRAIN_WEB_ICONS_DIR to write them)")
 }
 
 // Icon Composer layers, bottom to top. Colour and opacity per appearance are

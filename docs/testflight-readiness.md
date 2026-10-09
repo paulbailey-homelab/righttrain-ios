@@ -19,10 +19,10 @@ RIGHTTRAIN_DEVELOPMENT_TEAM=ABCDE12345 \
 RIGHTTRAIN_BUNDLE_IDENTIFIER=com.example.righttrain \
 RIGHTTRAIN_MARKETING_VERSION=0.1.0 \
 RIGHTTRAIN_BUILD_NUMBER=42 \
-ios/RightTrain/scripts/archive-testflight.sh
+scripts/archive-testflight.sh
 ```
 
-The script archives `RightTrain` for a generic iOS device and uploads the export to App Store Connect using `ios/RightTrain/TestFlightExportOptions.plist`. It requires an Apple developer account configured in Xcode with access to the target App Store Connect app record.
+The script archives `RightTrain` for a generic iOS device and uploads the export to App Store Connect using `TestFlightExportOptions.plist`. It requires an Apple developer account configured in Xcode with access to the target App Store Connect app record.
 
 ## Xcode Cloud Workflow
 
@@ -30,7 +30,7 @@ Use Xcode Cloud as the primary beta-distribution path. It keeps signing, archive
 
 Recommended workflow:
 
-1. Open `ios/RightTrain/RightTrain.xcodeproj` in Xcode.
+1. Open `RightTrain.xcodeproj` in Xcode.
 2. Configure Xcode Cloud for the `RightTrain` scheme and App Store Connect app record.
 3. Create a manually started workflow named `TestFlight`.
 4. Use the `Release` configuration and archive for iOS.
@@ -45,7 +45,7 @@ Workflow assumptions:
 - The Xcode Cloud workflow has permission to manage signing for the app and Live Activity extension.
 - The Release build settings retain `RIGHTTRAIN_API_BASE_URL=https://api.righttrain.app` and `RIGHTTRAIN_APNS_ENVIRONMENT=production`.
 
-Keep `ios/RightTrain/scripts/archive-testflight.sh` as a local fallback when an operator needs to archive from Xcode on a Mac with the right signing account.
+Keep `scripts/archive-testflight.sh` as a local fallback when an operator needs to archive from Xcode on a Mac with the right signing account.
 
 ## External Tester Smoke Test
 
