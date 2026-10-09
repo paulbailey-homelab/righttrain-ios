@@ -1,15 +1,16 @@
 import SwiftUI
 
-// A UK station departure board: single-dot amber lettering on black, the
-// columns of a concourse board (Time, Destination, Plat, Expected), Darwin's
-// sixteen-character station names, a scrolling message line and the
-// seconds clock along the bottom.
+// A UK platform indicator, drawn as an object: a dark housing, a recessed
+// black display with its unlit dot grid, and amber single-dot lettering
+// that glows faintly. It is the only place in the app the dot-matrix face
+// appears (with the Lock Screen Live Activity, which is a sign in itself).
 //
-// Everything inside a board is in the board face and everything outside it
-// stays in the system face, so the two never share a line. Boards keep their
-// amber-on-black in light and dark mode: they're a physical object, not a
-// themed surface. Status is in words ("Exp 08:36", "Cancelled"), as on a
-// real board, not in colour.
+// One sign per screen, for the train the traveller has pinned. Lists of
+// trains, search results and the rest of the app stay in the system face,
+// so a sign sits on the page like a photo of a real one rather than as a
+// second typeface. Signs keep amber on black in light and dark mode: they're
+// a physical object, not a themed surface. Status is in words ("Exp 08:36",
+// "Cancelled"), as on a real indicator, not in colour.
 
 struct DepartureBoard<Content: View>: View {
     private let content: Content
@@ -24,16 +25,55 @@ struct DepartureBoard<Content: View>: View {
         }
         .font(BoardFont.font(.body))
         .foregroundStyle(DepartureBoardStyle.amber)
+        .compositingGroup()
+        .shadow(color: DepartureBoardStyle.glow, radius: 2.5)
         .padding(.horizontal, 14)
         .padding(.vertical, 12)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .background(
-            DepartureBoardStyle.background,
-            in: RoundedRectangle(cornerRadius: RTRadius.chip, style: .continuous)
-        )
-        // Past AX2 a board line can't hold even a time and a destination.
+        .background { display }
+        .padding(SignMetrics.bezel)
+        .background { housing }
+        .shadow(color: .black.opacity(0.22), radius: 8, y: 4)
+        // Past AX2 a sign line can't hold even a time and a destination.
         .dynamicTypeSize(...DynamicTypeSize.accessibility2)
     }
+
+    /// The black face, recessed into the housing, with its unlit pixels.
+    private var display: some View {
+        let shape = RoundedRectangle(cornerRadius: SignMetrics.displayRadius, style: .continuous)
+        return shape
+            .fill(DepartureBoardStyle.background)
+            .overlay { SignDotGrid().clipShape(shape) }
+            .overlay { shape.strokeBorder(.black.opacity(0.8), lineWidth: 1) }
+    }
+
+    /// The dark metal case, lit from above.
+    private var housing: some View {
+        let shape = RoundedRectangle(cornerRadius: SignMetrics.housingRadius, style: .continuous)
+        return shape
+            .fill(LinearGradient(
+                colors: [Color(white: 0.22), Color(white: 0.12)],
+                startPoint: .top,
+                endPoint: .bottom
+            ))
+            .overlay {
+                shape.strokeBorder(
+                    LinearGradient(
+                        colors: [.white.opacity(0.2), .white.opacity(0.03)],
+                        startPoint: .top,
+                        endPoint: .bottom
+                    ),
+                    lineWidth: 1
+                )
+            }
+    }
+}
+
+private enum SignMetrics {
+    /// The case showing around the display.
+    static let bezel: CGFloat = 7
+    static let housingRadius: CGFloat = 16
+    static let displayRadius: CGFloat = housingRadius - bezel
 }
 
 // MARK: - Board copy
@@ -64,11 +104,6 @@ enum BoardText {
             return "Delayed"
         }
         return "On time"
-    }
-
-    /// The Plat column: the bare number, or "-" until one is known.
-    static func platform(_ platform: PlatformValue) -> String {
-        platform.number ?? "-"
     }
 
     /// The scrolling line under a board's first train: who runs it, where
@@ -117,54 +152,34 @@ enum BoardText {
     }
 }
 
-// MARK: - Rows
+// MARK: - Train line
 
-/// Column widths every row on a board shares, so headings, rows and the
-/// first train line up. Each view scales them with its own @ScaledMetric.
+/// Column widths for a sign's train line. The view scales them with its own
+/// @ScaledMetric.
 private enum BoardColumnWidth {
     static let time: CGFloat = 44
-    static let platform: CGFloat = 30
-    static let expected: CGFloat = 76
 }
 
-/// One departure: Time, Destination, Plat, Expected.
+/// The train line at the top of a platform indicator: Time, Destination,
+/// Expected. The platform has its own double-height line below it.
 struct DepartureBoardRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var time: String
     var destination: String
-    var platform: PlatformValue
     var expected: String
-    /// A leading pin for the train this search has pinned.
-    var isPinned = false
     @ScaledMetric(relativeTo: .body) private var timeWidth = BoardColumnWidth.time
-    @ScaledMetric(relativeTo: .body) private var platformWidth = BoardColumnWidth.platform
-    @ScaledMetric(relativeTo: .body) private var expectedWidth = BoardColumnWidth.expected
-
-    var body: some View {
-        columns
-            // In the board's side padding, so the columns still line up
-            // with the headings.
-            .overlay(alignment: .leading) {
-                pin.offset(x: -12)
-            }
-    }
 
     @ViewBuilder
-    private var columns: some View {
-        // At accessibility sizes the four columns don't fit, so the platform
-        // and Expected move to a second line.
+    var body: some View {
+        // At accessibility sizes the three columns don't fit, so Expected
+        // moves to a second line.
         if dynamicTypeSize.isAccessibilitySize {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 8) {
                     Text(time)
                     destinationText
                 }
-                HStack(spacing: 8) {
-                    Text("Plat \(BoardText.platform(platform))")
-                        .foregroundStyle(platformStyle)
-                    Spacer(minLength: 8)
-                    Text(expected)
-                }
+                Text(expected)
             }
         } else {
             HStack(spacing: 8) {
@@ -172,22 +187,10 @@ struct DepartureBoardRow: View {
                     .frame(width: timeWidth, alignment: .leading)
                 destinationText
                     .frame(maxWidth: .infinity, alignment: .leading)
-                Text(BoardText.platform(platform))
-                    .foregroundStyle(platformStyle)
-                    .frame(width: platformWidth, alignment: .trailing)
                 Text(expected)
-                    .frame(width: expectedWidth, alignment: .trailing)
+                    .fixedSize()
             }
             .lineLimit(1)
-        }
-    }
-
-    @ViewBuilder
-    private var pin: some View {
-        if isPinned {
-            Image(systemName: "pin.fill")
-                .font(.system(size: 9, weight: .bold))
-                .accessibilityHidden(true)
         }
     }
 
@@ -195,40 +198,6 @@ struct DepartureBoardRow: View {
         Text(destination)
             .lineLimit(1)
             .allowsTightening(true)
-    }
-
-    /// An expected platform is dim until it's confirmed; a changed one is
-    /// full brightness, since it's confirmed news.
-    private var platformStyle: Color {
-        platform.state == .confirmed || platform.isChanged
-            ? DepartureBoardStyle.amber
-            : DepartureBoardStyle.dimAmber
-    }
-}
-
-/// The dim headings over a board's columns.
-struct DepartureBoardHeader: View {
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @ScaledMetric(relativeTo: .body) private var timeWidth = BoardColumnWidth.time
-    @ScaledMetric(relativeTo: .body) private var platformWidth = BoardColumnWidth.platform
-    @ScaledMetric(relativeTo: .body) private var expectedWidth = BoardColumnWidth.expected
-
-    var body: some View {
-        if !dynamicTypeSize.isAccessibilitySize {
-            HStack(spacing: 8) {
-                Text("Time")
-                    .frame(width: timeWidth, alignment: .leading)
-                Text("Destination")
-                    .frame(maxWidth: .infinity, alignment: .leading)
-                Text("Plat")
-                    .frame(width: platformWidth, alignment: .trailing)
-                Text("Expected")
-                    .frame(width: expectedWidth, alignment: .trailing)
-            }
-            .lineLimit(1)
-            .foregroundStyle(DepartureBoardStyle.dimAmber)
-            .accessibilityHidden(true)
-        }
     }
 }
 
@@ -299,26 +268,4 @@ struct BoardScroller: View {
         let distance = CGFloat(date.timeIntervalSince(start)) * speed
         return containerWidth - distance.truncatingRemainder(dividingBy: travel)
     }
-}
-
-// MARK: - Clock
-
-/// The seconds clock along the bottom of a board, in UK time.
-struct BoardClock: View {
-    var body: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { context in
-            Text(Self.formatter.string(from: context.date))
-                .monospacedDigit()
-        }
-        .frame(maxWidth: .infinity)
-        .accessibilityHidden(true)
-    }
-
-    private static let formatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "Europe/London")
-        formatter.dateFormat = "HH:mm:ss"
-        return formatter
-    }()
 }

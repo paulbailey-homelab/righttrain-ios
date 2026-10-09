@@ -288,15 +288,14 @@ struct StatusFirstHeroBlock: View {
 
     // MARK: - Board
 
-    /// The train as a platform indicator shows it, then the two things to
-    /// act on (platform and time left) in double-height lettering, then the
-    /// clock.
+    /// The pinned train as a platform indicator shows it: the train line,
+    /// the scrolling message, then the two things to act on (platform and
+    /// time left) in double-height lettering. No clock: the phone shows one.
     private var board: some View {
         DepartureBoard {
             DepartureBoardRow(
                 time: depDisplay.scheduledText,
                 destination: BoardText.destination(journey),
-                platform: platform.value,
                 expected: BoardText.expected(journey)
             )
 
@@ -314,8 +313,6 @@ struct StatusFirstHeroBlock: View {
                 }
             }
             .padding(.vertical, 2)
-
-            BoardClock()
         }
     }
 
