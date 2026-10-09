@@ -269,25 +269,3 @@ struct BoardScroller: View {
         return containerWidth - distance.truncatingRemainder(dividingBy: travel)
     }
 }
-
-// MARK: - Clock
-
-/// The seconds clock along the bottom of a board, in UK time.
-struct BoardClock: View {
-    var body: some View {
-        TimelineView(.periodic(from: .now, by: 1)) { context in
-            Text(Self.formatter.string(from: context.date))
-                .monospacedDigit()
-        }
-        .frame(maxWidth: .infinity)
-        .accessibilityHidden(true)
-    }
-
-    private static let formatter: DateFormatter = {
-        let formatter = DateFormatter()
-        formatter.locale = Locale(identifier: "en_US_POSIX")
-        formatter.timeZone = TimeZone(identifier: "Europe/London")
-        formatter.dateFormat = "HH:mm:ss"
-        return formatter
-    }()
-}

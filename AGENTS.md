@@ -47,9 +47,9 @@ to `design/review-screenshots/`, which is git-ignored.
   housing, a recessed black display with an unlit dot grid, and amber
   single-dot lettering that glows faintly. Everything on a sign uses the face;
   nothing off a sign does. There are two signs: the pinned train on Pinned
-  (train line, scrolling message, double-height platform and countdown,
-  seconds clock) and the Lock Screen Live Activity, which is a sign in itself
-  (no scroller or clock, since it can't animate). One sign per screen at
+  (train line, scrolling message, double-height platform and countdown; no
+  clock, since the phone shows one) and the Lock Screen Live Activity, which
+  is a sign in itself (no scroller, since it can't animate). One sign per screen at
   most. Lists of trains, search results, journey detail and app chrome stay
   in the system face. Signs keep amber on black in both appearances, use
   sign wording ("Exp 08:36", "Cancelled", Darwin's sixteen-character station
