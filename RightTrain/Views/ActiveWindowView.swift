@@ -245,11 +245,13 @@ struct ActiveWindowView: View {
             Text("Other trains in this search")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
-                .padding(.horizontal, RTSpacing.cardPadding)
+                .padding(.horizontal, 2)
 
-            VStack(alignment: .leading, spacing: 0) {
-                let all = future + cancelled
-                ForEach(Array(all.enumerated()), id: \.element.id) { index, recommendation in
+            // A concourse board: chronological, cancelled trains in place,
+            // as the station shows them.
+            DepartureBoard {
+                DepartureBoardHeader()
+                ForEach(JourneyFormatting.chronologicalRecommendations(future + cancelled)) { recommendation in
                     StatusFirstTrainRow(
                         recommendation: recommendation,
                         surface: surface,
@@ -258,13 +260,8 @@ struct ActiveWindowView: View {
                         loadDetail: { await loadDetail(recommendation) },
                         togglePinned: { await activeWindowViewModel.togglePinnedLiveActivity(for: recommendation) }
                     )
-                    if index < all.count - 1 {
-                        Divider()
-                    }
                 }
             }
-            .padding(.horizontal, RTSpacing.cardPadding)
-            .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
         }
     }
 
@@ -587,7 +584,7 @@ struct ActiveOnTrainJourneyView: View {
 
             CompactTrainTime(
                 display: JourneyFormatting.arrivalDisplay(journey),
-                primaryFont: BoardFont.font(.largeTitle),
+                primaryFont: .largeTitle.weight(.bold),
                 secondaryFont: .subheadline.weight(.semibold)
             )
         }

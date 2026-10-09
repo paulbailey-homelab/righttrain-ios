@@ -30,6 +30,7 @@
 	<key>UIAppFonts</key>
 	<array>
 		<string>DotMatrix-Bold.ttf</string>
+		<string>DotMatrix-Regular.ttf</string>
 	</array>
 </dict>
 </plist>

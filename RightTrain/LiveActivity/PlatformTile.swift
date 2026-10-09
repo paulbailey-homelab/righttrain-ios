@@ -164,17 +164,17 @@ struct PlatformTile: View {
         }
     }
 
-    // The number is in the departure-board face; "TBC" stays in the system
-    // face, smaller, so it reads as a note rather than a platform.
     private var font: Font {
         let isUnknown = platform.number == nil
         switch size {
         case .small:
-            return isUnknown ? Font.caption2.weight(.bold) : BoardFont.font(.subheadline)
+            return (isUnknown ? Font.caption2 : Font.footnote).weight(.bold)
         case .medium:
-            return isUnknown ? Font.footnote.weight(.bold) : BoardFont.font(.title3)
+            return (isUnknown ? Font.footnote : Font.title3).weight(.bold)
         case .large:
-            return isUnknown ? .title3.weight(.bold) : BoardFont.font(fixedSize: largeNumber)
+            return isUnknown
+                ? .title3.weight(.bold)
+                : .system(size: largeNumber, weight: .bold, design: .rounded)
         }
     }
 
