@@ -42,11 +42,13 @@ to `design/review-screenshots/`, which is git-ignored.
 - Standard iOS system colours (grouped backgrounds, label colours) with dark mode
   support; green is the accent. Native structure: inset-grouped List/Form, system
   Picker, visible navigation bars, toolbar menus; compact departure-board rows.
-- Departures on Pinned are drawn as UK station departure boards
+- Departures on Pinned, search results and the Lock Screen Live Activity are
+  drawn as UK station departure boards
   (`RightTrain/Views/DepartureBoard.swift`): amber single-dot lettering on
   black in both appearances, concourse columns (Time, Destination, Plat,
   Expected), Darwin's sixteen-character station names, "Exp 08:36" /
-  "Cancelled" wording, a scrolling message line and a seconds clock. The
+  "Cancelled" wording, a scrolling message line and a seconds clock (the
+  Live Activity can't animate, so it has neither). The
   dot-matrix face (`BoardFont`, fonts and OFL licence in `RightTrain/Fonts`)
   is used only inside a board, and everything inside a board uses it; the
   rest of the app stays in the system face so the two never share a line.
