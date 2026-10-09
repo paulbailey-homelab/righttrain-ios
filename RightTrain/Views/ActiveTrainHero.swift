@@ -226,7 +226,7 @@ private struct HeroCountdownText: View {
 
     var body: some View {
         Text(countdown.text)
-            .font(.title3.weight(.bold))
+            .font(BoardFont.font(.title3))
             .foregroundStyle(countdown.tone.color)
             .monospacedDigit()
             .contentTransition(.numericText(countsDown: countsDown))
@@ -370,7 +370,7 @@ struct StatusFirstHeroBlock: View {
                 .foregroundStyle(.secondary)
 
             Text(primaryTime)
-                .font(.title3.weight(.semibold))
+                .font(BoardFont.font(.title3))
                 .monospacedDigit()
                 .contentTransition(.numericText())
                 .foregroundStyle(display.isDelayed ? Color.rightTrainAmber : surface.ink)

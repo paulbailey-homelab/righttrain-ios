@@ -559,7 +559,7 @@ private struct JourneyDetailTimeStrip: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.82)
             Text(value)
-                .font(.title2.weight(.bold))
+                .font(BoardFont.font(.title2))
                 .foregroundStyle(surface.ink)
                 .monospacedDigit()
                 .lineLimit(1)
@@ -816,7 +816,7 @@ struct JourneyStopTimeView: View {
             }
 
             Text(timing.current)
-                .font(.subheadline.weight(.semibold))
+                .font(BoardFont.font(.subheadline))
                 .foregroundStyle(timing.delayed ? Color.rightTrainAmber : Color.rightTrainInk)
                 .monospacedDigit()
                 .lineLimit(1)

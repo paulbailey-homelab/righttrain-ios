@@ -261,12 +261,12 @@ private struct HeroNumberFont: ViewModifier {
 
     func body(content: Content) -> some View {
         content
-            .font(.system(size: size, weight: .bold, design: .rounded))
+            .font(BoardFont.font(fixedSize: size))
     }
 }
 
 extension View {
-    /// Display-size rounded numerals for the countdown and platform heroes.
+    /// Display-size departure-board numerals for the countdown and platform heroes.
     /// Scales with Dynamic Type relative to Large Title, unlike a fixed
     /// `.system(size:)`.
     func heroNumberFont(size: CGFloat) -> some View {

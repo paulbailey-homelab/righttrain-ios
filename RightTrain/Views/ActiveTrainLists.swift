@@ -483,7 +483,7 @@ private struct SoftDivider: View {
 /// All colours are derived from `surface` so they read correctly on emerald / amber / deep-red.
 struct StatusFirstTrainRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    @ScaledMetric(relativeTo: .subheadline) private var timeColumnWidth: CGFloat = 46
+    @ScaledMetric(relativeTo: .subheadline) private var timeColumnWidth: CGFloat = 50
     var recommendation: DirectWindowRecommendation
     var surface: RTSurface
     var isPinned: Bool
@@ -608,7 +608,7 @@ struct StatusFirstTrainRow: View {
     private func surfaceTimeView(_ display: JourneyTimeDisplay) -> some View {
         VStack(alignment: .leading, spacing: 1) {
             Text(display.currentText ?? display.scheduledText)
-                .font(.subheadline.weight(.semibold))
+                .font(BoardFont.font(.subheadline))
                 .monospacedDigit()
                 .contentTransition(.numericText())
                 .foregroundStyle(surface.ink)

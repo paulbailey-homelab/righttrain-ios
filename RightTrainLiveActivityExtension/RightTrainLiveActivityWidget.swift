@@ -2159,8 +2159,7 @@ private struct JourneyHeroBlock: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 0) {
             headline
-                .font(.title.weight(.semibold))
-                .fontDesign(.rounded)
+                .font(BoardFont.font(.title))
                 .monospacedDigit()
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
@@ -2457,8 +2456,7 @@ private struct IslandEdgeMetric: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Text(value)
-                .font(.title3.weight(.semibold))
-                .fontDesign(.rounded)
+                .font(BoardFont.font(.title3))
                 .foregroundStyle(tint)
                 .monospacedDigit()
                 .lineLimit(1)

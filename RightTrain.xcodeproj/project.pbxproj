@@ -85,6 +85,12 @@
 		7B0000000000000000000621 /* RightTrainPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000620 /* RightTrainPalette.swift */; };
 		7B0000000000000000000622 /* RightTrainPalette.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000620 /* RightTrainPalette.swift */; };
 		7B0000000000000000000612 /* PlatformTile.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000610 /* PlatformTile.swift */; };
+		7B0000000000000000000D11 /* DotMatrix-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000D01 /* DotMatrix-Bold.ttf */; };
+		7B0000000000000000000D12 /* DotMatrix-Bold.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000D01 /* DotMatrix-Bold.ttf */; };
+		7B0000000000000000000D13 /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000D02 /* OFL.txt */; };
+		7B0000000000000000000D14 /* OFL.txt in Resources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000D02 /* OFL.txt */; };
+		7B0000000000000000000D15 /* BoardFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000D03 /* BoardFont.swift */; };
+		7B0000000000000000000D16 /* BoardFont.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000D03 /* BoardFont.swift */; };
 		7B0000000000000000000204 /* LiveActivityCoordinator.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000203 /* LiveActivityCoordinator.swift */; };
 		7B0000000000000000000206 /* RightTrainLiveActivityWidget.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000205 /* RightTrainLiveActivityWidget.swift */; };
 		7B0000000000000000000221 /* LiveActivityIntents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000220 /* LiveActivityIntents.swift */; };
@@ -224,6 +230,9 @@
 		7B0000000000000000000200 /* RightTrainLiveActivityAttributes.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightTrainLiveActivityAttributes.swift; sourceTree = "<group>"; };
 		7B0000000000000000000620 /* RightTrainPalette.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightTrainPalette.swift; sourceTree = "<group>"; };
 		7B0000000000000000000610 /* PlatformTile.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlatformTile.swift; sourceTree = "<group>"; };
+		7B0000000000000000000D01 /* DotMatrix-Bold.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DotMatrix-Bold.ttf"; sourceTree = "<group>"; };
+		7B0000000000000000000D02 /* OFL.txt */ = {isa = PBXFileReference; lastKnownFileType = text; path = OFL.txt; sourceTree = "<group>"; };
+		7B0000000000000000000D03 /* BoardFont.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BoardFont.swift; sourceTree = "<group>"; };
 		7B0000000000000000000203 /* LiveActivityCoordinator.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityCoordinator.swift; sourceTree = "<group>"; };
 		7B0000000000000000000205 /* RightTrainLiveActivityWidget.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RightTrainLiveActivityWidget.swift; sourceTree = "<group>"; };
 		7B0000000000000000000220 /* LiveActivityIntents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = LiveActivityIntents.swift; sourceTree = "<group>"; };
@@ -318,6 +327,7 @@
 				7B0000000000000000000214 /* LiveActivity */,
 				7B0000000000000000000304 /* PushNotifications */,
 				7B000000000000000000000D /* Views */,
+				7B0000000000000000000D00 /* Fonts */,
 				7B0000000000000000000400 /* Assets.xcassets */,
 				7B0000000000000000000122 /* Info.plist */,
 				7B0000000000000000000120 /* RightTrain.entitlements */,
@@ -425,9 +435,19 @@
 			path = Views;
 			sourceTree = "<group>";
 		};
+		7B0000000000000000000D00 /* Fonts */ = {
+			isa = PBXGroup;
+			children = (
+				7B0000000000000000000D01 /* DotMatrix-Bold.ttf */,
+				7B0000000000000000000D02 /* OFL.txt */,
+			);
+			path = Fonts;
+			sourceTree = "<group>";
+		};
 		7B0000000000000000000214 /* LiveActivity */ = {
 			isa = PBXGroup;
 			children = (
+				7B0000000000000000000D03 /* BoardFont.swift */,
 				7B0000000000000000000610 /* PlatformTile.swift */,
 				7B0000000000000000000620 /* RightTrainPalette.swift */,
 				7B0000000000000000000200 /* RightTrainLiveActivityAttributes.swift */,
@@ -592,6 +612,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				7B0000000000000000000401 /* Assets.xcassets in Resources */,
+				7B0000000000000000000D11 /* DotMatrix-Bold.ttf in Resources */,
+				7B0000000000000000000D13 /* OFL.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -600,6 +622,8 @@
 			buildActionMask = 2147483647;
 			files = (
 				7B0000000000000000000402 /* Assets.xcassets in Resources */,
+				7B0000000000000000000D12 /* DotMatrix-Bold.ttf in Resources */,
+				7B0000000000000000000D14 /* OFL.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -678,6 +702,7 @@
 				7B0000000000000000000175 /* CommuteRoutinesView.swift in Sources */,
 				7B000000000000000000011F /* PreviewSupport.swift in Sources */,
 				7B0000000000000000000201 /* RightTrainLiveActivityAttributes.swift in Sources */,
+				7B0000000000000000000D15 /* BoardFont.swift in Sources */,
 				7B0000000000000000000611 /* PlatformTile.swift in Sources */,
 				7B0000000000000000000621 /* RightTrainPalette.swift in Sources */,
 				7B0000000000000000000204 /* LiveActivityCoordinator.swift in Sources */,
@@ -698,6 +723,7 @@
 			buildActionMask = 2147483647;
 			files = (
 				7B0000000000000000000202 /* RightTrainLiveActivityAttributes.swift in Sources */,
+				7B0000000000000000000D16 /* BoardFont.swift in Sources */,
 				7B0000000000000000000612 /* PlatformTile.swift in Sources */,
 				7B0000000000000000000622 /* RightTrainPalette.swift in Sources */,
 				7B0000000000000000000206 /* RightTrainLiveActivityWidget.swift in Sources */,

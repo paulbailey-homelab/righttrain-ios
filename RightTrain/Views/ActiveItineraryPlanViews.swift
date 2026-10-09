@@ -675,7 +675,7 @@ private struct ActiveItineraryPlanHeroCard: View {
         VStack(alignment: .leading, spacing: 4) {
             HStack(alignment: .lastTextBaseline, spacing: RTSpacing.compact) {
                 Text(countdownText)
-                    .font(.title.weight(.bold))
+                    .font(BoardFont.font(.title))
                     .foregroundStyle(countdownTone.color)
                     .monospacedDigit()
                     .contentTransition(.numericText())
