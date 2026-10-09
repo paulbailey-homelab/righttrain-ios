@@ -6,10 +6,9 @@ import SwiftUI
 // of real boards; Bold doubles them for the large lines.
 //
 // The rule: the face appears only on a sign, a drawn display object with a
-// lit dot-matrix face, and everything on a sign uses it. There are two
-// signs: the platform indicator for the pinned train on Pinned, and the Lock
-// Screen Live Activity. Lists, search results and app chrome stay in the
-// system face. The face has no £, · or arrows; sign copy avoids them. A
+// lit dot-matrix face, and everything on a sign uses it. The signs are the
+// platform indicator and concourse board on Pinned, and the Lock Screen Live
+// Activity. Search results and app chrome stay in the system face. The face has no £, · or arrows; sign copy avoids them. A
 // missing font falls back to the system face rather than failing.
 
 enum BoardFont {

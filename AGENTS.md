@@ -42,17 +42,18 @@ to `design/review-screenshots/`, which is git-ignored.
 - Standard iOS system colours (grouped backgrounds, label colours) with dark mode
   support; green is the accent. Native structure: inset-grouped List/Form, system
   Picker, visible navigation bars, toolbar menus; compact departure-board rows.
-- The dot-matrix face appears only on a sign: a drawn UK platform indicator
+- The dot-matrix face appears only on a sign: a drawn UK station sign
   (`DepartureBoard` in `RightTrain/Views/DepartureBoard.swift`) with a dark
   housing, a recessed black display with an unlit dot grid, and amber
   single-dot lettering that glows faintly. Everything on a sign uses the face;
-  nothing off a sign does. There are two signs: the pinned train on Pinned
-  (train line, scrolling message, double-height platform and countdown; no
-  clock, since the phone shows one) and the Lock Screen Live Activity, which
-  is a sign in itself (no scroller, since it can't animate). One sign per screen at
-  most. Lists of trains, search results, journey detail and app chrome stay
-  in the system face. Signs keep amber on black in both appearances, use
-  sign wording ("Exp 08:36", "Cancelled", Darwin's sixteen-character station
+  nothing off a sign does. Pinned has two, as a station does: the platform
+  indicator for the pinned train (train line, scrolling message,
+  double-height platform and countdown; no clock, since the phone shows one)
+  and a concourse departures board for the other trains in the search (Time,
+  Destination, Plat, Expected, cancelled trains in place). The Lock Screen
+  Live Activity is a sign in itself (no scroller, since it can't animate).
+  Search results, journey detail and app chrome stay in the system face.
+  Signs keep amber on black in both appearances, use sign wording ("Exp 08:36", "Cancelled", Darwin's sixteen-character station
   names) and avoid £, middle dots and arrows, which the face lacks. Fonts and
   OFL licence are in `RightTrain/Fonts`, loaded through `BoardFont`.
 - Do not reintroduce cream/editorial surfaces, tracked uppercase eyebrows,
