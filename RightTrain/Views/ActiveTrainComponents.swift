@@ -2,7 +2,7 @@ import SwiftUI
 
 struct CompactTrainTime: View {
     var display: JourneyTimeDisplay
-    var primaryFont: Font = .subheadline.weight(.semibold)
+    var primaryFont: Font = BoardFont.font(.subheadline)
     var secondaryFont: Font = .caption2
 
     private var primaryText: String {

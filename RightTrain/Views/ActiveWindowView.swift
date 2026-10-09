@@ -587,7 +587,7 @@ struct ActiveOnTrainJourneyView: View {
 
             CompactTrainTime(
                 display: JourneyFormatting.arrivalDisplay(journey),
-                primaryFont: .largeTitle.weight(.bold),
+                primaryFont: BoardFont.font(.largeTitle),
                 secondaryFont: .subheadline.weight(.semibold)
             )
         }

@@ -53,6 +53,10 @@
 	<string>$(RIGHTTRAIN_API_BASE_URL)</string>
 	<key>RightTrainAPNsEnvironment</key>
 	<string>$(RIGHTTRAIN_APNS_ENVIRONMENT)</string>
+	<key>UIAppFonts</key>
+	<array>
+		<string>DotMatrix-Bold.ttf</string>
+	</array>
 	<key>UIApplicationSupportsIndirectInputEvents</key>
 	<true/>
 	<key>UIBackgroundModes</key>

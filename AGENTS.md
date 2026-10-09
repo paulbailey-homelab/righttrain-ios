@@ -42,6 +42,11 @@ to `design/review-screenshots/`, which is git-ignored.
 - Standard iOS system colours (grouped backgrounds, label colours) with dark mode
   support; green is the accent. Native structure: inset-grouped List/Form, system
   Picker, visible navigation bars, toolbar menus; compact departure-board rows.
+- Values a station departure board would show (clock times, countdowns,
+  platform numbers) use the dot-matrix board face via `BoardFont`
+  (`RightTrain/LiveActivity/BoardFont.swift`, font and OFL licence in
+  `RightTrain/Fonts`). Prose, labels and controls stay in the system face, and
+  nothing below subheadline size uses the board face.
 - Do not reintroduce cream/editorial surfaces, tracked uppercase eyebrows,
   card-in-card chrome or light-only overrides.
 - Liquid Glass only on floating/navigation controls (safe-area-bar primary
