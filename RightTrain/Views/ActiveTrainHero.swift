@@ -226,7 +226,7 @@ private struct HeroCountdownText: View {
 
     var body: some View {
         Text(countdown.text)
-            .font(BoardFont.font(.title3))
+            .font(.title3.weight(.bold))
             .foregroundStyle(countdown.tone.color)
             .monospacedDigit()
             .contentTransition(.numericText(countsDown: countsDown))
@@ -272,9 +272,9 @@ struct StatusFirstHeroBlock: View {
         Button {
             Task { await loadDetail() }
         } label: {
-            VStack(alignment: .leading, spacing: RTSpacing.cardPadding) {
-                countdownHero
-                timeStrip
+            VStack(alignment: .leading, spacing: RTSpacing.small) {
+                board
+                routeLines
             }
             .frame(maxWidth: .infinity, alignment: .leading)
             .contentShape(Rectangle())
@@ -286,109 +286,98 @@ struct StatusFirstHeroBlock: View {
         .accessibilityAction(named: "Unpin") { requestUnpin() }
     }
 
-    // MARK: - Countdown hero
+    // MARK: - Board
 
-    private var countdownHero: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            // The countdown and the platform are the two things to act on,
-            // so they share the top row at the same scale.
-            // Side by side the two heroes squeeze each other at accessibility
-            // sizes, so they stack there.
-            let heroLayout = dynamicTypeSize.isAccessibilitySize
-                ? AnyLayout(VStackLayout(alignment: .leading, spacing: RTSpacing.small))
-                : AnyLayout(HStackLayout(alignment: .lastTextBaseline, spacing: RTSpacing.compact))
-            heroLayout {
-                VStack(alignment: .leading, spacing: 0) {
-                    if let prefix = countdownPrefix {
-                        Text(prefix)
-                            .font(.subheadline.weight(.medium))
-                            .foregroundStyle(.secondary)
-                    }
+    /// The train as a platform indicator shows it, then the two things to
+    /// act on (platform and time left) in double-height lettering, then the
+    /// clock.
+    private var board: some View {
+        DepartureBoard {
+            DepartureBoardRow(
+                time: depDisplay.scheduledText,
+                destination: BoardText.destination(journey),
+                platform: platform.value,
+                expected: BoardText.expected(journey)
+            )
 
-                    Text(countdownValue)
-                        .heroNumberFont(size: 56)
-                        .foregroundStyle(isStale ? AnyShapeStyle(.secondary) : AnyShapeStyle(surface.ink))
-                        .monospacedDigit()
-                        .contentTransition(.numericText(countsDown: countdown.targetDate.map { $0 > now } ?? false))
-                        // The countdown ticks from a TimelineView, not a live
-                        // refresh, so it needs its own animation to roll.
-                        .animation(reduceMotion ? nil : .snappy, value: countdownValue)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.44)
-                }
-                .layoutPriority(1)
+            BoardScroller(text: BoardText.message(journey, platform: platform.value))
 
-                if !dynamicTypeSize.isAccessibilitySize {
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .lastTextBaseline, spacing: RTSpacing.small) {
+                    platformLine
                     Spacer(minLength: RTSpacing.small)
+                    countdownLine
                 }
-
-                platformHero
+                VStack(alignment: .leading, spacing: 2) {
+                    platformLine
+                    countdownLine
+                }
             }
+            .padding(.vertical, 2)
 
+            BoardClock()
+        }
+    }
+
+    private var platformLine: some View {
+        Text(platform.value.number.map { "Plat \($0)" } ?? "Plat TBC")
+            .font(BoardFont.font(.title, weight: .bold))
+            .foregroundStyle(
+                platform.value.state == .confirmed || platform.value.isChanged
+                    ? DepartureBoardStyle.amber
+                    : DepartureBoardStyle.dimAmber
+            )
+            .lineLimit(1)
+            .fixedSize()
+    }
+
+    private var countdownLine: some View {
+        Text(countdownBoardText)
+            .font(BoardFont.font(.title, weight: .bold))
+            .foregroundStyle(isStale ? DepartureBoardStyle.dimAmber : DepartureBoardStyle.amber)
+            .contentTransition(.numericText(countsDown: countdown.targetDate.map { $0 > now } ?? false))
+            // The countdown ticks from a TimelineView, not a live refresh,
+            // so it needs its own animation to roll.
+            .animation(reduceMotion ? nil : .snappy, value: countdownValue)
+            .lineLimit(1)
+            .minimumScaleFactor(0.6)
+    }
+
+    /// "7 min" next to the platform while the train is still to leave;
+    /// once it has gone, the whole phrase, so "Departed 3 min ago" doesn't
+    /// read as a countdown.
+    private var countdownBoardText: String {
+        BoardText.boardSafe(countdownPrefix == "Leaves in" ? countdownValue : countdown.text)
+    }
+
+    // MARK: - Route
+
+    /// The traveller's own route and arrival, outside the board in the
+    /// system face: the board names where the train ends up, which may be
+    /// further than they're going.
+    private var routeLines: some View {
+        VStack(alignment: .leading, spacing: 2) {
             Text(presentation.routeTitle)
                 .font(.subheadline.weight(.semibold))
                 // Wrap rather than truncate once the text is large enough
                 // that shrinking can't fit a long route name.
                 .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
                 .minimumScaleFactor(0.82)
-        }
-    }
 
-    private var platformHero: some View {
-        CaptionedPlatformTile(
-            platform: platform.value,
-            size: .large,
-            alignment: dynamicTypeSize.isAccessibilitySize ? .leading : .trailing
-        )
-        .opacity(isStale ? 0.6 : 1)
-    }
-
-    // MARK: - Time strip
-
-    private var timeStrip: some View {
-        let stacked = dynamicTypeSize.isAccessibilitySize
-        let layout = stacked ? AnyLayout(VStackLayout(spacing: 0)) : AnyLayout(HStackLayout(spacing: 0))
-        return layout {
-            timeCell(label: "Dep", display: depDisplay)
-
-            Divider()
-                .padding(stacked ? .horizontal : .vertical, RTSpacing.compact)
-
-            timeCell(label: "Arr", display: arrDisplay)
-        }
-        .fixedSize(horizontal: false, vertical: true)
-        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
-    }
-
-    private func timeCell(label: String, display: JourneyTimeDisplay) -> some View {
-        let primaryTime = display.currentText ?? display.scheduledText
-        let scheduledTime: String? = display.currentText != nil ? display.scheduledText : nil
-
-        return HStack(alignment: .firstTextBaseline, spacing: RTSpacing.small) {
-            Text(label)
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(.secondary)
-
-            Text(primaryTime)
-                .font(BoardFont.font(.title3))
+            Text(arrivalText)
+                .font(.subheadline)
+                .foregroundStyle(arrDisplay.isDelayed ? AnyShapeStyle(Color.rightTrainAmber) : AnyShapeStyle(.secondary))
                 .monospacedDigit()
-                .contentTransition(.numericText())
-                .foregroundStyle(display.isDelayed ? Color.rightTrainAmber : surface.ink)
-                .lineLimit(1)
-
-            if let scheduled = scheduledTime {
-                Text(scheduled)
-                    .font(.subheadline.weight(.medium))
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
-                    .strikethrough(display.isDelayed, color: surface.faint)
-                    .foregroundStyle(surface.dim)
-                    .lineLimit(1)
-            }
         }
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.horizontal, 14)
-        .padding(.vertical, 12)
+        .padding(.horizontal, 2)
+    }
+
+    private var arrivalText: String {
+        let current = arrDisplay.currentText ?? arrDisplay.scheduledText
+        if arrDisplay.isDelayed, current != arrDisplay.scheduledText {
+            return "Arrives \(current), due \(arrDisplay.scheduledText)"
+        }
+        return "Arrives \(current)"
     }
 
     // MARK: - Helpers

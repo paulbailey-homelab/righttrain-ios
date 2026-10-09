@@ -42,11 +42,14 @@ to `design/review-screenshots/`, which is git-ignored.
 - Standard iOS system colours (grouped backgrounds, label colours) with dark mode
   support; green is the accent. Native structure: inset-grouped List/Form, system
   Picker, visible navigation bars, toolbar menus; compact departure-board rows.
-- Values a station departure board would show (clock times, countdowns,
-  platform numbers) use the dot-matrix board face via `BoardFont`
-  (`RightTrain/LiveActivity/BoardFont.swift`, font and OFL licence in
-  `RightTrain/Fonts`). Prose, labels and controls stay in the system face, and
-  nothing below subheadline size uses the board face.
+- Departures on Pinned are drawn as UK station departure boards
+  (`RightTrain/Views/DepartureBoard.swift`): amber single-dot lettering on
+  black in both appearances, concourse columns (Time, Destination, Plat,
+  Expected), Darwin's sixteen-character station names, "Exp 08:36" /
+  "Cancelled" wording, a scrolling message line and a seconds clock. The
+  dot-matrix face (`BoardFont`, fonts and OFL licence in `RightTrain/Fonts`)
+  is used only inside a board, and everything inside a board uses it; the
+  rest of the app stays in the system face so the two never share a line.
 - Do not reintroduce cream/editorial surfaces, tracked uppercase eyebrows,
   card-in-card chrome or light-only overrides.
 - Liquid Glass only on floating/navigation controls (safe-area-bar primary

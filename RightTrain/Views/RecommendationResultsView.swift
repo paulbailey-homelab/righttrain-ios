@@ -231,7 +231,7 @@ private struct SearchResultRowLayout<Status: View>: View {
         let changed = display.currentText != nil && display.currentText != display.scheduledText
         return HStack(alignment: .firstTextBaseline, spacing: 4) {
             Text(current)
-                .font(BoardFont.font(.title3))
+                .font(.title3.weight(.semibold))
                 .monospacedDigit()
                 .foregroundStyle(changed ? Color.rightTrainAmber : Color.primary)
             if changed {

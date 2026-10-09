@@ -47,6 +47,8 @@
 		7B000000000000000000015B /* WindowSetupViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000015A /* WindowSetupViewModel.swift */; };
 		7B000000000000000000015D /* JourneyDetailViewModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B000000000000000000015C /* JourneyDetailViewModel.swift */; };
 		7B0000000000000000000161 /* Theme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000160 /* Theme.swift */; };
+		7B0000000000000000000D17 /* DotMatrix-Regular.ttf in Resources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000D04 /* DotMatrix-Regular.ttf */; };
+		7B0000000000000000000D18 /* DepartureBoard.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000D05 /* DepartureBoard.swift */; };
 		7B0000000000000000000163 /* JourneyFormatting.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000162 /* JourneyFormatting.swift */; };
 		7B0000000000000000000165 /* ActiveWindowPresentation.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000164 /* ActiveWindowPresentation.swift */; };
 		7B0000000000000000000167 /* StartupSplashView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 7B0000000000000000000166 /* StartupSplashView.swift */; };
@@ -195,6 +197,8 @@
 		7B000000000000000000015A /* WindowSetupViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = WindowSetupViewModel.swift; sourceTree = "<group>"; };
 		7B000000000000000000015C /* JourneyDetailViewModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyDetailViewModel.swift; sourceTree = "<group>"; };
 		7B0000000000000000000160 /* Theme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Theme.swift; sourceTree = "<group>"; };
+		7B0000000000000000000D04 /* DotMatrix-Regular.ttf */ = {isa = PBXFileReference; lastKnownFileType = file; path = "DotMatrix-Regular.ttf"; sourceTree = "<group>"; };
+		7B0000000000000000000D05 /* DepartureBoard.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = DepartureBoard.swift; sourceTree = "<group>"; };
 		7B0000000000000000000162 /* JourneyFormatting.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = JourneyFormatting.swift; sourceTree = "<group>"; };
 		7B0000000000000000000164 /* ActiveWindowPresentation.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ActiveWindowPresentation.swift; sourceTree = "<group>"; };
 		7B0000000000000000000166 /* StartupSplashView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StartupSplashView.swift; sourceTree = "<group>"; };
@@ -429,6 +433,7 @@
 				7B000000000000000000011C /* Components.swift */,
 				7B0000000000000000000162 /* JourneyFormatting.swift */,
 				7B000000000000000000016C /* UserDisplay.swift */,
+				7B0000000000000000000D05 /* DepartureBoard.swift */,
 				7B0000000000000000000160 /* Theme.swift */,
 				7B000000000000000000011E /* PreviewSupport.swift */,
 			);
@@ -439,6 +444,7 @@
 			isa = PBXGroup;
 			children = (
 				7B0000000000000000000D01 /* DotMatrix-Bold.ttf */,
+				7B0000000000000000000D04 /* DotMatrix-Regular.ttf */,
 				7B0000000000000000000D02 /* OFL.txt */,
 			);
 			path = Fonts;
@@ -613,6 +619,7 @@
 			files = (
 				7B0000000000000000000401 /* Assets.xcassets in Resources */,
 				7B0000000000000000000D11 /* DotMatrix-Bold.ttf in Resources */,
+				7B0000000000000000000D17 /* DotMatrix-Regular.ttf in Resources */,
 				7B0000000000000000000D13 /* OFL.txt in Resources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -690,6 +697,7 @@
 				7B0000000000000000000193 /* ActiveTrainComponents.swift in Sources */,
 				7B000000000000000000011B /* NotificationPermissionView.swift in Sources */,
 				7B000000000000000000011D /* Components.swift in Sources */,
+				7B0000000000000000000D18 /* DepartureBoard.swift in Sources */,
 				7B0000000000000000000161 /* Theme.swift in Sources */,
 				7B0000000000000000000163 /* JourneyFormatting.swift in Sources */,
 				7B0000000000000000000165 /* ActiveWindowPresentation.swift in Sources */,
