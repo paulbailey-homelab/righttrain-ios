@@ -50,7 +50,8 @@ to `design/review-screenshots/`, which is git-ignored.
   indicator for the pinned train (train line, scrolling message,
   double-height platform and countdown; no clock, since the phone shows one)
   and a concourse departures board for the other trains in the search (Time,
-  Destination, Plat, Expected, cancelled trains in place). The Lock Screen
+  Destination, Plat, Expected, a dim "Calling at Stockport 10:25" line with
+  the traveller's arrival, cancelled trains in place). The Lock Screen
   Live Activity is a sign in itself (no scroller, since it can't animate).
   Search results, journey detail and app chrome stay in the system face.
   Signs keep amber on black in both appearances, use sign wording ("Exp 08:36", "Cancelled", Darwin's sixteen-character station

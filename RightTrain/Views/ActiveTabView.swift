@@ -96,6 +96,11 @@ struct ActiveTabView: View {
             // large title only appears when there is nothing pinned.
             .navigationBarTitleDisplayMode(activePrimaryContent == .empty ? .large : .inline)
             .toolbar {
+                if activePrimaryContent != .empty {
+                    ToolbarItem(placement: .principal) {
+                        fittedRouteTitle
+                    }
+                }
                 if activeWindowViewModel.canShareActiveJourney {
                     ToolbarItem(placement: .topBarTrailing) {
                         shareJourneyButton
@@ -162,21 +167,68 @@ struct ActiveTabView: View {
     }
 
     /// The pinned route, "London Euston → Stockport", as a station board
-    /// names where it is; "Pinned" when nothing is.
-    private var navigationTitleText: String {
+    /// names where it is; "Pinned" when nothing is. Shorter forms are for
+    /// the inline title when the full names don't fit.
+    private var routeTitleForms: [String] {
         switch activePrimaryContent {
         case .itinerary:
-            if let itinerary = activeWindowViewModel.activeItinerary {
-                return ActiveItineraryPresentation(itinerary: itinerary).routeTitle
+            guard let itinerary = activeWindowViewModel.activeItinerary else { break }
+            let legs = itinerary.selectedItinerary.legs
+            guard let first = legs.first, let last = legs.last else {
+                return [ActiveItineraryPresentation(itinerary: itinerary).routeTitle]
             }
+            return Self.routeTitleForms(first: first.journeyResult, last: last.journeyResult)
         case .window, .onBoardWindow:
-            if let window = activeWindowViewModel.activeWindow {
-                return ActiveWindowPresentation(window: window).routeTitle
-            }
+            guard let window = activeWindowViewModel.activeWindow else { break }
+            let presentation = ActiveWindowPresentation(window: window)
+            let journey = presentation.recommendations.first?.journey ?? window.selectedRecommendation.journey
+            return Self.routeTitleForms(first: journey, last: journey)
         case .empty:
             break
         }
-        return "Pinned"
+        return ["Pinned"]
+    }
+
+    /// Full names, then Darwin's sixteen-character names ("Manchester
+    /// Picc"), then CRS codes ("EUS → SPT").
+    private static func routeTitleForms(first: JourneyResult, last: JourneyResult) -> [String] {
+        [
+            JourneyFormatting.routeTitle(
+                origin: JourneyFormatting.originStationText(first),
+                destination: JourneyFormatting.destinationStationText(last)
+            ),
+            JourneyFormatting.routeTitle(
+                origin: JourneyFormatting.compactOriginStationText(first),
+                destination: JourneyFormatting.compactDestinationStationText(last)
+            ),
+            JourneyFormatting.routeTitle(origin: first.originCrs, destination: last.destinationCrs)
+        ]
+    }
+
+    private var navigationTitleText: String {
+        routeTitleForms.first ?? "Pinned"
+    }
+
+    /// The inline title: the longest form of the route that fits between
+    /// the bar's buttons, so a long route shortens its station names rather
+    /// than being cut off mid-word.
+    private var fittedRouteTitle: some View {
+        let forms = routeTitleForms
+        let full = forms.first ?? "Pinned"
+        let short = forms.dropFirst().first ?? full
+        let codes = forms.last ?? short
+        return ViewThatFits(in: .horizontal) {
+            Text(full).fixedSize()
+            Text(short).fixedSize()
+            Text(codes).fixedSize()
+            // Nothing fits: the codes, cut off at the end.
+            Text(codes).truncationMode(.tail)
+        }
+        .lineLimit(1)
+        .font(.headline)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(full)
+        .accessibilityAddTraits(.isHeader)
     }
 
     private var activePrimaryContent: ActiveTabPrimaryContent {

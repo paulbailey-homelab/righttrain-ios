@@ -107,6 +107,14 @@ enum BoardText {
         return "On time"
     }
 
+    /// "Calling at Stockport 10:25": the traveller's stop, in Darwin's
+    /// short form, and when the train is expected there.
+    static func callingAt(_ journey: JourneyResult) -> String {
+        let arrival = JourneyFormatting.arrivalDisplay(journey)
+        let station = JourneyFormatting.compactDestinationStationText(journey)
+        return "Calling at \(station) \(arrival.currentText ?? arrival.scheduledText)"
+    }
+
     /// The Plat column: the bare number, or "-" until one is known.
     static func platform(_ platform: PlatformValue) -> String {
         platform.number ?? "-"
@@ -217,14 +225,17 @@ private enum ConcourseColumnWidth {
     static let expected: CGFloat = 76
 }
 
-/// One line of a concourse departures board: Time, Destination, Plat,
-/// Expected.
+/// One train on a concourse departures board: Time, Destination, Plat,
+/// Expected, then a dim "Calling at" line with the traveller's arrival.
 struct ConcourseBoardRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var time: String
     var destination: String
     var platform: PlatformValue
     var expected: String
+    /// The second line, as a board's "Calling at" line reads: the
+    /// traveller's stop and expected arrival, "Calling at Stockport 10:25".
+    var callingAt: String? = nil
     /// A leading pin for the train this search has pinned.
     var isPinned = false
     @ScaledMetric(relativeTo: .body) private var timeWidth = ConcourseColumnWidth.time
@@ -232,12 +243,22 @@ struct ConcourseBoardRow: View {
     @ScaledMetric(relativeTo: .body) private var expectedWidth = ConcourseColumnWidth.expected
 
     var body: some View {
-        columns
-            // In the board's side padding, so the columns still line up
-            // with the headings.
-            .overlay(alignment: .leading) {
-                pin.offset(x: -12)
+        VStack(alignment: .leading, spacing: 1) {
+            columns
+                // In the board's side padding, so the columns still line up
+                // with the headings.
+                .overlay(alignment: .leading) {
+                    pin.offset(x: -12)
+                }
+            if let callingAt {
+                Text(callingAt)
+                    .foregroundStyle(DepartureBoardStyle.dimAmber)
+                    .lineLimit(1)
+                    .allowsTightening(true)
+                    // Under the destination, as on a real board.
+                    .padding(.leading, dynamicTypeSize.isAccessibilitySize ? 0 : timeWidth + 8)
             }
+        }
     }
 
     @ViewBuilder

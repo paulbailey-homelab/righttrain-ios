@@ -511,6 +511,7 @@ struct StatusFirstTrainRow: View {
                 destination: BoardText.destination(journey),
                 platform: platform.value,
                 expected: BoardText.expected(journey),
+                callingAt: isCancelledTrain ? nil : BoardText.callingAt(journey),
                 isPinned: isPinned
             )
             .padding(.vertical, 5)
