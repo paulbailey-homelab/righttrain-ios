@@ -1326,6 +1326,35 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
+    func testLeaveNowSearchPinKeepsResultsAndPinsDirectTrains() async {
+        // A start in the past is searched from now. Pinning used to write
+        // that back to `departureStart`, whose didSet cleared the results,
+        // so the pin found none and fell back to an itinerary.
+        let apiClient = FakeAPIClient()
+        let sessionStore = FakeSessionStore()
+        sessionStore.session = TestFactory.storedSession(accessToken: "create-token")
+        apiClient.currentUserResult = .success(TestFactory.user())
+        apiClient.activeWindowResult = .failure(TestFactory.notFoundError())
+        apiClient.createWindowResult = .success(TestFactory.window(id: "window-1"))
+        let model = makeModel(apiClient: apiClient, sessionStore: sessionStore)
+        await model.bootstrap()
+        model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: true))
+        model.origin = TestFactory.station(crs: "AAA", name: "Origin")
+        model.destination = TestFactory.station(crs: "ZZZ", name: "Destination")
+        model.departureStart = Date().addingTimeInterval(-600)
+        let direct = [TestFactory.itinerary(stableKey: "direct-1")]
+        apiClient.journeyPlanResult = .success(TestFactory.journeyPlanResponse(direct, direct: direct))
+        await model.loadRecommendations()
+
+        await model.createActiveWindow()
+
+        XCTAssertTrue(apiClient.createItineraryRequests.isEmpty)
+        XCTAssertEqual(apiClient.createWindowRequests.last?.input.originCrs, "AAA")
+        XCTAssertEqual(model.activeWindow?.id, "window-1")
+        XCTAssertEqual(model.journeyPlanResponse?.itineraries.count, 1)
+    }
+
+    @MainActor
     func testPinSearchIsNotOfferedWhenPlannerFoundNoDirectTrain() async {
         let apiClient = FakeAPIClient()
         let model = makeModel(apiClient: apiClient)

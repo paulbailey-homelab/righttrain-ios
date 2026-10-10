@@ -289,10 +289,8 @@ final class WindowSetupViewModel {
         // Pinning the whole search watches its direct trains, whichever
         // search found them. Only a planner search with no direct train at
         // all falls back to monitoring its top route.
-        // The pin follows the results on screen, not the current mode: the
-        // mode is re-read from the server whenever the search screen shows,
-        // so on patchy signal it can flip between searching and pinning.
-        // Build 154 pinned a direct-only result list as a route that way.
+        // The pin follows the results on screen, not the current mode,
+        // which is re-read from the server whenever the search screen shows.
         let pinMode: JourneySearchMode = recommendationResponse != nil ? .direct
             : journeyPlanResponse != nil ? .anyRoute
             : searchMode
@@ -482,12 +480,12 @@ final class WindowSetupViewModel {
         return min(max(snapped, 30), 360)
     }
 
+    // Reads only. Writing a past start forward to now went through
+    // `departureStart`'s didSet, which clears the search results, so a
+    // "leave now" Search Pin found no results by the time it looked and
+    // pinned the top route as an itinerary (builds 153-155).
     private func effectiveDepartureStart(now: Date = Date()) -> Date {
-        if departureStart < now {
-            departureStart = now
-            return now
-        }
-        return departureStart
+        max(departureStart, now)
     }
 
     private func nextRoutineDeparture(clock: String, activeWeekdays: [Int], now: Date) -> Date {
