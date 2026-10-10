@@ -1454,6 +1454,32 @@ final class JourneyFormattingTests: XCTestCase {
         XCTAssertEqual(fallback.destination, 3)
     }
 
+    func testCallingPointBoardColumns() {
+        func stop(_ timing: JourneyStopTiming?, departure: String? = "10:22") -> JourneyStop {
+            JourneyStop(
+                stopIndex: 0,
+                stopType: "IP",
+                tpl: "NBARNET",
+                name: "New Barnet",
+                sixteenCharacterName: "New Barnet",
+                publicArrival: nil,
+                publicDeparture: departure,
+                timing: timing
+            )
+        }
+
+        XCTAssertEqual(BoardText.expected(stop(JourneyStopTiming(label: "Departs", scheduled: "10:22", current: "10:22", delayed: false, status: "expected"))), "On time")
+        XCTAssertEqual(BoardText.expected(stop(JourneyStopTiming(label: "Departs", scheduled: "10:22", current: "10:26", delayed: true, status: "delayed"))), "Exp 10:26")
+        XCTAssertEqual(BoardText.expected(stop(JourneyStopTiming(label: "Departed", scheduled: "10:22", current: "10:23", delayed: true, status: "actual"))), "Dep 10:23")
+        XCTAssertEqual(BoardText.expected(stop(JourneyStopTiming(label: "Arrived", scheduled: "10:58", current: "10:58", delayed: false, status: "actual"))), "Arr 10:58")
+        XCTAssertEqual(BoardText.expected(stop(JourneyStopTiming(label: "Not reported", scheduled: "10:22", current: "10:22", delayed: false, status: "not_reported"))), "No report")
+        XCTAssertEqual(BoardText.expected(stop(nil)), "")
+
+        XCTAssertEqual(BoardText.time(stop(nil)), "10:22")
+        XCTAssertEqual(BoardText.time(stop(nil, departure: nil)), "-")
+        XCTAssertEqual(BoardText.station(stop(nil)), "New Barnet")
+    }
+
     func testPlatformValueParsesFeedStrings() {
         XCTAssertEqual(PlatformValue.bare("4"), "4")
         XCTAssertEqual(PlatformValue.bare(" P12 "), "12")

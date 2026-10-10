@@ -3,7 +3,6 @@ import SwiftUI
 struct JourneyDetailView: View {
     @Environment(JourneyDetailViewModel.self) private var viewModel
     @Environment(ActiveWindowViewModel.self) private var activeWindowViewModel
-    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     var identity: JourneyDetailIdentity
     @State private var didAttemptInitialLoad = false
 
@@ -154,11 +153,7 @@ struct JourneyDetailView: View {
 
     private func summarySection(_ detail: JourneyDetail, surface: RTSurface) -> some View {
         VStack(alignment: .leading, spacing: RTSpacing.sectionGap) {
-            journeyOverviewCard(detail, surface: surface)
-
-            if let message = disruptionMessage(for: detail) {
-                disruptionBanner(message: message, cancelled: detail.cancelled, surface: surface)
-            }
+            platformIndicator(detail)
 
             if let legContext = activeItineraryLegContext {
                 itineraryLegCard(legContext, surface: surface)
@@ -263,109 +258,193 @@ struct JourneyDetailView: View {
         return ("Change here for the \(time)", ItineraryFormatting.connectionTone(connection))
     }
 
-    private func journeyOverviewCard(_ detail: JourneyDetail, surface: RTSurface) -> some View {
-        VStack(alignment: .leading, spacing: RTSpacing.cardPadding) {
-            HStack(alignment: .center, spacing: RTSpacing.small) {
-                StatusPill(
-                    text: JourneyFormatting.displayStatusText(detail),
-                    tone: surface.pillTone,
-                    style: .dot
+    // MARK: Platform indicator
+
+    /// The train as the platform indicator at the traveller's station shows
+    /// it: the train line with the traveller's arrival under it, a scrolling
+    /// message, then the platform at double height.
+    private func platformIndicator(_ detail: JourneyDetail) -> some View {
+        let time = originStop(detail).map(BoardText.time) ?? "-"
+        let destination = finalDestinationName(detail)
+        let expected = signExpected(detail)
+        let callingAt = signCallingAt(detail)
+        let platform = detailPlatform(detail)
+        let message = signMessage(detail)
+        return DepartureBoard {
+            DepartureBoardRow(time: time, destination: destination, expected: expected, callingAt: callingAt)
+            BoardScroller(text: message)
+            Text(platform.number.map { "Plat \($0)" } ?? "Plat TBC")
+                .font(BoardFont.font(.title, weight: .bold))
+                .foregroundStyle(
+                    platform.state == .confirmed || platform.isChanged
+                        ? DepartureBoardStyle.amber
+                        : DepartureBoardStyle.dimAmber
                 )
-
-                Spacer(minLength: RTSpacing.small)
-
-                JourneyDetailFreshnessBadge(text: detailFreshnessText(detail), surface: surface)
-            }
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text("\(segmentOriginName(detail)) to \(segmentDestinationName(detail))")
-                    .font(.title2.weight(.bold))
-                    .foregroundStyle(surface.ink)
-                    .lineLimit(3)
-                    .fixedSize(horizontal: false, vertical: true)
-
-                Text(operatorSummaryText(detail))
-                    .font(.subheadline)
-                    .foregroundStyle(surface.dim)
-                    .lineLimit(2)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-
-            JourneyDetailTimeStrip(
-                departure: detailDepartureText(detail),
-                arrival: detailArrivalText(detail),
-                platform: detailPlatform(detail),
-                surface: surface,
-                prefersStackedLayout: dynamicTypeSize.prefersExpandedLayout
-            )
+                .lineLimit(1)
+                .minimumScaleFactor(0.6)
         }
-        .rtCard(padding: RTSpacing.cardPadding)
-        .accessibilityElement(children: .contain)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            [
+                "\(time) to \(destination), \(expected)",
+                callingAt,
+                platform.accessibilityLabel(),
+                message
+            ]
+            .compactMap { $0 }
+            .joined(separator: ". ")
+        )
     }
 
-    private func operatorSummaryText(_ detail: JourneyDetail) -> String {
-        var parts = [JourneyFormatting.operatorDisplayText(detail)]
-        if let coachCountText = JourneyFormatting.coachCountText(detail) {
-            parts.append(coachCountText)
-        }
-        if let continuesToText = continuesToText(detail) {
-            parts.append(continuesToText)
-        }
-        return parts.joined(separator: " · ")
+    private func originStop(_ detail: JourneyDetail) -> JourneyStop? {
+        detail.stops.isEmpty ? nil : detail.stops[segmentRange(detail).origin]
     }
 
-    private func disruptionBanner(message: String, cancelled: Bool, surface: RTSurface) -> some View {
-        HStack(alignment: .top, spacing: 8) {
-            Image(systemName: cancelled ? "xmark.octagon.fill" : "exclamationmark.triangle.fill")
-                .foregroundStyle(surface.accent)
-            Text(message)
-                .font(.footnote.weight(.medium))
-                .foregroundStyle(surface.ink)
-                .fixedSize(horizontal: false, vertical: true)
-        }
-        .padding(RTSpacing.compact)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .background(surface.softFill, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
+    private func destinationStop(_ detail: JourneyDetail) -> JourneyStop? {
+        detail.stops.isEmpty ? nil : detail.stops[segmentRange(detail).destination]
     }
 
+    /// Where the train ends up, as boards name it even when the traveller
+    /// gets off sooner.
+    private func finalDestinationName(_ detail: JourneyDetail) -> String {
+        if let last = detail.stops.last {
+            return BoardText.station(last)
+        }
+        return JourneyFormatting.compactStationDisplayName(
+            shortName: detail.destinationSixteenCharacterName,
+            name: detail.destinationName,
+            fallback: detail.destinationCrs
+        )
+    }
+
+    private func signExpected(_ detail: JourneyDetail) -> String {
+        if detail.cancelled {
+            return "Cancelled"
+        }
+        guard let timing = originStop(detail)?.timing else {
+            return "On time"
+        }
+        if timing.status == "actual" {
+            return "Departed"
+        }
+        return timing.delayed ? "Exp \(timing.current.prefix(5))" : "On time"
+    }
+
+    /// "Calling at Moorgate 11:58": the traveller's stop and when the train
+    /// gets there, unless that's where it ends up anyway.
+    private func signCallingAt(_ detail: JourneyDetail) -> String? {
+        guard !detail.cancelled,
+              let stop = destinationStop(detail),
+              stop.id != detail.stops.last?.id else {
+            return nil
+        }
+        let arrival = stop.timing?.current ?? stop.publicArrival ?? stop.publicDeparture
+        return ["Calling at \(BoardText.station(stop))", arrival.map { String($0.prefix(5)) }]
+            .compactMap { $0 }
+            .joined(separator: " ")
+    }
+
+    /// Darwin's reason first, since it's news, then who runs the train, how
+    /// many coaches it has, and a warning when live running is patchy.
+    private func signMessage(_ detail: JourneyDetail) -> String {
+        var sentences: [String] = []
+        if let reason = disruptionMessage(for: detail) {
+            sentences.append(reason.hasSuffix(".") ? reason : "\(reason).")
+        }
+        let destination = JourneyFormatting.stationDisplayName(
+            name: detail.stops.last?.name ?? detail.destinationName,
+            fallback: detail.destinationCrs
+        )
+        let operatorName = JourneyFormatting.operatorDisplayText(detail)
+        if operatorName != "Not available" {
+            let article = "AEIOU".contains(operatorName.prefix(1).uppercased()) ? "an" : "a"
+            sentences.append("This is \(article) \(operatorName) service to \(destination).")
+        } else {
+            sentences.append("This train is for \(destination).")
+        }
+        if let count = detail.coachCount, count > 0 {
+            let about = detail.coachCountApproximate == true ? "about " : ""
+            sentences.append("This train is formed of \(about)\(count) \(count == 1 ? "coach" : "coaches").")
+        }
+        if !hasLiveData(detail) {
+            sentences.append("Live running information is limited for this train.")
+        }
+        return BoardText.boardSafe(sentences.joined(separator: "  "))
+    }
+
+    // MARK: Calling points board
+
+    /// Every stop the train makes, as a calling points board lists them.
+    /// The traveller's stretch is lit and the rest unlit, as are stops
+    /// already passed; a dot in the margin shows where the train is.
     private func callingPointsSection(_ detail: JourneyDetail, surface: RTSurface, now: Date) -> some View {
-        VStack(alignment: .leading, spacing: RTSpacing.small) {
-            Text("Calling points")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .padding(.horizontal, RTSpacing.cardPadding)
-
-            let range = segmentRange(detail)
-            let interchange = interchangeStopNote(detail)
-
-            LazyVStack(alignment: .leading, spacing: 0) {
-                ForEach(Array(detail.stops.enumerated()), id: \.element.id) { index, stop in
-                    let trainPosition = currentTrainPosition(detail, now: now)
-                    JourneyStopRow(
-                        stop: stop,
-                        isCurrent: trainPosition.stationIndex == index,
-                        isBetweenAfter: trainPosition.betweenAfterIndex == index,
-                        betweenProgress: trainPosition.progress,
-                        isPassed: stopIsPassed(at: index, trainPosition: trainPosition),
-                        isFirst: index == detail.stops.startIndex,
-                        isLast: index == detail.stops.index(before: detail.stops.endIndex),
-                        // Platforms matter where you board and get off; the
-                        // stops in between only need a time.
-                        showsPlatform: index == range.origin || index == range.destination,
-                        // The stop where this leg ends is the one that matters
-                        // most on a multi-leg journey, and nothing else in the
-                        // list distinguishes it from a stop passed through.
-                        changeNote: index == range.destination ? interchange?.text : nil,
-                        changeTone: interchange?.tone ?? .neutral
-                    )
-                        .padding(.vertical, 10)
-                }
+        let range = segmentRange(detail)
+        let interchange = interchangeStopNote(detail)
+        let trainPosition = currentTrainPosition(detail, now: now)
+        return DepartureBoard {
+            ConcourseBoardHeader(placeTitle: "Calling at")
+            ForEach(Array(detail.stops.enumerated()), id: \.element.id) { index, stop in
+                let inJourney = index >= range.origin && index <= range.destination
+                let isPassed = stopIsPassed(at: index, trainPosition: trainPosition)
+                CallingPointBoardRow(
+                    time: BoardText.time(stop),
+                    station: BoardText.station(stop),
+                    // Platforms matter where you board and get off.
+                    platform: index == range.origin || index == range.destination ? stopPlatform(stop) : nil,
+                    expected: BoardText.expected(stop),
+                    note: stopNote(stop, change: index == range.destination ? interchange?.text : nil),
+                    isLit: inJourney && !isPassed,
+                    marker: marker(at: index, trainPosition: trainPosition)
+                )
+                .accessibilityElement(children: .ignore)
+                .accessibilityLabel(stopAccessibilityLabel(stop, change: index == range.destination ? interchange?.text : nil))
             }
-            .padding(.horizontal, RTSpacing.cardPadding)
-            .padding(.vertical, RTSpacing.small)
-            .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
-            .lightSurfaceForeground()
         }
+    }
+
+    private func stopPlatform(_ stop: JourneyStop) -> PlatformValue {
+        PlatformValue(
+            stop.realtime?.platform ?? stop.scheduledPlatform,
+            confirmed: stop.realtime?.platform != nil && stop.realtime?.platformConfirmed == true
+        )
+    }
+
+    /// The change for the next train, then any delay reason for this stop.
+    private func stopNote(_ stop: JourneyStop, change: String?) -> String? {
+        var notes: [String] = []
+        if let change {
+            notes.append(change)
+        }
+        if let reason = stop.realtime?.reasonText, !reason.isEmpty {
+            if let location = stop.realtime?.reasonLocationName, !location.isEmpty {
+                notes.append("\(reason) near \(location)")
+            } else {
+                notes.append(reason)
+            }
+        }
+        return notes.isEmpty ? nil : BoardText.boardSafe(notes.joined(separator: ". "))
+    }
+
+    private func marker(at index: Int, trainPosition: JourneyTrainPosition) -> CallingPointBoardRow.Marker {
+        if trainPosition.stationIndex == index {
+            return .here
+        }
+        if let after = trainPosition.betweenAfterIndex, after + 1 == index {
+            return .approaching
+        }
+        return .none
+    }
+
+    private func stopAccessibilityLabel(_ stop: JourneyStop, change: String?) -> String {
+        [
+            JourneyFormatting.stationDisplayName(name: stop.name, fallback: stop.crs ?? stop.tpl),
+            BoardText.time(stop),
+            BoardText.expected(stop),
+            stopNote(stop, change: change)
+        ]
+        .compactMap { $0 }
+        .filter { !$0.isEmpty && $0 != "-" }
+        .joined(separator: ", ")
     }
 
     private func detailSurface(_ detail: JourneyDetail) -> RTSurface {
@@ -417,39 +496,6 @@ struct JourneyDetailView: View {
         )
     }
 
-    private func segmentOriginName(_ detail: JourneyDetail) -> String {
-        guard !detail.stops.isEmpty else { return detail.originName }
-        let stop = detail.stops[segmentRange(detail).origin]
-        return JourneyFormatting.stationDisplayName(name: stop.name, fallback: stop.crs ?? stop.tpl)
-    }
-
-    private func segmentDestinationName(_ detail: JourneyDetail) -> String {
-        guard !detail.stops.isEmpty else { return detail.destinationName }
-        let stop = detail.stops[segmentRange(detail).destination]
-        return JourneyFormatting.stationDisplayName(name: stop.name, fallback: stop.crs ?? stop.tpl)
-    }
-
-    /// "Continues to Edinburgh" when the train runs beyond the traveller's stop.
-    private func continuesToText(_ detail: JourneyDetail) -> String? {
-        guard let last = detail.stops.last,
-              segmentRange(detail).destination < detail.stops.index(before: detail.stops.endIndex) else {
-            return nil
-        }
-        return "Continues to \(JourneyFormatting.stationDisplayName(name: last.name, fallback: last.crs ?? last.tpl))"
-    }
-
-    private func detailDepartureText(_ detail: JourneyDetail) -> String {
-        guard !detail.stops.isEmpty else { return "TBC" }
-        let stop = detail.stops[segmentRange(detail).origin]
-        return stop.timing?.current ?? stop.publicDeparture ?? "TBC"
-    }
-
-    private func detailArrivalText(_ detail: JourneyDetail) -> String {
-        guard !detail.stops.isEmpty else { return "TBC" }
-        let stop = detail.stops[segmentRange(detail).destination]
-        return stop.timing?.current ?? stop.publicArrival ?? "TBC"
-    }
-
     private func detailPlatform(_ detail: JourneyDetail) -> PlatformValue {
         guard !detail.stops.isEmpty else { return .unknown }
         let stop = detail.stops[segmentRange(detail).origin]
@@ -457,14 +503,8 @@ struct JourneyDetailView: View {
         return PlatformValue(stop.realtime?.platform ?? stop.scheduledPlatform, confirmed: confirmed)
     }
 
-    private func detailFreshnessText(_ detail: JourneyDetail) -> String {
-        if detail.reportState == "complete" {
-            return "Live data"
-        }
-        if detail.realtimeSource?.isEmpty == false {
-            return "Live data"
-        }
-        return "Limited live data"
+    private func hasLiveData(_ detail: JourneyDetail) -> Bool {
+        detail.reportState == "complete" || detail.realtimeSource?.isEmpty == false
     }
 
     private func currentTrainPosition(_ detail: JourneyDetail, now: Date) -> JourneyTrainPosition {
@@ -481,125 +521,6 @@ struct JourneyDetailView: View {
         return false
     }
 
-}
-
-private struct JourneyDetailFreshnessBadge: View {
-    var text: String
-    var surface: RTSurface
-
-    var body: some View {
-        Label(text, systemImage: "dot.radiowaves.left.and.right")
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(surface.dim)
-            .lineLimit(1)
-            .minimumScaleFactor(0.76)
-            .labelStyle(.titleAndIcon)
-            .accessibilityLabel(text)
-    }
-}
-
-private struct JourneyDetailTimeStrip: View {
-    var departure: String
-    var arrival: String
-    var platform: PlatformValue
-    var surface: RTSurface
-    var prefersStackedLayout: Bool
-
-    var body: some View {
-        VStack(alignment: .leading, spacing: RTSpacing.compact) {
-            if prefersStackedLayout {
-                VStack(alignment: .leading, spacing: RTSpacing.compact) {
-                    timePoint(label: "Departs", value: departure, textAlignment: .leading, frameAlignment: .leading)
-                    Divider()
-                        .background(surface.faint)
-                    timePoint(label: "Arrives", value: arrival, textAlignment: .leading, frameAlignment: .leading)
-                }
-            } else {
-                HStack(alignment: .center, spacing: RTSpacing.compact) {
-                    timePoint(label: "Departs", value: departure, textAlignment: .leading, frameAlignment: .leading)
-
-                    HStack(spacing: RTSpacing.small) {
-                        Rectangle()
-                            .fill(surface.faint)
-                            .frame(height: 1)
-                        Image(systemName: "arrow.right")
-                            .font(.caption.weight(.bold))
-                            .foregroundStyle(surface.accent)
-                        Rectangle()
-                            .fill(surface.faint)
-                            .frame(height: 1)
-                    }
-                    .frame(minWidth: 56, maxWidth: 92)
-                    .accessibilityHidden(true)
-
-                    timePoint(label: "Arrives", value: arrival, textAlignment: .trailing, frameAlignment: .trailing)
-                }
-            }
-
-            JourneyDetailPlatformLine(platform: platform, surface: surface)
-        }
-        // Sits directly in the overview card, divided by a hairline, rather
-        // than in a filled box inside the card.
-        .padding(.top, RTSpacing.compact)
-        .overlay(alignment: .top) {
-            Divider()
-        }
-    }
-
-    private func timePoint(
-        label: String,
-        value: String,
-        textAlignment: HorizontalAlignment,
-        frameAlignment: Alignment
-    ) -> some View {
-        VStack(alignment: textAlignment, spacing: 3) {
-            Text(label)
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(surface.dim)
-                .lineLimit(1)
-                .minimumScaleFactor(0.82)
-            Text(value)
-                .font(.title2.weight(.bold))
-                .foregroundStyle(surface.ink)
-                .monospacedDigit()
-                .lineLimit(1)
-                .minimumScaleFactor(0.72)
-        }
-        .frame(maxWidth: .infinity, alignment: frameAlignment)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(label)
-        .accessibilityValue(value)
-    }
-}
-
-private struct JourneyDetailPlatformLine: View {
-    var platform: PlatformValue
-    var surface: RTSurface
-
-    var body: some View {
-        Label {
-            HStack(spacing: RTSpacing.small) {
-                Text(platform.caption())
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(surface.ink)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
-                PlatformTile(platform: platform)
-            }
-        } icon: {
-            Image(systemName: "tram.fill")
-                .font(.caption.weight(.bold))
-                .foregroundStyle(surface.accent)
-        }
-        .labelStyle(.titleAndIcon)
-        .frame(maxWidth: .infinity, alignment: .leading)
-        .padding(.top, RTSpacing.small)
-        .overlay(alignment: .top) {
-            Divider()
-        }
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(platform.accessibilityLabel())
-    }
 }
 
 struct JourneyStopRow: View {

@@ -6,8 +6,9 @@ import SwiftUI
 //
 // Pinned carries two signs, as a station does: the platform indicator for
 // the pinned train, and a concourse departures board for the other trains
-// in the search. The Lock Screen Live Activity is a sign in itself. Search
-// results, journey detail and the rest of the app stay in the system face,
+// in the search. Journey detail has two as well: a platform indicator for
+// the train and a calling points board. The Lock Screen Live Activity is a
+// sign in itself. Search results and the rest of the app stay in the system face,
 // so a sign sits on the page like a photo of a real one rather than as a
 // second typeface. Signs keep amber on black in light and dark mode: they're
 // a physical object, not a themed surface. Status is in words ("Exp 08:36",
@@ -181,6 +182,44 @@ enum BoardText {
         }
         let list = stops.count == 1 ? last : stops.dropLast().joined(separator: ", ") + " and " + last
         return "Calling at: \(list)."
+    }
+
+    /// A calling point's Expected column: "On time", "Exp 10:31",
+    /// "Dep 10:24" once it has gone, "No report" or "Cancelled".
+    static func expected(_ stop: JourneyStop) -> String {
+        if stop.realtime?.cancelled == true {
+            return "Cancelled"
+        }
+        guard let timing = stop.timing else {
+            return ""
+        }
+        switch timing.status {
+        case "actual":
+            let verb = timing.label == "Arrived" ? "Arr" : "Dep"
+            return "\(verb) \(timing.current.prefix(5))"
+        case "not_reported":
+            return "No report"
+        case "unknown":
+            return ""
+        default:
+            return timing.delayed ? "Exp \(timing.current.prefix(5))" : "On time"
+        }
+    }
+
+    /// A calling point's booked time: its departure, or its arrival at the
+    /// end of the run.
+    static func time(_ stop: JourneyStop) -> String {
+        let time = nonEmpty(stop.timing?.scheduled) ?? nonEmpty(stop.publicDeparture) ?? nonEmpty(stop.publicArrival)
+        return time.map { String($0.prefix(5)) } ?? "-"
+    }
+
+    /// Darwin's sixteen-character name, as boards print it.
+    static func station(_ stop: JourneyStop) -> String {
+        JourneyFormatting.compactStationDisplayName(
+            shortName: stop.sixteenCharacterName,
+            name: stop.name,
+            fallback: stop.crs ?? stop.tpl
+        )
     }
 
     /// Boards have no middle dot or arrows; swap them for what the face has.
@@ -366,19 +405,25 @@ struct ConcourseBoardRow: View {
     }
 }
 
-/// The dim headings over a concourse board's columns.
+/// The dim headings over a concourse board's columns. A calling points
+/// board heads its second column "Calling at".
 struct ConcourseBoardHeader: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
     @ScaledMetric(relativeTo: .body) private var timeWidth = ConcourseColumnWidth.time
     @ScaledMetric(relativeTo: .body) private var platformWidth = ConcourseColumnWidth.platform
     @ScaledMetric(relativeTo: .body) private var expectedWidth = ConcourseColumnWidth.expected
+    private let placeTitle: String
+
+    init(placeTitle: String = "Destination") {
+        self.placeTitle = placeTitle
+    }
 
     var body: some View {
         if !dynamicTypeSize.isAccessibilitySize {
             HStack(spacing: 8) {
                 Text("Time")
                     .frame(width: timeWidth, alignment: .leading)
-                Text("Destination")
+                Text(placeTitle)
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text("Plat")
                     .frame(width: platformWidth, alignment: .trailing)
@@ -389,6 +434,132 @@ struct ConcourseBoardHeader: View {
             .foregroundStyle(DepartureBoardStyle.dimAmber)
             .accessibilityHidden(true)
         }
+    }
+}
+
+// MARK: - Calling points board
+
+/// One stop on a calling points board: Time, Station, Plat, Expected, in the
+/// concourse board's columns. Stops the train has passed, and those outside
+/// the traveller's journey, are unlit; a lit dot in the margin shows where
+/// the train is, hollow while it's on its way to that stop. A note, such as
+/// a change or a delay reason, runs dim underneath.
+struct CallingPointBoardRow: View {
+    enum Marker {
+        case none
+        /// The train is at this stop.
+        case here
+        /// The train is between the previous stop and this one.
+        case approaching
+    }
+
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .body) private var timeWidth = ConcourseColumnWidth.time
+    @ScaledMetric(relativeTo: .body) private var platformWidth = ConcourseColumnWidth.platform
+    @ScaledMetric(relativeTo: .body) private var expectedWidth = ConcourseColumnWidth.expected
+    private let time: String
+    private let station: String
+    private let platform: PlatformValue?
+    private let expected: String
+    private let note: String?
+    private let isLit: Bool
+    private let marker: Marker
+
+    init(
+        time: String,
+        station: String,
+        platform: PlatformValue?,
+        expected: String,
+        note: String? = nil,
+        isLit: Bool,
+        marker: Marker = .none
+    ) {
+        self.time = time
+        self.station = station
+        self.platform = platform
+        self.expected = expected
+        self.note = note
+        self.isLit = isLit
+        self.marker = marker
+    }
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            columns
+                .overlay(alignment: .leading) {
+                    markerDot.offset(x: -10)
+                }
+            if let note {
+                Text(note)
+                    .foregroundStyle(DepartureBoardStyle.dimAmber)
+                    .fixedSize(horizontal: false, vertical: true)
+                    .padding(.leading, dynamicTypeSize.isAccessibilitySize ? 0 : timeWidth + 8)
+            }
+        }
+        .foregroundStyle(isLit ? DepartureBoardStyle.amber : DepartureBoardStyle.dimAmber)
+    }
+
+    @ViewBuilder
+    private var columns: some View {
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 8) {
+                    Text(time)
+                    stationText
+                }
+                HStack(spacing: 8) {
+                    if let platform, platform.number != nil {
+                        Text("Plat \(BoardText.platform(platform))")
+                            .foregroundStyle(platformStyle(platform))
+                    }
+                    Spacer(minLength: 8)
+                    Text(expected)
+                }
+            }
+        } else {
+            HStack(spacing: 8) {
+                Text(time)
+                    .frame(width: timeWidth, alignment: .leading)
+                stationText
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(platform.flatMap(\.number) ?? "")
+                    .foregroundStyle(platform.map(platformStyle) ?? DepartureBoardStyle.dimAmber)
+                    .frame(width: platformWidth, alignment: .trailing)
+                Text(expected)
+                    .frame(width: expectedWidth, alignment: .trailing)
+            }
+            .lineLimit(1)
+        }
+    }
+
+    private var stationText: some View {
+        Text(station)
+            .lineLimit(1)
+            .allowsTightening(true)
+    }
+
+    @ViewBuilder
+    private var markerDot: some View {
+        switch marker {
+        case .none:
+            EmptyView()
+        case .here:
+            Circle()
+                .fill(DepartureBoardStyle.amber)
+                .frame(width: 6, height: 6)
+                .accessibilityHidden(true)
+        case .approaching:
+            Circle()
+                .strokeBorder(DepartureBoardStyle.amber, lineWidth: 1.5)
+                .frame(width: 6, height: 6)
+                .accessibilityHidden(true)
+        }
+    }
+
+    private func platformStyle(_ platform: PlatformValue) -> Color {
+        platform.state == .confirmed || platform.isChanged
+            ? DepartureBoardStyle.amber
+            : DepartureBoardStyle.dimAmber
     }
 }
 
