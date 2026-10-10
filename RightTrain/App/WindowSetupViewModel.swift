@@ -135,7 +135,12 @@ final class WindowSetupViewModel {
     private static func directItineraries(in response: JourneyPlanResponse) -> [ItineraryRecommendation] {
         // A backend that predates the separate direct pass only has the
         // mixed list, where a direct train is a one-leg itinerary.
-        response.directItineraries ?? response.itineraries.filter { $0.legs.count == 1 }
+        // An empty direct pass falls back to the mixed list too, so a direct
+        // train the planner found is never pinned as a route.
+        if let direct = response.directItineraries, !direct.isEmpty {
+            return direct
+        }
+        return response.itineraries.filter { $0.legs.count == 1 }
     }
 
     var searchMode: JourneySearchMode {
@@ -324,6 +329,7 @@ final class WindowSetupViewModel {
                 )
                 journeyPlanResponse = nil
             case .anyRoute:
+                BetaDiagnostics.record("search_pin_route_fallback", details: "itineraries=\(journeyPlanResponse?.itineraries.count ?? 0)")
                 let subscription = try await activeWindowViewModel.createItinerary(
                     input: CreateItinerarySubscriptionRequest(
                         originCrs: origin.crs,

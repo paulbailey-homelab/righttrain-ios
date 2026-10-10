@@ -136,11 +136,11 @@ struct RightTrainLiveActivityWidget: Widget {
            let platform = displayPlatform(context.state.interchange?.onwardPlatform) {
             return (role: "Next platform", value: platform, confirmed: context.state.interchange?.onwardPlatformConfirmed == true)
         }
-        // On any boarded leg, current arrival platform is the next signal.
-        if context.attributes.activityKind == .leg,
-           let train = context.state.activeItineraryTrain,
-           let platform = displayPlatform(train.arrivalPlatform) {
-            return (role: "Arrival platform", value: platform, confirmed: true)
+        // On a boarded leg the arrival platform is only a mention on the
+        // Lock Screen sign, and the departure platform is behind the
+        // traveller.
+        if context.attributes.activityKind == .leg {
+            return nil
         }
         return departurePlatform(for: context).map { (role: "Platform", value: $0, confirmed: context.state.platformConfirmed) }
     }
@@ -1126,92 +1126,36 @@ private struct WindowBoardActivityView: View {
     }
 }
 
+/// An itinerary on the Lock Screen is the same sign as a single train.
+/// Before the first train it's that train's departure board, with the change
+/// on the message line. On a leg it's the arrival at the leg's end, led by
+/// the stop and time left, with the change (onward time and platform) on the
+/// message line. Approaching the change it becomes the onward train's
+/// departure board, since its platform is the one to walk to.
 private struct ItineraryBoardActivityView: View {
     var state: RightTrainLiveActivityAttributes.ContentState
 
     var body: some View {
-        if let train = state.activeItineraryTrain ?? state.trains.first {
-            VStack(alignment: .leading, spacing: 9) {
-                HStack(alignment: .center, spacing: 10) {
-                    // The change count, duration and operator used to fill a
-                    // second caption row; the rows below already show the
-                    // change and any delay.
-                    Text(state.routeTitle)
-                        .font(.headline.weight(.semibold))
-                        .foregroundStyle(Color.rightTrainActivityText)
-                        .lineLimit(1)
-                        .minimumScaleFactor(0.58)
-                        .allowsTightening(true)
-                        .truncationMode(.middle)
-                        .layoutPriority(2)
-
-                    Spacer(minLength: 6)
-
-                    if state.statusKind.isHeroAnomalous,
-                       state.resolvedPhase != .approachingInterchange {
-                        StatusBadge(text: state.statusText, kind: state.statusKind, delayMinutes: state.delayMinutes)
-                    }
-                }
-
-                if state.resolvedPhase == .approachingInterchange, let interchange = state.interchange {
-                    InterchangeHeroBlock(state: state, interchange: interchange)
-                } else {
-                    HStack(alignment: .lastTextBaseline, spacing: 10) {
-                        // Hero countdown: ARRIVAL when on a leg (gets the
-                        // user off at the right station), DEPARTURE when
-                        // still planning/at-origin.
-                        JourneyHeroBlock(train: train, mode: state.resolvedPhase.isOnboard ? .arrival : .departure)
-                            .layoutPriority(1)
-
-                        Spacer(minLength: 6)
-
-                        InlinePlatformLabel(
-                            platform: state.resolvedPhase.isOnboard ? train.arrivalPlatform : train.departurePlatform,
-                            confirmed: state.platformConfirmed,
-                            accessibilityPrefix: state.resolvedPhase.isOnboard ? "Arrival platform" : "Departure platform"
-                        )
-                    }
-                }
-
-                // Once aboard, the leg list is history; show only what the
-                // traveller acts on next so the card stays within the
-                // Lock Screen's height budget.
-                switch state.resolvedPhase {
-                case .approachingInterchange, .onFinalLeg:
-                    JourneyProgressFooter(
-                        train: train,
-                        originText: train.departureTime,
-                        destinationText: train.arrivalTime
-                    )
-                case .onLeg:
-                    if let interchange = state.interchange {
-                        InterchangeBanner(interchange: interchange, approaching: false)
-                    } else {
-                        JourneyProgressFooter(
-                            train: train,
-                            originText: train.departureTime,
-                            destinationText: train.arrivalTime
-                        )
-                    }
-                case .planning, .atOrigin:
-                    // One line only: a full leg list cannot fit the Lock
-                    // Screen's 160pt budget and would get scaled down.
-                    if let summary = state.disruptionSummaryText(for: train),
-                       summary != state.otherDeparturesText?.trimmingCharacters(in: .whitespacesAndNewlines) {
-                        DisruptionSummaryLine(text: summary, kind: state.statusKind)
-                    } else if let connection = state.nextConnection(after: train) {
-                        ConnectionTimelineRow(
-                            current: connection.current,
-                            next: connection.next,
-                            emphasized: state.statusKind == .atRisk || state.statusKind == .missed
-                        )
-                    }
-                }
-            }
-            .padding(.horizontal, 16)
-            .padding(.vertical, 14)
-            .activityCardChrome(statusKind: state.statusKind)
-            .accessibilityElement(children: .combine)
+        if state.resolvedPhase == .approachingInterchange,
+           let interchange = state.interchange,
+           let onward = onwardTrain {
+            BoardTrainActivityView(
+                state: state,
+                train: onward,
+                mode: .departure,
+                note: "Change here.  \(marginText(interchange))",
+                departurePlatform: PlatformValue(
+                    interchange.onwardPlatform ?? onward.departurePlatform,
+                    confirmed: interchange.onwardPlatformConfirmed
+                )
+            )
+        } else if let train = state.activeItineraryTrain ?? state.trains.first {
+            BoardTrainActivityView(
+                state: state,
+                train: train,
+                mode: state.resolvedPhase.isOnboard ? .arrival : .departure,
+                note: changeNote(after: train)
+            )
         } else {
             VStack(alignment: .leading, spacing: 8) {
                 Text(state.routeTitle)
@@ -1226,6 +1170,38 @@ private struct ItineraryBoardActivityView: View {
             .padding(.vertical, 14)
             .activityCardChrome(statusKind: state.statusKind)
             .accessibilityElement(children: .combine)
+        }
+    }
+
+    private var onwardTrain: RightTrainLiveActivityAttributes.ContentState.Train? {
+        state.onwardLeg ?? state.trains.dropFirst((state.currentLegIndex ?? 0) + 1).first
+    }
+
+    /// "Change at Stevenage for the 10:12 to Leeds, platform 4." Nil on the
+    /// last train.
+    private func changeNote(after train: RightTrainLiveActivityAttributes.ContentState.Train) -> String? {
+        let next = state.resolvedPhase.isOnboard ? onwardTrain : state.nextConnection(after: train)?.next
+        guard let next, next.serviceID != train.serviceID else {
+            return nil
+        }
+        if let interchange = state.interchange, interchange.riskStatus == "missed" {
+            return "Connection at \(interchange.name) missed."
+        }
+        var note = "Change at \(train.compactDestinationName) for the \(next.departureTime) to \(next.compactServiceDestinationName)"
+        let platform = (state.interchange?.onwardPlatform ?? next.departurePlatform)
+            .trimmingCharacters(in: .whitespacesAndNewlines)
+        if !platform.isEmpty {
+            note += ", platform \(platform)"
+        }
+        return note + "."
+    }
+
+    private func marginText(_ interchange: RightTrainLiveActivityAttributes.ContentState.Interchange) -> String {
+        switch interchange.riskStatus {
+        case "missed":
+            return "Connection missed."
+        default:
+            return "\(max(interchange.expectedMarginMinutes, 0)) min to change."
         }
     }
 }
@@ -1369,8 +1345,28 @@ private struct BoardTrainActivityView: View {
     var state: RightTrainLiveActivityAttributes.ContentState
     var train: RightTrainLiveActivityAttributes.ContentState.Train
     var mode: Mode = .departure
+    /// The message line when there's no platform change or disruption to
+    /// report, such as an itinerary's change.
+    var note: String? = nil
+    /// Overrides the train's own departure platform, such as the onward
+    /// platform at an interchange.
+    var departurePlatform: PlatformValue? = nil
 
     @ScaledMetric(relativeTo: .body) private var timeWidth: CGFloat = 44
+
+    init(
+        state: RightTrainLiveActivityAttributes.ContentState,
+        train: RightTrainLiveActivityAttributes.ContentState.Train,
+        mode: Mode = .departure,
+        note: String? = nil,
+        departurePlatform: PlatformValue? = nil
+    ) {
+        self.state = state
+        self.train = train
+        self.mode = mode
+        self.note = note
+        self.departurePlatform = departurePlatform
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
@@ -1480,7 +1476,7 @@ private struct BoardTrainActivityView: View {
     private var platform: PlatformValue {
         switch mode {
         case .departure:
-            PlatformValue(
+            departurePlatform ?? PlatformValue(
                 train.departurePlatform,
                 confirmed: state.platformConfirmed,
                 previous: state.platformChange(for: train)?.previousPlatform
@@ -1534,6 +1530,9 @@ private struct BoardTrainActivityView: View {
         }
         if let summary = state.disruptionSummaryText(for: train), !repeatsRow(summary) {
             return boardSafe(summary)
+        }
+        if let note {
+            return boardSafe(note)
         }
         if mode == .arrival {
             let verb = hasHappened ? "Arrived" : "Arriving"
