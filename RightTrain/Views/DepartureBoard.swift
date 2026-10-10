@@ -7,7 +7,8 @@ import SwiftUI
 // Pinned carries two signs, as a station does: the platform indicator for
 // the pinned train, and a concourse departures board for the other trains
 // in the search. Journey detail has two as well: a platform indicator for
-// the train and a calling points board. The Lock Screen Live Activity is a
+// the train and a calling points board, and so does the on-board screen,
+// as the display in the carriage. The Lock Screen Live Activity is a
 // sign in itself. Search results and the rest of the app stay in the system face,
 // so a sign sits on the page like a photo of a real one rather than as a
 // second typeface. Signs keep amber on black in light and dark mode: they're
@@ -250,12 +251,21 @@ private enum BoardColumnWidth {
 /// Expected. The platform has its own double-height line below it.
 struct DepartureBoardRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    var time: String
+    /// Nil drops the time column, as on the on-board sign where the
+    /// arrival time is in double height below.
+    var time: String?
     var destination: String
     var expected: String
     /// "Calling at Stockport 10:02", dim under the destination.
     var callingAt: String? = nil
     @ScaledMetric(relativeTo: .body) private var timeWidth = BoardColumnWidth.time
+
+    init(time: String?, destination: String, expected: String, callingAt: String? = nil) {
+        self.time = time
+        self.destination = destination
+        self.expected = expected
+        self.callingAt = callingAt
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
@@ -265,7 +275,7 @@ struct DepartureBoardRow: View {
                     .foregroundStyle(DepartureBoardStyle.dimAmber)
                     .lineLimit(1)
                     .allowsTightening(true)
-                    .padding(.leading, dynamicTypeSize.isAccessibilitySize ? 0 : timeWidth + 8)
+                    .padding(.leading, dynamicTypeSize.isAccessibilitySize || time == nil ? 0 : timeWidth + 8)
             }
         }
     }
@@ -277,15 +287,19 @@ struct DepartureBoardRow: View {
         if dynamicTypeSize.isAccessibilitySize {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 8) {
-                    Text(time)
+                    if let time {
+                        Text(time)
+                    }
                     destinationText
                 }
                 Text(expected)
             }
         } else {
             HStack(spacing: 8) {
-                Text(time)
-                    .frame(width: timeWidth, alignment: .leading)
+                if let time {
+                    Text(time)
+                        .frame(width: timeWidth, alignment: .leading)
+                }
                 destinationText
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text(expected)

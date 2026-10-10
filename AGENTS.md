@@ -57,8 +57,15 @@ to `design/review-screenshots/`, which is git-ignored.
   operator and coaches, double-height platform) and a calling points board
   (Time, Calling at, Plat, Expected for every stop; the traveller's stretch
   lit, passed stops and the rest unlit, a dot in the margin where the train
-  is, a change or delay reason dim under its stop). The Lock Screen
-  Live Activity is a sign in itself (no scroller, since it can't animate).
+  is, a change or delay reason dim under its stop). The on-board screen
+  has the carriage's version: a sign led by the traveller's stop (no train
+  time, train destination, operator or coaches; those mattered before
+  boarding), "Next stop" under it, a scrolling message with any delay
+  reason and the arrival platform as a mention, and arrival time with time
+  left at double height, then a calling points board for the traveller's
+  stretch. The Lock Screen Live Activity is a sign in itself (no scroller,
+  since it can't animate) and follows the same emphasis on board; the
+  arrival platform is never a headline there or in the Dynamic Island.
   Search results, the multi-leg leg card and app chrome stay in the system
   face.
   Signs keep amber on black in both appearances, use sign wording ("Exp 08:36", "Cancelled", Darwin's sixteen-character station

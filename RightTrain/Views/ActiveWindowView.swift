@@ -488,7 +488,7 @@ struct ActiveOnTrainJourneyView: View {
     var body: some View {
         TimelineView(.periodic(from: .now, by: 15)) { context in
             VStack(alignment: .leading, spacing: 18) {
-                summarySection
+                summarySection(now: context.date)
 
                 if let detail {
                     stationsSection(detail: detail, now: context.date)
@@ -522,7 +522,7 @@ struct ActiveOnTrainJourneyView: View {
         }
     }
 
-    private var summarySection: some View {
+    private func summarySection(now: Date) -> some View {
         VStack(alignment: .leading, spacing: RTSpacing.cardPadding) {
             PinnedObjectHeader(
                 kind: .journey,
@@ -546,19 +546,7 @@ struct ActiveOnTrainJourneyView: View {
                 EmptyView()
             }
 
-            ViewThatFits(in: .horizontal) {
-                HStack(alignment: .bottom, spacing: 14) {
-                    arrivalHero
-                        .layoutPriority(1)
-                    Spacer(minLength: 8)
-                    arrivalPlatformSummary
-                }
-
-                VStack(alignment: .leading, spacing: 12) {
-                    arrivalHero
-                    arrivalPlatformSummary
-                }
-            }
+            onBoardSign(now: now)
         }
         .frame(maxWidth: .infinity, alignment: .leading)
     }
@@ -576,40 +564,157 @@ struct ActiveOnTrainJourneyView: View {
         ActiveWindowPresentation.heroStatusDisplay(for: recommendation)
     }
 
-    private var arrivalHero: some View {
-        VStack(alignment: .leading, spacing: 5) {
-            Text(JourneyFormatting.isArrived(journey) ? "Arrived" : "Arrives")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
+    // MARK: On-board sign
 
-            CompactTrainTime(
-                display: JourneyFormatting.arrivalDisplay(journey),
-                primaryFont: .largeTitle.weight(.bold),
-                secondaryFont: .subheadline.weight(.semibold)
+    /// The traveller's stop as the display in the carriage shows it. The
+    /// boarded train's own details (its time, where it ends up, who runs
+    /// it) have done their job: the sign gives the stop with Expected and
+    /// the next stop under it, a message line, then the arrival time and
+    /// time left at double height. The arrival platform is only a mention
+    /// in the message.
+    private func onBoardSign(now: Date) -> some View {
+        let arrival = JourneyFormatting.arrivalDisplay(journey)
+        let arrivalTime = arrival.currentText ?? arrival.scheduledText
+        let nextStop = detail.flatMap { nextStopText($0, now: now) }
+        let countdown = arrivalCountdownText(now: now)
+        let message = onBoardMessage
+        let isCancelled = JourneyFormatting.isCancelled(journey)
+        return DepartureBoard {
+            DepartureBoardRow(
+                time: nil,
+                destination: JourneyFormatting.compactDestinationStationText(journey),
+                expected: arrivalExpected,
+                callingAt: nextStop
             )
-        }
-    }
-
-    private var arrivalPlatformSummary: some View {
-        let platform = ActiveWindowPresentation.arrivalPlatformDisplay(for: journey)
-        return VStack(alignment: .trailing, spacing: 5) {
-            Text("Arrival platform")
-                .font(.caption.weight(.semibold))
-                .foregroundStyle(.secondary)
-                .lineLimit(1)
-                .multilineTextAlignment(.trailing)
-
-            PlatformTile(platform: platform.value, size: .medium, role: "Arrival platform")
-
-            if let secondary = platform.secondary {
-                Text(secondary)
-                    .font(.caption2.weight(.medium))
-                    .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .multilineTextAlignment(.trailing)
+            BoardScroller(text: message)
+            ViewThatFits(in: .horizontal) {
+                HStack(alignment: .lastTextBaseline, spacing: RTSpacing.small) {
+                    if !isCancelled {
+                        bigLine(arrivalTime)
+                    }
+                    Spacer(minLength: RTSpacing.small)
+                    bigLine(countdown)
+                }
+                VStack(alignment: .leading, spacing: 2) {
+                    if !isCancelled {
+                        bigLine(arrivalTime)
+                    }
+                    bigLine(countdown)
+                }
             }
         }
-        .frame(alignment: .trailing)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(
+            [
+                "Your stop \(JourneyFormatting.destinationStationText(journey))",
+                arrivalExpected,
+                isCancelled ? nil : "Arrives \(arrivalTime)",
+                isCancelled ? nil : countdown,
+                nextStop,
+                message
+            ]
+            .compactMap { $0 }
+            .joined(separator: ". ")
+        )
+    }
+
+    /// The arrival time is in double height, so a late arrival says how
+    /// late rather than repeating it.
+    private var arrivalExpected: String {
+        if JourneyFormatting.isCancelled(journey) {
+            return "Cancelled"
+        }
+        if JourneyFormatting.isArrived(journey) {
+            return "Arrived"
+        }
+        let arrival = JourneyFormatting.arrivalDisplay(journey)
+        if let current = arrival.currentDate, let scheduled = arrival.scheduledDate {
+            let minutesLate = Int((current.timeIntervalSince(scheduled) / 60).rounded())
+            if minutesLate > 0 {
+                return "\(minutesLate) min late"
+            }
+        }
+        if let current = arrival.currentText, current != arrival.scheduledText {
+            return "Exp \(current)"
+        }
+        return "On time"
+    }
+
+    /// "Next stop Finsbury Park 11:41", or "Now at Finsbury Park" while
+    /// the train is standing there. Nil once it has reached the
+    /// traveller's stop.
+    private func nextStopText(_ detail: JourneyDetail, now: Date) -> String? {
+        guard !JourneyFormatting.isArrived(journey) else {
+            return nil
+        }
+        let entries = segmentStopEntries(for: detail)
+        let position = adjustedPosition(JourneyFormatting.currentTrainPosition(detail, now: now), entries: entries)
+        if let index = position.stationIndex, index > 0, index < entries.count - 1 {
+            return "Now at \(BoardText.station(entries[index].stop))"
+        }
+        let nextIndex: Int
+        if let index = position.stationIndex {
+            nextIndex = index + 1
+        } else if let after = position.betweenAfterIndex {
+            nextIndex = after + 1
+        } else {
+            return nil
+        }
+        guard nextIndex < entries.count else {
+            return nil
+        }
+        let stop = entries[nextIndex].stop
+        let time = stop.timing?.current ?? stop.publicArrival ?? stop.publicDeparture
+        return ["Next stop \(BoardText.station(stop))", time.map { String($0.prefix(5)) }]
+            .compactMap { $0 }
+            .joined(separator: " ")
+    }
+
+    /// Time left to the traveller's stop ("24 min", "1 hr 12 min"), then
+    /// "Arriving" and "Arrived".
+    private func arrivalCountdownText(now: Date) -> String {
+        if JourneyFormatting.isCancelled(journey) {
+            return "Cancelled"
+        }
+        if JourneyFormatting.isArrived(journey) {
+            return "Arrived"
+        }
+        let arrival = JourneyFormatting.arrivalDisplay(journey)
+        guard let date = arrival.currentDate ?? arrival.scheduledDate else {
+            return ""
+        }
+        let seconds = date.timeIntervalSince(now)
+        if seconds <= 60 {
+            return "Arriving"
+        }
+        let minutes = Int((seconds / 60).rounded(.up))
+        if minutes >= 60 {
+            let rest = minutes % 60
+            return rest == 0 ? "\(minutes / 60) hr" : "\(minutes / 60) hr \(rest) min"
+        }
+        return "\(minutes) min"
+    }
+
+    private func bigLine(_ text: String) -> some View {
+        Text(text)
+            .font(BoardFont.font(.title, weight: .bold))
+            .lineLimit(1)
+            .fixedSize()
+    }
+
+    /// Darwin's delay reason, then the arrival platform as a mention.
+    private var onBoardMessage: String {
+        var sentences: [String] = []
+        if let reason = journey.lateReasonText?.trimmingCharacters(in: .whitespacesAndNewlines), !reason.isEmpty {
+            sentences.append(reason.hasSuffix(".") ? reason : "\(reason).")
+        }
+        let verb = JourneyFormatting.isArrived(journey) ? "Arrived" : "Arriving"
+        if let number = ActiveWindowPresentation.arrivalPlatformDisplay(for: journey).value.number {
+            sentences.append("\(verb) at platform \(number).")
+        } else {
+            sentences.append("\(verb) at \(JourneyFormatting.destinationStationText(journey)).")
+        }
+        return BoardText.boardSafe(sentences.joined(separator: "  "))
     }
 
     private func stationsSection(detail: JourneyDetail, now: Date) -> some View {
@@ -632,26 +737,63 @@ struct ActiveOnTrainJourneyView: View {
                 }
             }
 
-            LazyVStack(alignment: .leading, spacing: 0) {
+            // The calling points board for the traveller's stretch: passed
+            // stops go unlit and a dot in the margin marks the train.
+            DepartureBoard {
+                ConcourseBoardHeader(placeTitle: "Calling at")
                 ForEach(entries) { entry in
-                    JourneyStopRow(
-                        stop: entry.stop,
-                        isCurrent: trainPosition.stationIndex == entry.localIndex,
-                        isBetweenAfter: trainPosition.betweenAfterIndex == entry.localIndex,
-                        betweenProgress: trainPosition.progress,
-                        isPassed: stopIsPassed(at: entry.localIndex, trainPosition: trainPosition),
-                        isFirst: entry.localIndex == 0,
-                        isLast: entry.localIndex == entries.count - 1,
-                        showsPlatform: entry.localIndex == 0 || entry.localIndex == entries.count - 1
+                    let isEnd = entry.localIndex == 0 || entry.localIndex == entries.count - 1
+                    CallingPointBoardRow(
+                        time: BoardText.time(entry.stop),
+                        station: BoardText.station(entry.stop),
+                        platform: isEnd ? stopPlatform(entry.stop) : nil,
+                        expected: BoardText.expected(entry.stop),
+                        note: stopReason(entry.stop),
+                        isLit: !stopIsPassed(at: entry.localIndex, trainPosition: trainPosition),
+                        marker: marker(at: entry.localIndex, trainPosition: trainPosition)
                     )
-                    .padding(.vertical, 10)
+                    .accessibilityElement(children: .ignore)
+                    .accessibilityLabel(
+                        [
+                            JourneyFormatting.stationDisplayName(name: entry.stop.name, fallback: entry.stop.crs ?? entry.stop.tpl),
+                            BoardText.time(entry.stop),
+                            BoardText.expected(entry.stop),
+                            stopReason(entry.stop)
+                        ]
+                        .compactMap { $0 }
+                        .filter { !$0.isEmpty && $0 != "-" }
+                        .joined(separator: ", ")
+                    )
                 }
             }
-            .padding(.horizontal, RTSpacing.cardPadding)
-            .padding(.vertical, 6)
-            .background(Color.rightTrainSurface, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
-            .lightSurfaceForeground()
         }
+    }
+
+    private func stopPlatform(_ stop: JourneyStop) -> PlatformValue {
+        PlatformValue(
+            stop.realtime?.platform ?? stop.scheduledPlatform,
+            confirmed: stop.realtime?.platform != nil && stop.realtime?.platformConfirmed == true
+        )
+    }
+
+    private func stopReason(_ stop: JourneyStop) -> String? {
+        guard let reason = stop.realtime?.reasonText, !reason.isEmpty else {
+            return nil
+        }
+        if let location = stop.realtime?.reasonLocationName, !location.isEmpty {
+            return BoardText.boardSafe("\(reason) near \(location)")
+        }
+        return BoardText.boardSafe(reason)
+    }
+
+    private func marker(at index: Int, trainPosition: JourneyTrainPosition) -> CallingPointBoardRow.Marker {
+        if trainPosition.stationIndex == index {
+            return .here
+        }
+        if let after = trainPosition.betweenAfterIndex, after + 1 == index {
+            return .approaching
+        }
+        return .none
     }
 
     /// How far the rider is from the stations either side, from a location

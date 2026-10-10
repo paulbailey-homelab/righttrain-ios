@@ -68,7 +68,7 @@ struct RightTrainLiveActivityWidget: Widget {
                         // Already falls back to its bare symbol via
                         // ViewThatFits, keeping "+18" whenever it fits.
                         StatusGlyph(kind: statusKind, delayMinutes: context.state.selectedTrain?.delayMinutes ?? context.state.delayMinutes)
-                    } else if let platform = departurePlatform(for: context) {
+                    } else if !isOnboardTrain(context), let platform = departurePlatform(for: context) {
                         CompactPlatformText(platform: platform, confirmed: context.state.platformConfirmed)
                     } else {
                         StatusGlyph(kind: statusKind, delayMinutes: context.state.selectedTrain?.delayMinutes ?? context.state.delayMinutes)
@@ -119,11 +119,15 @@ struct RightTrainLiveActivityWidget: Widget {
         return context.state.recommendedTrain?.departureTime ?? context.state.compactWindowEmptyStateText
     }
 
+    /// On board a pinned train the arrival time is what matters; the
+    /// arrival platform is only a footnote on the Lock Screen sign.
+    private func isOnboardTrain(_ context: ActivityViewContext<RightTrainLiveActivityAttributes>) -> Bool {
+        context.attributes.activityKind == .train && context.state.selectedTrain?.isOnboard == true
+    }
+
     private func islandPlatform(for context: ActivityViewContext<RightTrainLiveActivityAttributes>) -> (role: String, value: String, confirmed: Bool)? {
-        if context.attributes.activityKind == .train,
-           let train = context.state.selectedTrain,
-           train.isOnboard {
-            return displayPlatform(train.arrivalPlatform).map { (role: "Arrival platform", value: $0, confirmed: true) }
+        if isOnboardTrain(context) {
+            return nil
         }
         // On approaching_interchange, the user cares most about the
         // ONWARD platform at the interchange. Surface it in the island.
@@ -142,11 +146,8 @@ struct RightTrainLiveActivityWidget: Widget {
     }
 
     private func compactPlatform(for context: ActivityViewContext<RightTrainLiveActivityAttributes>) -> (value: String, accessibilityPrefix: String, confirmed: Bool)? {
-        if context.attributes.activityKind == .train,
-           let train = context.state.selectedTrain,
-           train.isOnboard,
-           let platform = displayPlatform(train.arrivalPlatform) {
-            return (value: platform, accessibilityPrefix: "Arrival platform", confirmed: true)
+        if isOnboardTrain(context) {
+            return nil
         }
         // At an interchange the onward platform is the one to walk to.
         if context.attributes.activityKind == .leg,
@@ -1355,8 +1356,10 @@ private struct TimelineProgressHairline: View {
 /// matching the sign on Pinned: amber single-dot lettering on black, the
 /// board time, Darwin's short destination name and the Expected wording,
 /// then platform and time left in double-height lettering, then one line of
-/// news. Before departure it's the departure board; on board it's the
-/// arrival at the traveller's stop.
+/// news. Before departure it's the departure board. On board the train's own
+/// details have done their job, so the sign is about the traveller's stop:
+/// its name and Expected, then the arrival time and time left, with the
+/// arrival platform only a mention on the bottom line.
 private struct BoardTrainActivityView: View {
     enum Mode {
         case departure
@@ -1372,8 +1375,10 @@ private struct BoardTrainActivityView: View {
     var body: some View {
         VStack(alignment: .leading, spacing: 5) {
             HStack(spacing: 8) {
-                Text(scheduledTime)
-                    .frame(width: timeWidth, alignment: .leading)
+                if mode == .departure {
+                    Text(scheduledTime)
+                        .frame(width: timeWidth, alignment: .leading)
+                }
                 Text(destination)
                     .allowsTightening(true)
                     .frame(maxWidth: .infinity, alignment: .leading)
@@ -1383,7 +1388,11 @@ private struct BoardTrainActivityView: View {
             .lineLimit(1)
 
             HStack(alignment: .lastTextBaseline, spacing: 8) {
-                if !isCancelled {
+                if mode == .arrival {
+                    if !isCancelled {
+                        Text(currentTime)
+                    }
+                } else if !isCancelled {
                     Text(platformText)
                         .foregroundStyle(platformStyle)
                 }
@@ -1450,9 +1459,20 @@ private struct BoardTrainActivityView: View {
     private var expected: String {
         if isCancelled { return "Cancelled" }
         if hasHappened { return mode == .arrival ? "Arrived" : "Departed" }
+        if mode == .arrival, isDelayed, let minutesLate, minutesLate > 0 {
+            // The arrival time is already in big lettering below.
+            return "\(minutesLate) min late"
+        }
         if isDelayed, trimmed(currentTime) != trimmed(scheduledTime) { return "Exp \(currentTime)" }
         if train.statusKind == .delayed { return "Delayed" }
         return "On time"
+    }
+
+    private var minutesLate: Int? {
+        guard let expected = train.arrivalDate, let scheduled = train.scheduledArrivalDate else {
+            return nil
+        }
+        return Int((expected.timeIntervalSince(scheduled) / 60).rounded())
     }
 
     // MARK: Platform and countdown
@@ -1486,8 +1506,9 @@ private struct BoardTrainActivityView: View {
             : train.departureDate ?? train.scheduledDepartureDate
     }
 
-    /// Minutes to go within the hour, which the system keeps ticking between
-    /// pushes; otherwise the board time.
+    /// Time left, which the system keeps ticking between pushes. Before
+    /// departure that's within the hour, otherwise the board time; on board
+    /// the arrival time already leads the line, so it's always time left.
     @ViewBuilder private var countdown: some View {
         if isCancelled {
             Text("Cancelled")
@@ -1495,9 +1516,10 @@ private struct BoardTrainActivityView: View {
             Text(mode == .arrival ? "Arrived" : "Departed")
         } else if let targetDate, abs(targetDate.timeIntervalSinceNow) <= 60 {
             Text(mode == .arrival ? "Arriving" : "Departing")
-        } else if let targetDate, targetDate.timeIntervalSinceNow > 0, targetDate.timeIntervalSinceNow < 60 * 60 {
+        } else if let targetDate, targetDate.timeIntervalSinceNow > 0,
+                  mode == .arrival || targetDate.timeIntervalSinceNow < 60 * 60 {
             MinuteRelativeText(date: targetDate)
-        } else {
+        } else if mode == .departure {
             Text(currentTime)
         }
     }
@@ -1505,7 +1527,7 @@ private struct BoardTrainActivityView: View {
     // MARK: Message line
 
     /// A platform change first, then the delay or cancellation summary,
-    /// then who runs the train.
+    /// then who runs the train. On board, the arrival platform instead.
     private var message: String {
         if mode == .departure, let change = state.platformChange(for: train) {
             return "Now departing from platform \(change.currentPlatform), not platform \(change.previousPlatform)."
@@ -1514,7 +1536,11 @@ private struct BoardTrainActivityView: View {
             return boardSafe(summary)
         }
         if mode == .arrival {
-            return "Departed \(train.departureTime).  Arrives \(train.destinationName) \(train.arrivalTime)."
+            let verb = hasHappened ? "Arrived" : "Arriving"
+            if let number = platform.number {
+                return "\(verb) at platform \(number)."
+            }
+            return "\(verb) at \(train.destinationName)."
         }
         if let operatorName = train.operatorNameDisplayText {
             let article = "AEIOU".contains(operatorName.prefix(1).uppercased()) ? "an" : "a"
@@ -1534,6 +1560,16 @@ private struct BoardTrainActivityView: View {
     }
 
     private var accessibilityLabel: String {
+        if mode == .arrival {
+            var parts = ["Your stop \(train.destinationName)", expected]
+            if let targetDate, !hasHappened, !isCancelled {
+                let formatter = RelativeDateTimeFormatter()
+                formatter.unitsStyle = .full
+                parts.append("Arrives \(currentTime), \(formatter.localizedString(for: targetDate, relativeTo: Date()))")
+            }
+            parts.append(message)
+            return parts.joined(separator: ", ")
+        }
         let verb = mode == .arrival ? "Arrives at" : "Departs"
         let place = mode == .arrival ? train.destinationName : "to \(train.serviceDestinationDisplayName)"
         var parts = ["\(scheduledTime) \(place)", expected]
