@@ -57,7 +57,11 @@ to `design/review-screenshots/`, which is git-ignored.
   operator and coaches, double-height platform) and a calling points board
   (Time, Calling at, Plat, Expected for every stop; the traveller's stretch
   lit, passed stops and the rest unlit, a dot in the margin where the train
-  is, a change or delay reason dim under its stop). The Lock Screen
+  is, a change or delay reason dim under its stop). The on-board screen
+  has the carriage's version: a sign with the traveller's arrival as the
+  train line, "Next stop" under it, a scrolling message, and arrival
+  platform with minutes to go at double height, then a calling points board
+  for the traveller's stretch. The Lock Screen
   Live Activity is a sign in itself (no scroller, since it can't animate).
   Search results, the multi-leg leg card and app chrome stay in the system
   face.

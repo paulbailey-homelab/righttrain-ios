@@ -7,7 +7,8 @@ import SwiftUI
 // Pinned carries two signs, as a station does: the platform indicator for
 // the pinned train, and a concourse departures board for the other trains
 // in the search. Journey detail has two as well: a platform indicator for
-// the train and a calling points board. The Lock Screen Live Activity is a
+// the train and a calling points board, and so does the on-board screen,
+// as the display in the carriage. The Lock Screen Live Activity is a
 // sign in itself. Search results and the rest of the app stay in the system face,
 // so a sign sits on the page like a photo of a real one rather than as a
 // second typeface. Signs keep amber on black in light and dark mode: they're
