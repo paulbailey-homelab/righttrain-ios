@@ -1510,7 +1510,7 @@ private struct BoardTrainActivityView: View {
         if mode == .departure, let change = state.platformChange(for: train) {
             return "Now departing from platform \(change.currentPlatform), not platform \(change.previousPlatform)."
         }
-        if let summary = state.disruptionSummaryText(for: train) {
+        if let summary = state.disruptionSummaryText(for: train), !repeatsRow(summary) {
             return boardSafe(summary)
         }
         if mode == .arrival {
@@ -1521,6 +1521,16 @@ private struct BoardTrainActivityView: View {
             return "This is \(article) \(operatorName) service to \(train.serviceDestinationDisplayName)."
         }
         return "Arrives \(train.destinationName) \(train.arrivalTime)."
+    }
+
+    /// At the station the summary is the departure signage, "11:22 to
+    /// Moorgate", which the top row already shows.
+    private func repeatsRow(_ summary: String) -> Bool {
+        let summary = trimmed(summary)
+        return [scheduledTime, currentTime]
+            .map(trimmed)
+            .filter { !$0.isEmpty }
+            .contains { summary.hasPrefix("\($0) to ") }
     }
 
     private var accessibilityLabel: String {
