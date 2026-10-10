@@ -405,11 +405,10 @@ private struct PlanSearchResultsView: View {
         .listStyle(.insetGrouped)
         .readableContentMargins()
         .toolbar {
-            if let response = viewModel.recommendationResponse,
-               !response.recommendations.isEmpty || response.topRecommendation != nil {
+            if let trainCount = viewModel.searchPinTrainCount {
                 ToolbarItem(placement: .topBarTrailing) {
                     SearchPinToolbarButton(
-                        recommendationCount: response.recommendations.count,
+                        recommendationCount: trainCount,
                         action: requestPinDirectWindow
                     )
                 }

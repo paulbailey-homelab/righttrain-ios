@@ -114,6 +114,30 @@ final class WindowSetupViewModel {
         isSignedInProvider()
     }
 
+    /// How many direct trains a Search Pin on the current results would
+    /// watch, or nil when the results can't be pinned as a search. A Search
+    /// Pin is a window subscription, which watches direct trains only, so a
+    /// planner search offers it whenever it found any direct train.
+    var searchPinTrainCount: Int? {
+        if let response = recommendationResponse {
+            guard !response.recommendations.isEmpty || response.topRecommendation != nil else {
+                return nil
+            }
+            return response.recommendations.count
+        }
+        guard let response = journeyPlanResponse else {
+            return nil
+        }
+        let direct = Self.directItineraries(in: response)
+        return direct.isEmpty ? nil : direct.count
+    }
+
+    private static func directItineraries(in response: JourneyPlanResponse) -> [ItineraryRecommendation] {
+        // A backend that predates the separate direct pass only has the
+        // mixed list, where a direct train is a one-leg itinerary.
+        response.directItineraries ?? response.itineraries.filter { $0.legs.count == 1 }
+    }
+
     var searchMode: JourneySearchMode {
         multiLegRoutingEnabled ? .anyRoute : .direct
     }
@@ -257,10 +281,30 @@ final class WindowSetupViewModel {
             return
         }
         let searchDepartureStart = effectiveDepartureStart()
+        // Pinning the whole search watches its direct trains, whichever
+        // search found them. Only a planner search with no direct train at
+        // all falls back to monitoring its top route.
+        let pinsDirectTrains = searchMode == .direct
+            || journeyPlanResponse.map { !Self.directItineraries(in: $0).isEmpty } == true
 
         await operationState.withLoading {
             if replacingActiveJourney {
                 try await activeWindowViewModel.replaceActiveJourneyIfNeeded()
+            }
+            if pinsDirectTrains, searchMode == .anyRoute {
+                _ = try await activeWindowViewModel.createWindow(
+                    input: CreateWindowSubscriptionRequest(
+                        originCrs: origin.crs,
+                        destinationCrs: destination.crs,
+                        originTpl: origin.tpl,
+                        destinationTpl: destination.tpl,
+                        departureStart: searchDepartureStart,
+                        windowMinutes: windowMinutes
+                    )
+                )
+                // The planner results stay on screen, as they do when a
+                // single direct train from them is pinned.
+                return
             }
             switch searchMode {
             case .direct:
