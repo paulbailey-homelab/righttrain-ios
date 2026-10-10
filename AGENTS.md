@@ -51,9 +51,16 @@ to `design/review-screenshots/`, which is git-ignored.
   double-height platform and countdown; no clock, since the phone shows one)
   and a concourse departures board for the other trains in the search (Time,
   Destination, Plat, Expected, a dim "Calling at Stockport 10:25" line with
-  the traveller's arrival, cancelled trains in place). The Lock Screen
+  the traveller's arrival, cancelled trains in place). Journey detail has
+  two: a platform indicator for the train (train line, "Calling at" line
+  with the traveller's arrival, scrolling message with any delay reason,
+  operator and coaches, double-height platform) and a calling points board
+  (Time, Calling at, Plat, Expected for every stop; the traveller's stretch
+  lit, passed stops and the rest unlit, a dot in the margin where the train
+  is, a change or delay reason dim under its stop). The Lock Screen
   Live Activity is a sign in itself (no scroller, since it can't animate).
-  Search results, journey detail and app chrome stay in the system face.
+  Search results, the multi-leg leg card and app chrome stay in the system
+  face.
   Signs keep amber on black in both appearances, use sign wording ("Exp 08:36", "Cancelled", Darwin's sixteen-character station
   names) and avoid £, middle dots and arrows, which the face lacks. Fonts and
   OFL licence are in `RightTrain/Fonts`, loaded through `BoardFont`.
