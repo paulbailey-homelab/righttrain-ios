@@ -11,32 +11,50 @@ struct ItineraryOnLegView: View {
     }
 
     var body: some View {
-        ActiveItineraryCard {
-            if approachingInterchange {
-                approachingBanner
-            }
-
-            currentTrainCard
-
-            if let connection = itinerary.nextConnection, !approachingInterchange {
-                connectionCard(connection)
-            }
-
-            if let onward = itinerary.onwardLeg {
-                onwardCard(onward)
-            }
-
-            if presentation.canBoardOnwardLeg, let onwardLeg = itinerary.onwardLeg {
-                Button {
-                    Task {
-                        await activeWindowViewModel.boardItineraryLeg(onwardLeg.legIndex, itineraryID: itinerary.id)
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            ActiveItineraryCard {
+                // Approaching the change the onward train's platform
+                // indicator is the sign, since its platform is the one to
+                // walk to; otherwise it's the carriage display for this leg.
+                if approachingInterchange, let onward = itinerary.onwardLeg {
+                    legSign(onward) {
+                        PlatformIndicatorSign(
+                            journey: onward.journeyResult,
+                            platform: PlatformValue(onwardPlatform(onward), confirmed: onward.realtimePlatformConfirmed),
+                            message: approachingMessage(onward),
+                            now: context.date
+                        )
                     }
-                } label: {
-                    Label("I'm on the next train", systemImage: "checkmark.circle.fill")
-                        .frame(maxWidth: .infinity)
+                } else if let leg = itinerary.currentLeg {
+                    legSign(leg) {
+                        OnBoardSign(
+                            journey: leg.journeyResult,
+                            message: BoardText.arrivingMessage(leg.journeyResult, extra: changeNote),
+                            now: context.date
+                        )
+                    }
                 }
-                .buttonStyle(.rtPrimary)
-                .accessibilityIdentifier("active-itinerary-board-onward-leg")
+
+                if let connection = itinerary.nextConnection, !approachingInterchange {
+                    connectionCard(connection)
+                }
+
+                if let onward = itinerary.onwardLeg, !approachingInterchange {
+                    onwardCard(onward)
+                }
+
+                if presentation.canBoardOnwardLeg, let onwardLeg = itinerary.onwardLeg {
+                    Button {
+                        Task {
+                            await activeWindowViewModel.boardItineraryLeg(onwardLeg.legIndex, itineraryID: itinerary.id)
+                        }
+                    } label: {
+                        Label("I'm on the next train", systemImage: "checkmark.circle.fill")
+                            .frame(maxWidth: .infinity)
+                    }
+                    .buttonStyle(.rtPrimary)
+                    .accessibilityIdentifier("active-itinerary-board-onward-leg")
+                }
             }
         }
         .background {
@@ -44,101 +62,49 @@ struct ItineraryOnLegView: View {
         }
     }
 
-    /// The one thing to do next, at the same scale as the direct Pin's
-    /// hero: where to get off, and the platform to walk to.
-    private var approachingBanner: some View {
-        let title = if let connection = itinerary.nextConnection {
-            "Get off at \(ItineraryFormatting.approachingConnectionText(connection))"
-        } else {
-            "Get off at the interchange"
+    /// A sign that opens the leg's calling points.
+    private func legSign<Sign: View>(_ leg: ItineraryLeg, @ViewBuilder sign: () -> Sign) -> some View {
+        Button {
+            Task { await loadDetail(leg) }
+        } label: {
+            sign()
         }
-        let onward = itinerary.onwardLeg
-        let onwardPlatform = onward.flatMap { nonEmptyPlatform($0.realtimePlatform) ?? nonEmptyPlatform($0.originPlatform) }
-
-        return HStack(alignment: .lastTextBaseline, spacing: RTSpacing.compact) {
-            VStack(alignment: .leading, spacing: 2) {
-                Label(title, systemImage: "figure.walk.diamond.fill")
-                    .font(.headline)
-                    .labelStyle(.titleAndIcon)
-                    .fixedSize(horizontal: false, vertical: true)
-                if let onward {
-                    Text(onwardHeroLine(onward))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(connectionTint)
-                        .monospacedDigit()
-                }
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-
-            if let onward, onwardPlatform != nil {
-                CaptionedPlatformTile(
-                    platform: PlatformValue(onwardPlatform, confirmed: onward.realtimePlatformConfirmed),
-                    size: .large,
-                    role: "Next platform"
-                )
-            }
-        }
-        .accessibilityElement(children: .combine)
+        .buttonStyle(.plain)
+        .accessibilityHint("Shows the train's calling points")
     }
 
-    private var connectionTint: Color {
-        guard let connection = itinerary.nextConnection else {
-            return .secondary
+    /// "Change here for the 10:12 to Leeds, platform 4." on the leg before
+    /// a change.
+    private var changeNote: String? {
+        guard let onward = itinerary.onwardLeg else {
+            return nil
         }
-        switch connection.risk.status {
-        case "missed":
-            return .rightTrainDanger
-        case "at_risk", "tight":
-            return .rightTrainAmber
-        default:
-            return .secondary
+        if itinerary.nextConnection?.risk.status == "missed" {
+            return "Connection missed."
         }
+        let time = ItineraryFormatting.timeText(onward.expectedDeparture ?? onward.scheduledDeparture)
+        var note = "Change here for the \(time) to \(BoardText.destination(onward.journeyResult))"
+        if let platform = onwardPlatform(onward) {
+            note += ", platform \(platform)"
+        }
+        return note + "."
     }
 
-    private func onwardHeroLine(_ leg: ItineraryLeg) -> String {
-        var parts = ["Next \(ItineraryFormatting.timeText(leg.expectedDeparture ?? leg.scheduledDeparture))"]
+    /// "Change at Stevenage.  6 min to change." above any delay reason.
+    private func approachingMessage(_ onward: ItineraryLeg) -> String {
+        var sentences: [String] = []
         if let connection = itinerary.nextConnection {
-            parts.append(riskText(connection))
+            sentences.append("Change at \(ItineraryFormatting.approachingConnectionText(connection)).")
+            sentences.append(connection.risk.status == "missed" ? "Connection missed." : "\(riskText(connection).prefix(1).uppercased())\(riskText(connection).dropFirst()).")
         }
-        return parts.joined(separator: " · ")
+        if let reason = onward.lateReasonText?.trimmingCharacters(in: .whitespacesAndNewlines), !reason.isEmpty {
+            sentences.append(reason.hasSuffix(".") ? reason : "\(reason).")
+        }
+        return sentences.joined(separator: "  ")
     }
 
-    @ViewBuilder
-    private var currentTrainCard: some View {
-        if let leg = itinerary.currentLeg {
-            Button {
-                Task { await loadDetail(leg) }
-            } label: {
-                VStack(alignment: .leading, spacing: 6) {
-                    ViewThatFits(in: .horizontal) {
-                        HStack(alignment: .firstTextBaseline) {
-                            Text(legTitle(leg))
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.primary)
-                                .multilineTextAlignment(.leading)
-                            Spacer()
-                            Text("Arr \(ItineraryFormatting.timeText(leg.expectedArrival ?? leg.scheduledArrival))")
-                                .font(.subheadline.weight(.semibold).monospacedDigit())
-                                .foregroundStyle(.primary)
-                        }
-                        VStack(alignment: .leading, spacing: 3) {
-                            Text(legTitle(leg))
-                                .font(.subheadline.weight(.semibold))
-                                .foregroundStyle(.primary)
-                            Text("Arr \(ItineraryFormatting.timeText(leg.expectedArrival ?? leg.scheduledArrival))")
-                                .font(.subheadline.weight(.semibold).monospacedDigit())
-                                .foregroundStyle(.primary)
-                        }
-                    }
-                    Text(currentLegSummary(leg))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.leading)
-                }
-                .itineraryLegRowChrome(systemImage: "tram.fill", showsDivider: approachingInterchange)
-            }
-            .buttonStyle(.plain)
-        }
+    private func onwardPlatform(_ leg: ItineraryLeg) -> String? {
+        nonEmptyPlatform(leg.realtimePlatform) ?? nonEmptyPlatform(leg.originPlatform)
     }
 
     private func connectionCard(_ connection: ItineraryConnection) -> some View {
@@ -228,23 +194,6 @@ struct ItineraryOnLegView: View {
         .buttonStyle(.plain)
     }
 
-    private func legTitle(_ leg: ItineraryLeg) -> String {
-        ItineraryFormatting.legRouteText(leg)
-    }
-
-    /// Platforms are labelled: a bare "4" beside an operator name reads as
-    /// anything but a platform.
-    private func currentLegSummary(_ leg: ItineraryLeg) -> String {
-        var parts: [String] = []
-        if let platform = nonEmptyPlatform(leg.destinationRealtime?.platform) ?? nonEmptyPlatform(leg.destinationPlatform) {
-            parts.append("Arrives platform \(platform)")
-        }
-        if let op = JourneyFormatting.operatorSummaryText(leg.journeyResult) {
-            parts.append(op)
-        }
-        return parts.joined(separator: " · ")
-    }
-
     private func onwardSummary(_ leg: ItineraryLeg) -> String {
         var parts = ["Dep \(ItineraryFormatting.timeText(leg.expectedDeparture ?? leg.scheduledDeparture))"]
         if let platform = nonEmptyPlatform(leg.realtimePlatform) ?? nonEmptyPlatform(leg.originPlatform) {
@@ -290,8 +239,8 @@ struct ItineraryOnLegView: View {
     }
 }
 
-/// Final-leg perspective: no more connections to make, so keep the focus on
-/// arrival while retaining stop-monitoring in the common menu.
+/// Final-leg perspective: no more connections to make, so the carriage
+/// display for the last train is the whole card.
 struct ItineraryOnFinalLegView: View {
     var itinerary: ItinerarySubscription
     var loadDetail: (ItineraryLeg) async -> Void
@@ -301,120 +250,26 @@ struct ItineraryOnFinalLegView: View {
     }
 
     var body: some View {
-        ActiveItineraryCard {
-            if let leg = itinerary.currentLeg {
-                arrivalCard(leg)
-                finalLegNextStep(leg)
+        TimelineView(.periodic(from: .now, by: 30)) { context in
+            ActiveItineraryCard {
+                if let leg = itinerary.currentLeg {
+                    Button {
+                        Task { await loadDetail(leg) }
+                    } label: {
+                        OnBoardSign(
+                            journey: leg.journeyResult,
+                            message: BoardText.arrivingMessage(leg.journeyResult),
+                            now: context.date
+                        )
+                    }
+                    .buttonStyle(.plain)
+                    .accessibilityHint("Shows the train's calling points")
+                }
             }
         }
         .background {
             ActiveItineraryHeader(presentation: presentation)
         }
-    }
-
-    private func arrivalCard(_ leg: ItineraryLeg) -> some View {
-        Button {
-            Task { await loadDetail(leg) }
-        } label: {
-            VStack(alignment: .leading, spacing: 6) {
-                ViewThatFits(in: .horizontal) {
-                    HStack(alignment: .firstTextBaseline) {
-                        Text("Arriving at \(JourneyFormatting.stationDisplayName(name: leg.destinationName, fallback: leg.destinationCrs))")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
-                        Spacer()
-                        HStack(alignment: .center, spacing: 8) {
-                            Text(ItineraryFormatting.timeText(leg.expectedArrival ?? leg.scheduledArrival))
-                                .font(.title3.weight(.semibold).monospacedDigit())
-                                .foregroundStyle(.primary)
-                            PlatformTile(
-                                platform: PlatformValue(
-                                    leg.destinationRealtime?.platform ?? leg.destinationPlatform,
-                                    confirmed: leg.destinationRealtime?.platformConfirmed == true
-                                ),
-                                role: "Arrival platform"
-                            )
-                        }
-                    }
-                    VStack(alignment: .leading, spacing: 3) {
-                        Text("Arriving at \(JourneyFormatting.stationDisplayName(name: leg.destinationName, fallback: leg.destinationCrs))")
-                            .font(.subheadline.weight(.semibold))
-                            .foregroundStyle(.primary)
-                        HStack(alignment: .center, spacing: 8) {
-                            Text(ItineraryFormatting.timeText(leg.expectedArrival ?? leg.scheduledArrival))
-                                .font(.title3.weight(.semibold).monospacedDigit())
-                                .foregroundStyle(.primary)
-                            PlatformTile(
-                                platform: PlatformValue(
-                                    leg.destinationRealtime?.platform ?? leg.destinationPlatform,
-                                    confirmed: leg.destinationRealtime?.platformConfirmed == true
-                                ),
-                                role: "Arrival platform"
-                            )
-                        }
-                    }
-                }
-                if !arrivalSummary(leg).isEmpty {
-                    Text(arrivalSummary(leg))
-                        .font(.caption)
-                        .foregroundStyle(.secondary)
-                        .multilineTextAlignment(.leading)
-                }
-            }
-            .padding(12)
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .background(Color.rightTrainInsetFill, in: RoundedRectangle(cornerRadius: RTRadius.chip))
-            .lightSurfaceForeground()
-        }
-        .buttonStyle(.plain)
-    }
-
-    private func arrivalSummary(_ leg: ItineraryLeg) -> String {
-        ItineraryFormatting.legSummaryText(
-            leg,
-            includesTimes: false,
-            includesPlatform: false,
-            includesStatus: false
-        )
-    }
-
-    private func finalLegNextStep(_ leg: ItineraryLeg) -> some View {
-        let destination = JourneyFormatting.stationDisplayName(name: leg.destinationName, fallback: leg.destinationCrs)
-        let arrival = ItineraryFormatting.timeText(leg.expectedArrival ?? leg.scheduledArrival)
-        let platform = nonEmptyPlatform(leg.destinationRealtime?.platform) ?? nonEmptyPlatform(leg.destinationPlatform)
-
-        return HStack(alignment: .top, spacing: RTSpacing.listItem) {
-            Image(systemName: "figure.walk")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Color.rightTrainActionInk)
-                .frame(width: RTSize.iconSmall)
-
-            VStack(alignment: .leading, spacing: 4) {
-                Text(finalLegNextStepTitle(destination: destination, platform: platform))
-                    .font(.subheadline.weight(.semibold))
-                    .fixedSize(horizontal: false, vertical: true)
-                Text("Arrival is due at \(arrival). RightTrain will keep this Journey Pin live until you arrive.")
-                    .font(.caption)
-                    .foregroundStyle(.secondary)
-                    .fixedSize(horizontal: false, vertical: true)
-            }
-        }
-        .padding(12)
-        .background(Color.rightTrainActionInk.opacity(0.08), in: RoundedRectangle(cornerRadius: RTRadius.chip))
-    }
-
-    private func finalLegNextStepTitle(destination: String, platform: String?) -> String {
-        if let platform {
-            return "Get ready to leave at \(destination), platform \(platform)"
-        }
-        return "Get ready to leave at \(destination)"
-    }
-
-    private func nonEmptyPlatform(_ value: String?) -> String? {
-        guard let trimmed = value?.trimmingCharacters(in: .whitespacesAndNewlines), !trimmed.isEmpty else {
-            return nil
-        }
-        return trimmed
     }
 }
 

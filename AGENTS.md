@@ -66,6 +66,12 @@ to `design/review-screenshots/`, which is git-ignored.
   stretch. The Lock Screen Live Activity is a sign in itself (no scroller,
   since it can't animate) and follows the same emphasis on board; the
   arrival platform is never a headline there or in the Dynamic Island.
+  Itinerary pins (journeys with changes) use the same two signs
+  (`PlatformIndicatorSign` before a train, `OnBoardSign` on one): the next
+  train's platform indicator before boarding and when approaching a change,
+  the carriage display on a leg with the change on its message line. Their
+  Lock Screen Live Activity is the same sign; the connection and onward-leg
+  cards stay system cards.
   Search results, the multi-leg leg card and app chrome stay in the system
   face.
   Signs keep amber on black in both appearances, use sign wording ("Exp 08:36", "Cancelled", Darwin's sixteen-character station

@@ -351,6 +351,10 @@ struct ActiveItineraryView: View {
     private func selectedJourneySection(now: Date) -> some View {
         if !presentation.journeyOptions.isEmpty {
             LazyVStack(alignment: .leading, spacing: RTSpacing.listItem) {
+                if let selected = presentation.selectedItinerary, let firstLeg = selected.legs.first {
+                    firstTrainSign(firstLeg, in: selected, now: now)
+                }
+
                 ForEach(presentation.journeyOptions) { option in
                     let isSelected = option.id == presentation.selectedItinerary?.id
                     ActiveItineraryOptionCard(
@@ -384,6 +388,26 @@ struct ActiveItineraryView: View {
                 message: "RightTrain could not find a usable journey for this window."
             )
         }
+    }
+
+    /// Before the first train, its platform indicator, with the change on
+    /// the message line. The route breakdown stays a card below it.
+    private func firstTrainSign(_ leg: ItineraryLeg, in selected: ItineraryRecommendation, now: Date) -> some View {
+        let journey = leg.journeyResult
+        let platform = ActiveWindowPresentation.platformDisplay(for: journey).value
+        var message = BoardText.message(journey, platform: platform)
+        if let next = selected.legs.first(where: { $0.legIndex > leg.legIndex }) {
+            let time = ItineraryFormatting.timeText(next.expectedDeparture ?? next.scheduledDeparture)
+            let station = JourneyFormatting.stationDisplayName(name: leg.destinationName, fallback: leg.destinationCrs)
+            message += "  Change at \(station) for the \(time) to \(BoardText.destination(next.journeyResult))."
+        }
+        return Button {
+            Task { await loadDetail(leg) }
+        } label: {
+            PlatformIndicatorSign(journey: journey, platform: platform, message: message, now: now)
+        }
+        .buttonStyle(.plain)
+        .accessibilityHint("Shows the train's calling points")
     }
 
     /// Before boarding, the other routes this search returned are the only
