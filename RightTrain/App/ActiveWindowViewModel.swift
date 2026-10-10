@@ -1184,7 +1184,12 @@ final class ActiveWindowViewModel {
             tokenRegistration: liveActivityTokenRegistrationContext()
         )
         operationState.alertState = nil
-        BetaDiagnostics.record("active_itinerary_created")
+        let selected = subscription.selectedItinerary
+        let services = selected.legs.map { String($0.serviceId) }.joined(separator: ",")
+        BetaDiagnostics.record(
+            "active_itinerary_created",
+            details: "legs=\(selected.legs.count);changes=\(selected.score.changeCount);services=\(services)"
+        )
         return subscription
     }
 
