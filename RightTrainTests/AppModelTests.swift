@@ -1255,6 +1255,65 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
+    func testPinSearchOnPlannerResultsWatchesTheDirectTrains() async {
+        // One search returns planner results, and the Search Pin used to
+        // appear only on the old direct results, so pinning a search vanished.
+        let apiClient = FakeAPIClient()
+        let sessionStore = FakeSessionStore()
+        sessionStore.session = TestFactory.storedSession(accessToken: "create-token")
+        apiClient.currentUserResult = .success(TestFactory.user())
+        apiClient.activeWindowResult = .failure(TestFactory.notFoundError())
+        apiClient.createWindowResult = .success(TestFactory.window(id: "window-1"))
+        let model = makeModel(apiClient: apiClient, sessionStore: sessionStore)
+        await model.bootstrap()
+        model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: true))
+        model.origin = TestFactory.station(crs: "AAA", name: "Origin")
+        model.destination = TestFactory.station(crs: "ZZZ", name: "Destination")
+        let direct = [
+            TestFactory.itinerary(stableKey: "direct-1"),
+            TestFactory.itinerary(rank: 2, stableKey: "direct-2"),
+        ]
+        let changes = TestFactory.itinerary(
+            stableKey: "route-changes",
+            legs: [TestFactory.itineraryLeg(legIndex: 0), TestFactory.itineraryLeg(legIndex: 1)],
+            connections: [TestFactory.itineraryConnection()]
+        )
+        apiClient.journeyPlanResult = .success(TestFactory.journeyPlanResponse([changes] + direct, direct: direct))
+        await model.loadRecommendations()
+
+        XCTAssertEqual(model.windowSetupViewModel.searchPinTrainCount, 2)
+
+        await model.createActiveWindow()
+
+        XCTAssertTrue(apiClient.createItineraryRequests.isEmpty)
+        XCTAssertEqual(apiClient.createWindowRequests.last?.input.originCrs, "AAA")
+        XCTAssertEqual(apiClient.createWindowRequests.last?.input.destinationCrs, "ZZZ")
+        XCTAssertNil(apiClient.createWindowRequests.last?.input.selectedTrainServiceId)
+        XCTAssertEqual(model.activeWindow?.id, "window-1")
+        XCTAssertEqual(model.journeyPlanResponse?.itineraries.count, 3)
+        XCTAssertNil(model.alertState)
+    }
+
+    @MainActor
+    func testPinSearchIsNotOfferedWhenPlannerFoundNoDirectTrain() async {
+        let apiClient = FakeAPIClient()
+        let model = makeModel(apiClient: apiClient)
+        model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: true))
+        model.origin = TestFactory.station(crs: "AAA", name: "Origin")
+        model.destination = TestFactory.station(crs: "ZZZ", name: "Destination")
+        let changes = TestFactory.itinerary(
+            stableKey: "route-changes",
+            legs: [TestFactory.itineraryLeg(legIndex: 0), TestFactory.itineraryLeg(legIndex: 1)],
+            connections: [TestFactory.itineraryConnection()]
+        )
+        apiClient.journeyPlanResult = .success(TestFactory.journeyPlanResponse([changes], direct: []))
+
+        await model.loadRecommendations()
+
+        XCTAssertNil(model.windowSetupViewModel.searchPinTrainCount)
+    }
+
+    @MainActor
     func testPinningAResultWithChangesStillCreatesAnItinerarySubscription() async {
         let apiClient = FakeAPIClient()
         let sessionStore = FakeSessionStore()
