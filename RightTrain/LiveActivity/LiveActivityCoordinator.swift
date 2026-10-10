@@ -102,6 +102,21 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
             recommendations.contains { $0.journey.serviceId == serviceID } ? serviceID : nil
         }
 
+        // A refresh can leave out the caught train, for example while the
+        // pin is still queued offline and the server has moved on from a
+        // departed train. Keep the on-board activity rather than replacing it
+        // with the window's next departure.
+        if pinnedTrainIsValid == nil,
+           let pinnedTrainServiceID,
+           Activity<RightTrainLiveActivityAttributes>.activities.contains(where: {
+               $0.attributes.windowSubscriptionID == window.id &&
+                   $0.attributes.activityKind == .train &&
+                   $0.attributes.pinnedTrainServiceID == pinnedTrainServiceID
+           }) {
+            BetaDiagnostics.record("live_activity_pinned_train_missing_kept", details: "service=\(pinnedTrainServiceID)")
+            return
+        }
+
         if let pinnedTrainIsValid {
             let trainState = RightTrainLiveActivityStateBuilder.state(
                 for: window,
@@ -122,6 +137,9 @@ final class SystemLiveActivityCoordinator: LiveActivityCoordinating {
                 pinnedTrainServiceID: pinnedTrainIsValid
             ), tokenRegistration: tokenRegistration)
         } else {
+            if let pinnedTrainServiceID {
+                BetaDiagnostics.record("live_activity_pinned_train_missing", details: "service=\(pinnedTrainServiceID)")
+            }
             let windowState = RightTrainLiveActivityStateBuilder.state(for: window, pinnedTrainServiceID: nil)
             await upsertActivity(
                 kind: .window,

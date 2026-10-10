@@ -160,16 +160,14 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
         case .authorizedAlways:
             requestMotionAuthorizationIfNeeded()
             if monitoredKind == .window(id: window.id) {
-                manager.requestLocation()
-                updateLocationUpdates(now: Date())
+                refreshLocation()
             } else {
                 startMonitoringWindow(window, latitude: latitude, longitude: longitude)
             }
         case .authorizedWhenInUse:
             requestAlwaysAuthorizationIfNeeded()
             if monitoredKind == .window(id: window.id) {
-                manager.requestLocation()
-                updateLocationUpdates(now: Date())
+                refreshLocation()
             } else {
                 startMonitoringWindow(window, latitude: latitude, longitude: longitude)
             }
@@ -211,16 +209,14 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
         case .authorizedAlways:
             requestMotionAuthorizationIfNeeded()
             if monitoredKind == target.kind {
-                manager.requestLocation()
-                updateLocationUpdates(now: Date())
+                refreshLocation()
             } else {
                 startMonitoringItinerary(target: target)
             }
         case .authorizedWhenInUse:
             requestAlwaysAuthorizationIfNeeded()
             if monitoredKind == target.kind {
-                manager.requestLocation()
-                updateLocationUpdates(now: Date())
+                refreshLocation()
             } else {
                 startMonitoringItinerary(target: target)
             }
@@ -413,8 +409,7 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
         monitoredCoordinate = coordinate
         manager.allowsBackgroundLocationUpdates = true
         manager.startMonitoring(for: region)
-        manager.requestLocation()
-        updateLocationUpdates(now: Date())
+        refreshLocation()
         BetaDiagnostics.record("station_proximity_monitor_started", details: "\(window.originCrs); radius=\(Int(radius))")
     }
 
@@ -432,8 +427,7 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
         monitoredCoordinate = target.coordinate
         manager.allowsBackgroundLocationUpdates = true
         manager.startMonitoring(for: region)
-        manager.requestLocation()
-        updateLocationUpdates(now: Date())
+        refreshLocation()
         BetaDiagnostics.record("station_proximity_monitor_started", details: target.diagnosticContext)
     }
 
@@ -896,6 +890,19 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
         return "last_seen=\(lastSeen); candidates=\(candidates)"
     }
 
+    /// One fix to check whether the user is already at the station, unless
+    /// continuous updates are running. `requestLocation()` can't be used
+    /// alongside `startUpdatingLocation()`: it ends the continuous updates
+    /// detection relies on once its fix arrives, and with them the app's
+    /// background time, while `locationUpdatesActive` still reads true so
+    /// nothing restarts them. Every window refresh comes through here.
+    private func refreshLocation() {
+        updateLocationUpdates(now: Date())
+        if !locationUpdatesActive {
+            manager.requestLocation()
+        }
+    }
+
     private func updateLocationUpdates(now: Date) {
         guard let detection = caughtDetection,
               !detection.didEmit,
@@ -916,6 +923,10 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
         locationUpdatesActive = true
         manager.startUpdatingLocation()
         startMotionUpdates()
+        BetaDiagnostics.record(
+            "station_proximity_tracking_started",
+            details: "motion=\(motionUpdatesActive ? "on" : "off")"
+        )
     }
 
     private func stopLocationUpdates() {
@@ -926,6 +937,7 @@ final class SystemStationProximityMonitor: NSObject, StationProximityMonitoring,
         manager.pausesLocationUpdatesAutomatically = true
         locationUpdatesActive = false
         stopMotionUpdates()
+        BetaDiagnostics.record("station_proximity_tracking_stopped")
     }
 }
 
