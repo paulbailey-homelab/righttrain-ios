@@ -289,14 +289,21 @@ final class WindowSetupViewModel {
         // Pinning the whole search watches its direct trains, whichever
         // search found them. Only a planner search with no direct train at
         // all falls back to monitoring its top route.
-        let pinsDirectTrains = searchMode == .direct
+        // The pin follows the results on screen, not the current mode: the
+        // mode is re-read from the server whenever the search screen shows,
+        // so on patchy signal it can flip between searching and pinning.
+        // Build 154 pinned a direct-only result list as a route that way.
+        let pinMode: JourneySearchMode = recommendationResponse != nil ? .direct
+            : journeyPlanResponse != nil ? .anyRoute
+            : searchMode
+        let pinsDirectTrains = pinMode == .direct
             || journeyPlanResponse.map { !Self.directItineraries(in: $0).isEmpty } == true
 
         await operationState.withLoading {
             if replacingActiveJourney {
                 try await activeWindowViewModel.replaceActiveJourneyIfNeeded()
             }
-            if pinsDirectTrains, searchMode == .anyRoute {
+            if pinsDirectTrains, pinMode == .anyRoute {
                 _ = try await activeWindowViewModel.createWindow(
                     input: CreateWindowSubscriptionRequest(
                         originCrs: origin.crs,
@@ -311,7 +318,7 @@ final class WindowSetupViewModel {
                 // single direct train from them is pinned.
                 return
             }
-            switch searchMode {
+            switch pinMode {
             case .direct:
                 let subscription = try await activeWindowViewModel.createWindow(
                     input: CreateWindowSubscriptionRequest(
