@@ -100,6 +100,7 @@ final class JourneyDetailViewModel {
     @ObservationIgnored private let apiClient: any APIClienting
     @ObservationIgnored private let operationState: AppOperationState
     @ObservationIgnored private var loadGenerationByIdentity: [JourneyDetailIdentity: Int] = [:]
+    @ObservationIgnored private var signDetails: [JourneyDetailIdentity: JourneyDetail] = [:]
 
     init(
         apiClient: any APIClienting,
@@ -146,6 +147,30 @@ final class JourneyDetailViewModel {
             try? await operation()
         }
         return loaded
+    }
+
+    /// A journey's detail for a sign's scrolling message (calling points,
+    /// coach count), fetched quietly: no loading state, no alert, and the
+    /// detail screen's selection is left alone. Kept per journey for the
+    /// session, since neither changes often enough to refetch on each tick.
+    func signDetail(serviceID: Int, originTPL: String, destinationTPL: String) async -> JourneyDetail? {
+        let identity = JourneyDetailIdentity(
+            serviceID: serviceID,
+            originTPL: originTPL,
+            destinationTPL: destinationTPL
+        )
+        if let cached = signDetails[identity] {
+            return cached
+        }
+        guard let detail = try? await apiClient.getJourneyDetail(
+            serviceID: serviceID,
+            originTPL: originTPL,
+            destinationTPL: destinationTPL
+        ) else {
+            return nil
+        }
+        signDetails[identity] = detail
+        return detail
     }
 
     func detail(for identity: JourneyDetailIdentity) -> JourneyDetail? {

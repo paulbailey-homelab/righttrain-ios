@@ -250,6 +250,8 @@ private struct HeroCountdownText: View {
 struct StatusFirstHeroBlock: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(JourneyDetailViewModel.self) private var journeyDetailViewModel
+    @State private var signDetail: JourneyDetail?
     var presentation: ActiveWindowPresentation
     var countdown: ActiveWindowPresentation.CountdownDisplay
     var surface: RTSurface
@@ -281,6 +283,19 @@ struct StatusFirstHeroBlock: View {
         .accessibilityLabel(accessibilityDescription)
         .accessibilityHint("Shows full journey calling points")
         .accessibilityAction(named: "Unpin") { requestUnpin() }
+        // Calling points and coaches for the sign's message.
+        .task(id: journey.serviceId) {
+            signDetail = await journeyDetailViewModel.signDetail(
+                serviceID: journey.serviceId,
+                originTPL: journey.originTpl,
+                destinationTPL: journey.destinationTpl
+            )
+        }
+    }
+
+    /// The loaded detail, only while it's still for the hero's train.
+    private var matchingSignDetail: JourneyDetail? {
+        signDetail?.serviceId == journey.serviceId ? signDetail : nil
     }
 
     // MARK: - Board
@@ -298,7 +313,7 @@ struct StatusFirstHeroBlock: View {
                 callingAt: JourneyFormatting.isCancelled(journey) ? nil : BoardText.callingAt(journey)
             )
 
-            BoardScroller(text: BoardText.message(journey, platform: platform.value))
+            BoardScroller(text: BoardText.message(journey, platform: platform.value, detail: matchingSignDetail))
 
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .lastTextBaseline, spacing: RTSpacing.small) {

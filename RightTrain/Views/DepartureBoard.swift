@@ -120,18 +120,15 @@ enum BoardText {
         platform.number ?? "-"
     }
 
-    /// The scrolling line under a sign's train: who runs it, a platform
-    /// change and Darwin's own delay or cancellation reason, which already
-    /// reads as a sentence. The arrival has its own "Calling at" line.
-    static func message(_ journey: JourneyResult, platform: PlatformValue) -> String {
+    /// The scrolling line under a sign's train, in the order a platform
+    /// indicator runs it: a platform change and Darwin's own delay or
+    /// cancellation reason first, since they're news, then the calling
+    /// points with their times, who runs the train and how many coaches it
+    /// has. The calling points and coaches come from the journey's detail,
+    /// so they join once it has loaded. The traveller's own arrival has its
+    /// "Calling at" line.
+    static func message(_ journey: JourneyResult, platform: PlatformValue, detail: JourneyDetail? = nil) -> String {
         var sentences: [String] = []
-        let finalDestination = JourneyFormatting.finalDestinationText(journey)
-        if let operatorName = nonEmpty(journey.operatorName) {
-            let article = "AEIOU".contains(operatorName.prefix(1).uppercased()) ? "an" : "a"
-            sentences.append("This is \(article) \(operatorName) service to \(finalDestination).")
-        } else {
-            sentences.append("This train is for \(finalDestination).")
-        }
 
         if let number = platform.number, let previous = platform.previousNumber {
             sentences.append("Now departing from platform \(number), not platform \(previous).")
@@ -143,7 +140,47 @@ enum BoardText {
         if let reason {
             sentences.append(reason.hasSuffix(".") ? reason : "\(reason).")
         }
+
+        if let detail, let callingPoints = callingPoints(detail, after: journey.originTpl) {
+            sentences.append(callingPoints)
+        }
+
+        let finalDestination = JourneyFormatting.finalDestinationText(journey)
+        if let operatorName = nonEmpty(journey.operatorName) {
+            let article = "AEIOU".contains(operatorName.prefix(1).uppercased()) ? "an" : "a"
+            sentences.append("This is \(article) \(operatorName) service to \(finalDestination).")
+        } else {
+            sentences.append("This train is for \(finalDestination).")
+        }
+
+        if let detail, let count = detail.coachCount, count > 0 {
+            let about = detail.coachCountApproximate == true ? "about " : ""
+            sentences.append("This train is formed of \(about)\(count) \(count == 1 ? "coach" : "coaches").")
+        }
+
         return sentences.joined(separator: "  ")
+    }
+
+    /// "Calling at: Stockport (10:02) and Manchester Piccadilly (10:12)."
+    /// Every stop with a public time after the traveller boards, to the end
+    /// of the run; nil when there are none, as for a train's last stop.
+    static func callingPoints(_ detail: JourneyDetail, after originTPL: String) -> String? {
+        let origin = JourneyFormatting.segmentStopRange(
+            detail.stops,
+            originTPL: originTPL,
+            destinationTPL: nil
+        ).origin
+        let stops = detail.stops.dropFirst(origin + 1).compactMap { stop -> String? in
+            guard let time = nonEmpty(stop.publicArrival) ?? nonEmpty(stop.publicDeparture) else {
+                return nil
+            }
+            return "\(stop.name) (\(time.prefix(5)))"
+        }
+        guard let last = stops.last else {
+            return nil
+        }
+        let list = stops.count == 1 ? last : stops.dropLast().joined(separator: ", ") + " and " + last
+        return "Calling at: \(list)."
     }
 
     /// Boards have no middle dot or arrows; swap them for what the face has.
