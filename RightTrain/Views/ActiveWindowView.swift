@@ -566,19 +566,22 @@ struct ActiveOnTrainJourneyView: View {
 
     // MARK: On-board sign
 
-    /// The train as the display in the carriage shows it: the traveller's
-    /// arrival as the train line, the next stop under it, a scrolling
-    /// message, then the arrival platform and minutes to go at double
-    /// height.
+    /// The traveller's stop as the display in the carriage shows it. The
+    /// boarded train's own details (its time, where it ends up, who runs
+    /// it) have done their job: the sign gives the stop with Expected and
+    /// the next stop under it, a message line, then the arrival time and
+    /// time left at double height. The arrival platform is only a mention
+    /// in the message.
     private func onBoardSign(now: Date) -> some View {
         let arrival = JourneyFormatting.arrivalDisplay(journey)
-        let platform = ActiveWindowPresentation.arrivalPlatformDisplay(for: journey).value
+        let arrivalTime = arrival.currentText ?? arrival.scheduledText
         let nextStop = detail.flatMap { nextStopText($0, now: now) }
         let countdown = arrivalCountdownText(now: now)
         let message = onBoardMessage
+        let isCancelled = JourneyFormatting.isCancelled(journey)
         return DepartureBoard {
             DepartureBoardRow(
-                time: arrival.scheduledText,
+                time: nil,
                 destination: JourneyFormatting.compactDestinationStationText(journey),
                 expected: arrivalExpected,
                 callingAt: nextStop
@@ -586,23 +589,28 @@ struct ActiveOnTrainJourneyView: View {
             BoardScroller(text: message)
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .lastTextBaseline, spacing: RTSpacing.small) {
-                    arrivalPlatformLine(platform)
+                    if !isCancelled {
+                        bigLine(arrivalTime)
+                    }
                     Spacer(minLength: RTSpacing.small)
-                    arrivalCountdownLine(countdown)
+                    bigLine(countdown)
                 }
                 VStack(alignment: .leading, spacing: 2) {
-                    arrivalPlatformLine(platform)
-                    arrivalCountdownLine(countdown)
+                    if !isCancelled {
+                        bigLine(arrivalTime)
+                    }
+                    bigLine(countdown)
                 }
             }
         }
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(
             [
-                "Arrives \(JourneyFormatting.destinationStationText(journey)) \(arrival.currentText ?? arrival.scheduledText), \(arrivalExpected)",
+                "Your stop \(JourneyFormatting.destinationStationText(journey))",
+                arrivalExpected,
+                isCancelled ? nil : "Arrives \(arrivalTime)",
+                isCancelled ? nil : countdown,
                 nextStop,
-                platform.accessibilityLabel(role: "Arrival platform"),
-                countdown,
                 message
             ]
             .compactMap { $0 }
@@ -610,6 +618,8 @@ struct ActiveOnTrainJourneyView: View {
         )
     }
 
+    /// The arrival time is in double height, so a late arrival says how
+    /// late rather than repeating it.
     private var arrivalExpected: String {
         if JourneyFormatting.isCancelled(journey) {
             return "Cancelled"
@@ -618,6 +628,12 @@ struct ActiveOnTrainJourneyView: View {
             return "Arrived"
         }
         let arrival = JourneyFormatting.arrivalDisplay(journey)
+        if let current = arrival.currentDate, let scheduled = arrival.scheduledDate {
+            let minutesLate = Int((current.timeIntervalSince(scheduled) / 60).rounded())
+            if minutesLate > 0 {
+                return "\(minutesLate) min late"
+            }
+        }
         if let current = arrival.currentText, current != arrival.scheduledText {
             return "Exp \(current)"
         }
@@ -654,62 +670,49 @@ struct ActiveOnTrainJourneyView: View {
             .joined(separator: " ")
     }
 
-    /// Minutes until the traveller's stop within the hour, the arrival
-    /// time beyond it, then "Arriving" and "Arrived".
+    /// Time left to the traveller's stop ("24 min", "1 hr 12 min"), then
+    /// "Arriving" and "Arrived".
     private func arrivalCountdownText(now: Date) -> String {
+        if JourneyFormatting.isCancelled(journey) {
+            return "Cancelled"
+        }
         if JourneyFormatting.isArrived(journey) {
             return "Arrived"
         }
         let arrival = JourneyFormatting.arrivalDisplay(journey)
         guard let date = arrival.currentDate ?? arrival.scheduledDate else {
-            return arrival.currentText ?? arrival.scheduledText
+            return ""
         }
         let seconds = date.timeIntervalSince(now)
         if seconds <= 60 {
             return "Arriving"
         }
-        if seconds >= 60 * 60 {
-            return arrival.currentText ?? arrival.scheduledText
+        let minutes = Int((seconds / 60).rounded(.up))
+        if minutes >= 60 {
+            let rest = minutes % 60
+            return rest == 0 ? "\(minutes / 60) hr" : "\(minutes / 60) hr \(rest) min"
         }
-        return "\(Int((seconds / 60).rounded(.up))) min"
+        return "\(minutes) min"
     }
 
-    private func arrivalPlatformLine(_ platform: PlatformValue) -> some View {
-        Text(platform.number.map { "Plat \($0)" } ?? "Plat TBC")
-            .font(BoardFont.font(.title, weight: .bold))
-            .foregroundStyle(
-                platform.state == .confirmed || platform.isChanged
-                    ? DepartureBoardStyle.amber
-                    : DepartureBoardStyle.dimAmber
-            )
-            .lineLimit(1)
-            .fixedSize()
-    }
-
-    private func arrivalCountdownLine(_ text: String) -> some View {
+    private func bigLine(_ text: String) -> some View {
         Text(text)
             .font(BoardFont.font(.title, weight: .bold))
             .lineLimit(1)
             .fixedSize()
     }
 
-    /// Darwin's delay reason first, then where the train ends up, who runs
-    /// it and how many coaches it has.
+    /// Darwin's delay reason, then the arrival platform as a mention.
     private var onBoardMessage: String {
         var sentences: [String] = []
         if let reason = journey.lateReasonText?.trimmingCharacters(in: .whitespacesAndNewlines), !reason.isEmpty {
             sentences.append(reason.hasSuffix(".") ? reason : "\(reason).")
         }
-        let finalDestination = JourneyFormatting.finalDestinationText(journey)
-        if let operatorName = JourneyFormatting.operatorSummaryText(journey) {
-            let article = "AEIOU".contains(operatorName.prefix(1).uppercased()) ? "an" : "a"
-            sentences.append("This is \(article) \(operatorName) service to \(finalDestination).")
+        let verb = JourneyFormatting.isArrived(journey) ? "Arrived" : "Arriving"
+        if let number = ActiveWindowPresentation.arrivalPlatformDisplay(for: journey).value.number {
+            sentences.append("\(verb) at platform \(number).")
         } else {
-            sentences.append("This train is for \(finalDestination).")
-        }
-        if let detail, let count = detail.coachCount, count > 0 {
-            let about = detail.coachCountApproximate == true ? "about " : ""
-            sentences.append("This train is formed of \(about)\(count) \(count == 1 ? "coach" : "coaches").")
+            sentences.append("\(verb) at \(JourneyFormatting.destinationStationText(journey)).")
         }
         return BoardText.boardSafe(sentences.joined(separator: "  "))
     }

@@ -251,12 +251,21 @@ private enum BoardColumnWidth {
 /// Expected. The platform has its own double-height line below it.
 struct DepartureBoardRow: View {
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
-    var time: String
+    /// Nil drops the time column, as on the on-board sign where the
+    /// arrival time is in double height below.
+    var time: String?
     var destination: String
     var expected: String
     /// "Calling at Stockport 10:02", dim under the destination.
     var callingAt: String? = nil
     @ScaledMetric(relativeTo: .body) private var timeWidth = BoardColumnWidth.time
+
+    init(time: String?, destination: String, expected: String, callingAt: String? = nil) {
+        self.time = time
+        self.destination = destination
+        self.expected = expected
+        self.callingAt = callingAt
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 1) {
@@ -266,7 +275,7 @@ struct DepartureBoardRow: View {
                     .foregroundStyle(DepartureBoardStyle.dimAmber)
                     .lineLimit(1)
                     .allowsTightening(true)
-                    .padding(.leading, dynamicTypeSize.isAccessibilitySize ? 0 : timeWidth + 8)
+                    .padding(.leading, dynamicTypeSize.isAccessibilitySize || time == nil ? 0 : timeWidth + 8)
             }
         }
     }
@@ -278,15 +287,19 @@ struct DepartureBoardRow: View {
         if dynamicTypeSize.isAccessibilitySize {
             VStack(alignment: .leading, spacing: 2) {
                 HStack(spacing: 8) {
-                    Text(time)
+                    if let time {
+                        Text(time)
+                    }
                     destinationText
                 }
                 Text(expected)
             }
         } else {
             HStack(spacing: 8) {
-                Text(time)
-                    .frame(width: timeWidth, alignment: .leading)
+                if let time {
+                    Text(time)
+                        .frame(width: timeWidth, alignment: .leading)
+                }
                 destinationText
                     .frame(maxWidth: .infinity, alignment: .leading)
                 Text(expected)
