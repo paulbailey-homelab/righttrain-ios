@@ -272,12 +272,9 @@ struct StatusFirstHeroBlock: View {
         Button {
             Task { await loadDetail() }
         } label: {
-            VStack(alignment: .leading, spacing: RTSpacing.small) {
-                board
-                routeLines
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
+            board
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
@@ -288,15 +285,17 @@ struct StatusFirstHeroBlock: View {
 
     // MARK: - Board
 
-    /// The pinned train as a platform indicator shows it: the train line,
-    /// the scrolling message, then the two things to act on (platform and
-    /// time left) in double-height lettering. No clock: the phone shows one.
+    /// The pinned train as a platform indicator shows it: the train line
+    /// with its "Calling at" arrival, the scrolling message, then the two
+    /// things to act on (platform and time left) in double-height lettering.
+    /// No clock: the phone shows one, and the route is the screen's title.
     private var board: some View {
         DepartureBoard {
             DepartureBoardRow(
                 time: depDisplay.scheduledText,
                 destination: BoardText.destination(journey),
-                expected: BoardText.expected(journey)
+                expected: BoardText.expected(journey),
+                callingAt: JourneyFormatting.isCancelled(journey) ? nil : BoardText.callingAt(journey)
             )
 
             BoardScroller(text: BoardText.message(journey, platform: platform.value))
@@ -345,27 +344,6 @@ struct StatusFirstHeroBlock: View {
     /// read as a countdown.
     private var countdownBoardText: String {
         BoardText.boardSafe(countdownPrefix == "Leaves in" ? countdownValue : countdown.text)
-    }
-
-    // MARK: - Route
-
-    /// The traveller's own arrival, outside the board in the system face:
-    /// the board names where the train ends up, which may be further than
-    /// they're going. The route itself is the navigation title.
-    private var routeLines: some View {
-        Text(arrivalText)
-            .font(.subheadline)
-            .foregroundStyle(arrDisplay.isDelayed ? AnyShapeStyle(Color.rightTrainAmber) : AnyShapeStyle(.secondary))
-            .monospacedDigit()
-            .padding(.horizontal, 2)
-    }
-
-    private var arrivalText: String {
-        let current = arrDisplay.currentText ?? arrDisplay.scheduledText
-        if arrDisplay.isDelayed, current != arrDisplay.scheduledText {
-            return "Arrives \(current), due \(arrDisplay.scheduledText)"
-        }
-        return "Arrives \(current)"
     }
 
     // MARK: - Helpers

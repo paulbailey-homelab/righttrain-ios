@@ -120,9 +120,9 @@ enum BoardText {
         platform.number ?? "-"
     }
 
-    /// The scrolling line under a board's first train: who runs it, where
-    /// the traveller gets off, a platform change and Darwin's own delay or
-    /// cancellation reason, which already reads as a sentence.
+    /// The scrolling line under a sign's train: who runs it, a platform
+    /// change and Darwin's own delay or cancellation reason, which already
+    /// reads as a sentence. The arrival has its own "Calling at" line.
     static func message(_ journey: JourneyResult, platform: PlatformValue) -> String {
         var sentences: [String] = []
         let finalDestination = JourneyFormatting.finalDestinationText(journey)
@@ -132,10 +132,6 @@ enum BoardText {
         } else {
             sentences.append("This train is for \(finalDestination).")
         }
-
-        let arrival = JourneyFormatting.arrivalDisplay(journey)
-        let arrivalTime = arrival.currentText ?? arrival.scheduledText
-        sentences.append("Arrives \(JourneyFormatting.destinationStationText(journey)) \(arrivalTime).")
 
         if let number = platform.number, let previous = platform.previousNumber {
             sentences.append("Now departing from platform \(number), not platform \(previous).")
@@ -181,10 +177,25 @@ struct DepartureBoardRow: View {
     var time: String
     var destination: String
     var expected: String
+    /// "Calling at Stockport 10:02", dim under the destination.
+    var callingAt: String? = nil
     @ScaledMetric(relativeTo: .body) private var timeWidth = BoardColumnWidth.time
 
-    @ViewBuilder
     var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            columns
+            if let callingAt {
+                Text(callingAt)
+                    .foregroundStyle(DepartureBoardStyle.dimAmber)
+                    .lineLimit(1)
+                    .allowsTightening(true)
+                    .padding(.leading, dynamicTypeSize.isAccessibilitySize ? 0 : timeWidth + 8)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var columns: some View {
         // At accessibility sizes the three columns don't fit, so Expected
         // moves to a second line.
         if dynamicTypeSize.isAccessibilitySize {
