@@ -1,16 +1,17 @@
 import SwiftUI
 
-// A UK platform indicator, drawn as an object: a dark housing, a recessed
-// black display with its unlit dot grid, and amber single-dot lettering
-// that glows faintly. It is the only place in the app the dot-matrix face
-// appears (with the Lock Screen Live Activity, which is a sign in itself).
+// A UK station sign, drawn as an object: a dark housing, a recessed black
+// display with its unlit dot grid, and amber single-dot lettering that glows
+// faintly. Signs are the only place in the app the dot-matrix face appears.
 //
-// One sign per screen, for the train the traveller has pinned. Lists of
-// trains, search results and the rest of the app stay in the system face,
+// Pinned carries two signs, as a station does: the platform indicator for
+// the pinned train, and a concourse departures board for the other trains
+// in the search. The Lock Screen Live Activity is a sign in itself. Search
+// results, journey detail and the rest of the app stay in the system face,
 // so a sign sits on the page like a photo of a real one rather than as a
 // second typeface. Signs keep amber on black in light and dark mode: they're
 // a physical object, not a themed surface. Status is in words ("Exp 08:36",
-// "Cancelled"), as on a real indicator, not in colour.
+// "Cancelled"), as on a real board, not in colour.
 
 struct DepartureBoard<Content: View>: View {
     private let content: Content
@@ -106,22 +107,28 @@ enum BoardText {
         return "On time"
     }
 
-    /// The scrolling line under a board's first train: who runs it, where
-    /// the traveller gets off, a platform change and Darwin's own delay or
-    /// cancellation reason, which already reads as a sentence.
-    static func message(_ journey: JourneyResult, platform: PlatformValue) -> String {
-        var sentences: [String] = []
-        let finalDestination = JourneyFormatting.finalDestinationText(journey)
-        if let operatorName = nonEmpty(journey.operatorName) {
-            let article = "AEIOU".contains(operatorName.prefix(1).uppercased()) ? "an" : "a"
-            sentences.append("This is \(article) \(operatorName) service to \(finalDestination).")
-        } else {
-            sentences.append("This train is for \(finalDestination).")
-        }
-
+    /// "Calling at Stockport 10:25": the traveller's stop, in Darwin's
+    /// short form, and when the train is expected there.
+    static func callingAt(_ journey: JourneyResult) -> String {
         let arrival = JourneyFormatting.arrivalDisplay(journey)
-        let arrivalTime = arrival.currentText ?? arrival.scheduledText
-        sentences.append("Arrives \(JourneyFormatting.destinationStationText(journey)) \(arrivalTime).")
+        let station = JourneyFormatting.compactDestinationStationText(journey)
+        return "Calling at \(station) \(arrival.currentText ?? arrival.scheduledText)"
+    }
+
+    /// The Plat column: the bare number, or "-" until one is known.
+    static func platform(_ platform: PlatformValue) -> String {
+        platform.number ?? "-"
+    }
+
+    /// The scrolling line under a sign's train, in the order a platform
+    /// indicator runs it: a platform change and Darwin's own delay or
+    /// cancellation reason first, since they're news, then the calling
+    /// points with their times, who runs the train and how many coaches it
+    /// has. The calling points and coaches come from the journey's detail,
+    /// so they join once it has loaded. The traveller's own arrival has its
+    /// "Calling at" line.
+    static func message(_ journey: JourneyResult, platform: PlatformValue, detail: JourneyDetail? = nil) -> String {
+        var sentences: [String] = []
 
         if let number = platform.number, let previous = platform.previousNumber {
             sentences.append("Now departing from platform \(number), not platform \(previous).")
@@ -133,7 +140,47 @@ enum BoardText {
         if let reason {
             sentences.append(reason.hasSuffix(".") ? reason : "\(reason).")
         }
+
+        if let detail, let callingPoints = callingPoints(detail, after: journey.originTpl) {
+            sentences.append(callingPoints)
+        }
+
+        let finalDestination = JourneyFormatting.finalDestinationText(journey)
+        if let operatorName = nonEmpty(journey.operatorName) {
+            let article = "AEIOU".contains(operatorName.prefix(1).uppercased()) ? "an" : "a"
+            sentences.append("This is \(article) \(operatorName) service to \(finalDestination).")
+        } else {
+            sentences.append("This train is for \(finalDestination).")
+        }
+
+        if let detail, let count = detail.coachCount, count > 0 {
+            let about = detail.coachCountApproximate == true ? "about " : ""
+            sentences.append("This train is formed of \(about)\(count) \(count == 1 ? "coach" : "coaches").")
+        }
+
         return sentences.joined(separator: "  ")
+    }
+
+    /// "Calling at: Stockport (10:02) and Manchester Piccadilly (10:12)."
+    /// Every stop with a public time after the traveller boards, to the end
+    /// of the run; nil when there are none, as for a train's last stop.
+    static func callingPoints(_ detail: JourneyDetail, after originTPL: String) -> String? {
+        let origin = JourneyFormatting.segmentStopRange(
+            detail.stops,
+            originTPL: originTPL,
+            destinationTPL: nil
+        ).origin
+        let stops = detail.stops.dropFirst(origin + 1).compactMap { stop -> String? in
+            guard let time = nonEmpty(stop.publicArrival) ?? nonEmpty(stop.publicDeparture) else {
+                return nil
+            }
+            return "\(stop.name) (\(time.prefix(5)))"
+        }
+        guard let last = stops.last else {
+            return nil
+        }
+        let list = stops.count == 1 ? last : stops.dropLast().joined(separator: ", ") + " and " + last
+        return "Calling at: \(list)."
     }
 
     /// Boards have no middle dot or arrows; swap them for what the face has.
@@ -167,10 +214,25 @@ struct DepartureBoardRow: View {
     var time: String
     var destination: String
     var expected: String
+    /// "Calling at Stockport 10:02", dim under the destination.
+    var callingAt: String? = nil
     @ScaledMetric(relativeTo: .body) private var timeWidth = BoardColumnWidth.time
 
-    @ViewBuilder
     var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            columns
+            if let callingAt {
+                Text(callingAt)
+                    .foregroundStyle(DepartureBoardStyle.dimAmber)
+                    .lineLimit(1)
+                    .allowsTightening(true)
+                    .padding(.leading, dynamicTypeSize.isAccessibilitySize ? 0 : timeWidth + 8)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var columns: some View {
         // At accessibility sizes the three columns don't fit, so Expected
         // moves to a second line.
         if dynamicTypeSize.isAccessibilitySize {
@@ -198,6 +260,135 @@ struct DepartureBoardRow: View {
         Text(destination)
             .lineLimit(1)
             .allowsTightening(true)
+    }
+}
+
+// MARK: - Concourse board
+
+/// Column widths a concourse board's headings and rows share, so they line
+/// up. Each view scales them with its own @ScaledMetric.
+private enum ConcourseColumnWidth {
+    static let time: CGFloat = 44
+    static let platform: CGFloat = 30
+    static let expected: CGFloat = 76
+}
+
+/// One train on a concourse departures board: Time, Destination, Plat,
+/// Expected, then a dim "Calling at" line with the traveller's arrival.
+struct ConcourseBoardRow: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    var time: String
+    var destination: String
+    var platform: PlatformValue
+    var expected: String
+    /// The second line, as a board's "Calling at" line reads: the
+    /// traveller's stop and expected arrival, "Calling at Stockport 10:25".
+    var callingAt: String? = nil
+    /// A leading pin for the train this search has pinned.
+    var isPinned = false
+    @ScaledMetric(relativeTo: .body) private var timeWidth = ConcourseColumnWidth.time
+    @ScaledMetric(relativeTo: .body) private var platformWidth = ConcourseColumnWidth.platform
+    @ScaledMetric(relativeTo: .body) private var expectedWidth = ConcourseColumnWidth.expected
+
+    var body: some View {
+        VStack(alignment: .leading, spacing: 1) {
+            columns
+                // In the board's side padding, so the columns still line up
+                // with the headings.
+                .overlay(alignment: .leading) {
+                    pin.offset(x: -12)
+                }
+            if let callingAt {
+                Text(callingAt)
+                    .foregroundStyle(DepartureBoardStyle.dimAmber)
+                    .lineLimit(1)
+                    .allowsTightening(true)
+                    // Under the destination, as on a real board.
+                    .padding(.leading, dynamicTypeSize.isAccessibilitySize ? 0 : timeWidth + 8)
+            }
+        }
+    }
+
+    @ViewBuilder
+    private var columns: some View {
+        // At accessibility sizes the four columns don't fit, so the platform
+        // and Expected move to a second line.
+        if dynamicTypeSize.isAccessibilitySize {
+            VStack(alignment: .leading, spacing: 2) {
+                HStack(spacing: 8) {
+                    Text(time)
+                    destinationText
+                }
+                HStack(spacing: 8) {
+                    Text("Plat \(BoardText.platform(platform))")
+                        .foregroundStyle(platformStyle)
+                    Spacer(minLength: 8)
+                    Text(expected)
+                }
+            }
+        } else {
+            HStack(spacing: 8) {
+                Text(time)
+                    .frame(width: timeWidth, alignment: .leading)
+                destinationText
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text(BoardText.platform(platform))
+                    .foregroundStyle(platformStyle)
+                    .frame(width: platformWidth, alignment: .trailing)
+                Text(expected)
+                    .frame(width: expectedWidth, alignment: .trailing)
+            }
+            .lineLimit(1)
+        }
+    }
+
+    @ViewBuilder
+    private var pin: some View {
+        if isPinned {
+            Image(systemName: "pin.fill")
+                .font(.system(size: 9, weight: .bold))
+                .accessibilityHidden(true)
+        }
+    }
+
+    private var destinationText: some View {
+        Text(destination)
+            .lineLimit(1)
+            .allowsTightening(true)
+    }
+
+    /// An expected platform is dim until it's confirmed; a changed one is
+    /// full brightness, since it's confirmed news.
+    private var platformStyle: Color {
+        platform.state == .confirmed || platform.isChanged
+            ? DepartureBoardStyle.amber
+            : DepartureBoardStyle.dimAmber
+    }
+}
+
+/// The dim headings over a concourse board's columns.
+struct ConcourseBoardHeader: View {
+    @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @ScaledMetric(relativeTo: .body) private var timeWidth = ConcourseColumnWidth.time
+    @ScaledMetric(relativeTo: .body) private var platformWidth = ConcourseColumnWidth.platform
+    @ScaledMetric(relativeTo: .body) private var expectedWidth = ConcourseColumnWidth.expected
+
+    var body: some View {
+        if !dynamicTypeSize.isAccessibilitySize {
+            HStack(spacing: 8) {
+                Text("Time")
+                    .frame(width: timeWidth, alignment: .leading)
+                Text("Destination")
+                    .frame(maxWidth: .infinity, alignment: .leading)
+                Text("Plat")
+                    .frame(width: platformWidth, alignment: .trailing)
+                Text("Expected")
+                    .frame(width: expectedWidth, alignment: .trailing)
+            }
+            .lineLimit(1)
+            .foregroundStyle(DepartureBoardStyle.dimAmber)
+            .accessibilityHidden(true)
+        }
     }
 }
 

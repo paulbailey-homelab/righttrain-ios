@@ -250,6 +250,8 @@ private struct HeroCountdownText: View {
 struct StatusFirstHeroBlock: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @Environment(\.dynamicTypeSize) private var dynamicTypeSize
+    @Environment(JourneyDetailViewModel.self) private var journeyDetailViewModel
+    @State private var signDetail: JourneyDetail?
     var presentation: ActiveWindowPresentation
     var countdown: ActiveWindowPresentation.CountdownDisplay
     var surface: RTSurface
@@ -272,34 +274,46 @@ struct StatusFirstHeroBlock: View {
         Button {
             Task { await loadDetail() }
         } label: {
-            VStack(alignment: .leading, spacing: RTSpacing.small) {
-                board
-                routeLines
-            }
-            .frame(maxWidth: .infinity, alignment: .leading)
-            .contentShape(Rectangle())
+            board
+                .frame(maxWidth: .infinity, alignment: .leading)
+                .contentShape(Rectangle())
         }
         .buttonStyle(.plain)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityDescription)
         .accessibilityHint("Shows full journey calling points")
         .accessibilityAction(named: "Unpin") { requestUnpin() }
+        // Calling points and coaches for the sign's message.
+        .task(id: journey.serviceId) {
+            signDetail = await journeyDetailViewModel.signDetail(
+                serviceID: journey.serviceId,
+                originTPL: journey.originTpl,
+                destinationTPL: journey.destinationTpl
+            )
+        }
+    }
+
+    /// The loaded detail, only while it's still for the hero's train.
+    private var matchingSignDetail: JourneyDetail? {
+        signDetail?.serviceId == journey.serviceId ? signDetail : nil
     }
 
     // MARK: - Board
 
-    /// The pinned train as a platform indicator shows it: the train line,
-    /// the scrolling message, then the two things to act on (platform and
-    /// time left) in double-height lettering. No clock: the phone shows one.
+    /// The pinned train as a platform indicator shows it: the train line
+    /// with its "Calling at" arrival, the scrolling message, then the two
+    /// things to act on (platform and time left) in double-height lettering.
+    /// No clock: the phone shows one, and the route is the screen's title.
     private var board: some View {
         DepartureBoard {
             DepartureBoardRow(
                 time: depDisplay.scheduledText,
                 destination: BoardText.destination(journey),
-                expected: BoardText.expected(journey)
+                expected: BoardText.expected(journey),
+                callingAt: JourneyFormatting.isCancelled(journey) ? nil : BoardText.callingAt(journey)
             )
 
-            BoardScroller(text: BoardText.message(journey, platform: platform.value))
+            BoardScroller(text: BoardText.message(journey, platform: platform.value, detail: matchingSignDetail))
 
             ViewThatFits(in: .horizontal) {
                 HStack(alignment: .lastTextBaseline, spacing: RTSpacing.small) {
@@ -345,36 +359,6 @@ struct StatusFirstHeroBlock: View {
     /// read as a countdown.
     private var countdownBoardText: String {
         BoardText.boardSafe(countdownPrefix == "Leaves in" ? countdownValue : countdown.text)
-    }
-
-    // MARK: - Route
-
-    /// The traveller's own route and arrival, outside the board in the
-    /// system face: the board names where the train ends up, which may be
-    /// further than they're going.
-    private var routeLines: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(presentation.routeTitle)
-                .font(.subheadline.weight(.semibold))
-                // Wrap rather than truncate once the text is large enough
-                // that shrinking can't fit a long route name.
-                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
-                .minimumScaleFactor(0.82)
-
-            Text(arrivalText)
-                .font(.subheadline)
-                .foregroundStyle(arrDisplay.isDelayed ? AnyShapeStyle(Color.rightTrainAmber) : AnyShapeStyle(.secondary))
-                .monospacedDigit()
-        }
-        .padding(.horizontal, 2)
-    }
-
-    private var arrivalText: String {
-        let current = arrDisplay.currentText ?? arrDisplay.scheduledText
-        if arrDisplay.isDelayed, current != arrDisplay.scheduledText {
-            return "Arrives \(current), due \(arrDisplay.scheduledText)"
-        }
-        return "Arrives \(current)"
     }
 
     // MARK: - Helpers
