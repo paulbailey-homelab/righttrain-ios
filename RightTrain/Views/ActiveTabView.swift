@@ -91,7 +91,7 @@ struct ActiveTabView: View {
             }
             .background(activeSurface.bg.ignoresSafeArea())
             .animation(.easeInOut(duration: 0.4), value: activeSurface)
-            .navigationTitle("Pinned")
+            .navigationTitle(navigationTitleText)
             // A live journey needs the first screenful for guidance, so the
             // large title only appears when there is nothing pinned.
             .navigationBarTitleDisplayMode(activePrimaryContent == .empty ? .large : .inline)
@@ -159,6 +159,24 @@ struct ActiveTabView: View {
                 appCoordinator.startNewJourneyPlan()
             }
         }
+    }
+
+    /// The pinned route, "London Euston → Stockport", as a station board
+    /// names where it is; "Pinned" when nothing is.
+    private var navigationTitleText: String {
+        switch activePrimaryContent {
+        case .itinerary:
+            if let itinerary = activeWindowViewModel.activeItinerary {
+                return ActiveItineraryPresentation(itinerary: itinerary).routeTitle
+            }
+        case .window, .onBoardWindow:
+            if let window = activeWindowViewModel.activeWindow {
+                return ActiveWindowPresentation(window: window).routeTitle
+            }
+        case .empty:
+            break
+        }
+        return "Pinned"
     }
 
     private var activePrimaryContent: ActiveTabPrimaryContent {

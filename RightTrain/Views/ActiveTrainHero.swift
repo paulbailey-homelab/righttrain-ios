@@ -349,24 +349,15 @@ struct StatusFirstHeroBlock: View {
 
     // MARK: - Route
 
-    /// The traveller's own route and arrival, outside the board in the
-    /// system face: the board names where the train ends up, which may be
-    /// further than they're going.
+    /// The traveller's own arrival, outside the board in the system face:
+    /// the board names where the train ends up, which may be further than
+    /// they're going. The route itself is the navigation title.
     private var routeLines: some View {
-        VStack(alignment: .leading, spacing: 2) {
-            Text(presentation.routeTitle)
-                .font(.subheadline.weight(.semibold))
-                // Wrap rather than truncate once the text is large enough
-                // that shrinking can't fit a long route name.
-                .lineLimit(dynamicTypeSize.isAccessibilitySize ? 3 : 1)
-                .minimumScaleFactor(0.82)
-
-            Text(arrivalText)
-                .font(.subheadline)
-                .foregroundStyle(arrDisplay.isDelayed ? AnyShapeStyle(Color.rightTrainAmber) : AnyShapeStyle(.secondary))
-                .monospacedDigit()
-        }
-        .padding(.horizontal, 2)
+        Text(arrivalText)
+            .font(.subheadline)
+            .foregroundStyle(arrDisplay.isDelayed ? AnyShapeStyle(Color.rightTrainAmber) : AnyShapeStyle(.secondary))
+            .monospacedDigit()
+            .padding(.horizontal, 2)
     }
 
     private var arrivalText: String {
