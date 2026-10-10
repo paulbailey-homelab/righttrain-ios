@@ -1224,6 +1224,37 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
+    func testSearchPinFollowsDirectResultsWhenRoutingTurnsOnAfterTheSearch() async {
+        // The search screen re-reads capabilities each time it shows. A
+        // failed read leaves direct-only results on screen, and a later good
+        // one turns routing back on before the pin: the pin still has to
+        // watch the direct trains the traveller was looking at.
+        let apiClient = FakeAPIClient()
+        let sessionStore = FakeSessionStore()
+        sessionStore.session = TestFactory.storedSession(accessToken: "create-token")
+        apiClient.currentUserResult = .success(TestFactory.user())
+        apiClient.activeWindowResult = .failure(TestFactory.notFoundError())
+        let recommendation = TestFactory.recommendation(serviceID: 202)
+        apiClient.recommendationsResult = .success(TestFactory.recommendationResponse([recommendation]))
+        apiClient.createWindowResult = .success(TestFactory.window(id: "window-1"))
+        let model = makeModel(apiClient: apiClient, sessionStore: sessionStore)
+        await model.bootstrap()
+        model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: false))
+        model.origin = TestFactory.station(crs: "AAA", name: "Origin")
+        model.destination = TestFactory.station(crs: "ZZZ", name: "Destination")
+        await model.loadRecommendations()
+        model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: true))
+
+        await model.createActiveWindow()
+
+        XCTAssertTrue(apiClient.createItineraryRequests.isEmpty)
+        XCTAssertEqual(apiClient.createWindowRequests.last?.input.originCrs, "AAA")
+        XCTAssertEqual(apiClient.createWindowRequests.last?.input.destinationCrs, "ZZZ")
+        XCTAssertEqual(model.activeWindow?.id, "window-1")
+        XCTAssertNil(model.activeItinerary)
+    }
+
+    @MainActor
     func testPinningAResultWithNoChangesCreatesAWindowSubscription() async {
         // One search now returns direct journeys as one-leg itineraries. Those
         // are still monitored as direct windows, and the user never sees the

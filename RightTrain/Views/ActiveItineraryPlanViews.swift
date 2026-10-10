@@ -356,19 +356,22 @@ struct ActiveItineraryView: View {
                 }
 
                 ForEach(presentation.journeyOptions) { option in
-                    let isSelected = option.id == presentation.selectedItinerary?.id
-                    ActiveItineraryOptionCard(
-                        itinerary: option,
-                        emphasized: isSelected,
-                        isExpanded: isExpanded(option),
-                        now: now,
-                        toggleExpanded: {
-                            toggleExpanded(option)
-                        },
-                        loadDetail: loadDetail
-                    )
+                    // The sign above already carries the first train's time,
+                    // countdown and platform, so the old hero card under it
+                    // only repeated them. A direct journey needs nothing
+                    // more; a journey with a change keeps its route and legs.
+                    if option.legs.count > 1 {
+                        ActiveItineraryRouteBreakdown(
+                            itinerary: option,
+                            isExpanded: isExpanded(option),
+                            toggleExpanded: {
+                                toggleExpanded(option)
+                            },
+                            loadDetail: loadDetail
+                        )
+                    }
 
-                    if isSelected, presentation.canBoardFirstLeg, let firstLeg = option.legs.first {
+                    if presentation.canBoardFirstLeg, let firstLeg = option.legs.first {
                         Button {
                             Task {
                                 await activeWindowViewModel.boardItineraryLeg(firstLeg.legIndex, itineraryID: itinerary.id)
@@ -391,7 +394,7 @@ struct ActiveItineraryView: View {
     }
 
     /// Before the first train, its platform indicator, with the change on
-    /// the message line. The route breakdown stays a card below it.
+    /// the message line. A journey with a change keeps its route below it.
     private func firstTrainSign(_ leg: ItineraryLeg, in selected: ItineraryRecommendation, now: Date) -> some View {
         let journey = leg.journeyResult
         let platform = ActiveWindowPresentation.platformDisplay(for: journey).value
@@ -609,11 +612,11 @@ private struct ActiveItineraryAlternativeRow: View {
     }
 }
 
-private struct ActiveItineraryOptionCard: View {
+/// Under the first train's sign, for a journey with a change: the stations
+/// in order, opening to each leg. Times and the platform stay on the sign.
+private struct ActiveItineraryRouteBreakdown: View {
     var itinerary: ItineraryRecommendation
-    var emphasized: Bool
     var isExpanded: Bool
-    var now: Date
     var toggleExpanded: () -> Void
     var loadDetail: (ItineraryLeg) async -> Void
 
@@ -622,11 +625,19 @@ private struct ActiveItineraryOptionCard: View {
             Button {
                 toggleExpanded()
             } label: {
-                ActiveItineraryPlanHeroCard(
-                    itinerary: itinerary,
-                    now: now,
-                    isExpanded: isExpanded
-                )
+                HStack(alignment: .firstTextBaseline, spacing: RTSpacing.small) {
+                    Text(ItineraryFormatting.routeChainText(itinerary) ?? ItineraryFormatting.durationText(itinerary))
+                        .font(.subheadline.weight(.medium))
+                        .lineLimit(2)
+                        .fixedSize(horizontal: false, vertical: true)
+                        .frame(maxWidth: .infinity, alignment: .leading)
+                    Label(isExpanded ? "Hide legs" : "Show legs", systemImage: isExpanded ? "chevron.up" : "chevron.down")
+                        .labelStyle(.iconOnly)
+                        .font(.footnote.weight(.semibold))
+                        .foregroundStyle(.tertiary)
+                }
+                .contentShape(Rectangle())
+                .lightSurfaceForeground()
             }
             .buttonStyle(.plain)
             .accessibilityHint(isExpanded ? "Hides the train legs for this journey." : "Shows each train leg for this journey.")
@@ -636,134 +647,7 @@ private struct ActiveItineraryOptionCard: View {
                     .transition(.opacity.combined(with: .move(edge: .top)))
             }
         }
-        .accessibilityIdentifier(emphasized ? "active-itinerary-recommended-option" : "active-itinerary-option")
-    }
-}
-
-private struct ActiveItineraryPlanHeroCard: View {
-    var itinerary: ItineraryRecommendation
-    var now: Date
-    var isExpanded: Bool
-
-    private var firstLeg: ItineraryLeg? {
-        itinerary.legs.first
-    }
-
-    // `expectedDeparture` on a leg is a clock string like "12:22", which
-    // `DateFormatting` cannot parse, so this used to be nil every time: the
-    // countdown fell back to "Dep 12:22" in amber, repeating the line
-    // directly beneath it and implying something was wrong. The timestamp
-    // field is the one to read, with the clock string resolved against now
-    // for anything that does not carry it.
-    private var departureDate: Date? {
-        if let timestamp = firstLeg?.expectedDepartureAt, let date = DateFormatting.date(from: timestamp) {
-            return date
-        }
-        let clock = firstLeg?.expectedDeparture ?? itinerary.expectedDeparture
-        return JourneyFormatting.railDate(from: clock, near: now)
-    }
-
-    private var countdownText: String {
-        guard let departureDate else {
-            return "Dep \(ItineraryFormatting.departureText(itinerary))"
-        }
-        let seconds = departureDate.timeIntervalSince(now)
-        if seconds > 60 {
-            return "Leaves in \(Int((seconds / 60).rounded(.up))) min"
-        }
-        if seconds >= -60 {
-            return "Leaves now"
-        }
-        return "Departed"
-    }
-
-    private var countdownTone: StatusPill.Tone {
-        guard let departureDate else {
-            return .amber
-        }
-        return departureDate < now ? .accent : .green
-    }
-
-    private var platform: ActiveWindowPresentation.PlatformDisplay {
-        ActiveWindowPresentation.PlatformDisplay(
-            primary: ItineraryFormatting.firstLegPlatformText(itinerary),
-            secondary: nil,
-            confirmed: ItineraryFormatting.firstLegPlatformConfirmed(itinerary)
-        )
-    }
-
-    // Sits directly in the itinerary card: a filled box inside the card was
-    // card-in-card chrome. The change and its risk are in the header and the
-    // leg list, so the detail line keeps to times.
-    var body: some View {
-        VStack(alignment: .leading, spacing: 4) {
-            HStack(alignment: .lastTextBaseline, spacing: RTSpacing.compact) {
-                Text(countdownText)
-                    .font(.title.weight(.bold))
-                    .foregroundStyle(countdownTone.color)
-                    .monospacedDigit()
-                    .contentTransition(.numericText())
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.72)
-                    .frame(maxWidth: .infinity, alignment: .leading)
-
-                CaptionedPlatformTile(
-                    platform: platform.value,
-                    size: .small,
-                    captionFont: .caption.weight(.medium)
-                )
-            }
-
-            let routeChainText = ItineraryFormatting.routeChainText(itinerary)
-
-            HStack(spacing: RTSpacing.small) {
-                Text(detailLine)
-                    .font(.subheadline)
-                    .foregroundStyle(.secondary)
-                    .monospacedDigit()
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.82)
-                Spacer(minLength: 0)
-                // A direct journey has no route chain, so the disclosure
-                // stays here for it: without a chevron somewhere there is
-                // nothing to say the card opens.
-                if routeChainText == nil {
-                    disclosure
-                }
-            }
-
-            // Standing in for the leg list while the card is collapsed: the
-            // stations, in order, including the one being changed at.
-            if let routeChainText {
-                HStack(alignment: .firstTextBaseline, spacing: RTSpacing.small) {
-                    Text(routeChainText)
-                        .font(.subheadline.weight(.medium))
-                        .lineLimit(2)
-                        .fixedSize(horizontal: false, vertical: true)
-                        .frame(maxWidth: .infinity, alignment: .leading)
-                    disclosure
-                }
-                .padding(.top, 2)
-            }
-        }
-        .contentShape(Rectangle())
-        .lightSurfaceForeground()
-    }
-
-    private var disclosure: some View {
-        Label(isExpanded ? "Hide legs" : "Show legs", systemImage: isExpanded ? "chevron.up" : "chevron.down")
-            .labelStyle(.iconOnly)
-            .font(.footnote.weight(.semibold))
-            .foregroundStyle(.tertiary)
-    }
-
-    private var detailLine: String {
-        [
-            "Dep \(ItineraryFormatting.departureText(itinerary))",
-            "Arr \(ItineraryFormatting.arrivalText(itinerary))",
-            ItineraryFormatting.durationText(itinerary)
-        ]
-        .joined(separator: " · ")
+        .accessibilityIdentifier("active-itinerary-recommended-option")
     }
 }
 
