@@ -96,9 +96,7 @@ struct ActiveWindowView: View {
         VStack(alignment: .leading, spacing: 0) {
             statusPillRow(
                 presentation: presentation,
-                surface: surface,
-                freshnessText: showsHero ? glance.freshnessText : nil,
-                isStale: isStale
+                surface: surface
             )
             .padding(.bottom, showsHero ? RTSpacing.small : RTSpacing.compact)
 
@@ -128,6 +126,14 @@ struct ActiveWindowView: View {
                     loadDetail: { await loadDetail(presentation.heroRecommendation) },
                     requestUnpin: requestDeleteConfirmation
                 )
+
+                // How fresh the sign is, right-aligned under the sign it describes.
+                HStack {
+                    Spacer(minLength: 0)
+                    freshnessLabel(glance.freshnessText, isStale: isStale)
+                }
+                .padding(.top, RTSpacing.small)
+                .padding(.horizontal, 2)
                 .padding(.bottom, RTSpacing.sectionGap)
             }
         }
@@ -168,26 +174,18 @@ struct ActiveWindowView: View {
         }
     }
 
-    /// One line for what RightTrain is watching and from where, with how
-    /// fresh the data is on the right. The origin lives here rather than in
-    /// the navigation bar, which carries only the destination.
+    /// One line for what RightTrain is watching and from where. The origin
+    /// lives here rather than in the navigation bar, which carries only the
+    /// destination. Data freshness sits under the recommended train's sign.
     private func statusPillRow(
         presentation: ActiveWindowPresentation,
-        surface: RTSurface,
-        freshnessText: String?,
-        isStale: Bool
+        surface: RTSurface
     ) -> some View {
-        HStack(alignment: .firstTextBaseline, spacing: RTSpacing.small) {
-            Text(pillStatusText(presentation: presentation))
-                .font(.subheadline.weight(.medium))
-                .foregroundStyle(surface.pillTone.color)
-                .fixedSize(horizontal: false, vertical: true)
-                .frame(maxWidth: .infinity, alignment: .leading)
-            if let freshnessText {
-                freshnessLabel(freshnessText, isStale: isStale)
-            }
-        }
-        .frame(maxWidth: .infinity, alignment: .leading)
+        Text(pillStatusText(presentation: presentation))
+            .font(.subheadline.weight(.medium))
+            .foregroundStyle(surface.pillTone.color)
+            .fixedSize(horizontal: false, vertical: true)
+            .frame(maxWidth: .infinity, alignment: .leading)
         .pinnedActionsToolbar(
             primaryAction: PinnedHeaderPrimaryAction(
                 title: presentation.heroIsPinnedTrain ? "Unpin Journey" : "Unpin Search",
