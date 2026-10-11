@@ -109,6 +109,15 @@ struct ActiveWindowView: View {
 
             // ── Hero block ────────────────────────────────────────────────
             if showsHero {
+                // Names the sign, as "Other options" names the board below:
+                // without it the two read as the same kind of thing.
+                Text(presentation.heroIsPinnedTrain ? "Your train" : "Recommended train")
+                    .font(.subheadline.weight(.semibold))
+                    .foregroundStyle(.secondary)
+                    .padding(.horizontal, 2)
+                    .padding(.bottom, RTSpacing.small)
+                    .accessibilityAddTraits(.isHeader)
+
                 StatusFirstHeroBlock(
                     presentation: presentation,
                     countdown: heroCountdown,
@@ -159,28 +168,23 @@ struct ActiveWindowView: View {
         }
     }
 
-    /// One line for what RightTrain is doing and how fresh the data is,
-    /// instead of separate rows around the hero.
+    /// One line for what RightTrain is watching and from where, with how
+    /// fresh the data is on the right. The origin lives here rather than in
+    /// the navigation bar, which carries only the destination.
     private func statusPillRow(
         presentation: ActiveWindowPresentation,
         surface: RTSurface,
         freshnessText: String?,
         isStale: Bool
     ) -> some View {
-        ViewThatFits(in: .horizontal) {
-            HStack(spacing: RTSpacing.small) {
-                statusPill(presentation: presentation, surface: surface)
-                Spacer(minLength: RTSpacing.small)
-                if let freshnessText {
-                    freshnessLabel(freshnessText, isStale: isStale)
-                }
-            }
-
-            VStack(alignment: .leading, spacing: 2) {
-                statusPill(presentation: presentation, surface: surface)
-                if let freshnessText {
-                    freshnessLabel(freshnessText, isStale: isStale)
-                }
+        HStack(alignment: .firstTextBaseline, spacing: RTSpacing.small) {
+            Text(pillStatusText(presentation: presentation))
+                .font(.subheadline.weight(.medium))
+                .foregroundStyle(surface.pillTone.color)
+                .fixedSize(horizontal: false, vertical: true)
+                .frame(maxWidth: .infinity, alignment: .leading)
+            if let freshnessText {
+                freshnessLabel(freshnessText, isStale: isStale)
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -199,38 +203,26 @@ struct ActiveWindowView: View {
         }
     }
 
-    private func statusPill(presentation: ActiveWindowPresentation, surface: RTSurface) -> some View {
-        StatusPill(
-            text: pillStatusText(presentation: presentation),
-            tone: surface.pillTone,
-            style: .dot
-        )
-        .fixedSize(horizontal: true, vertical: false)
-    }
-
     @ViewBuilder
     private func freshnessLabel(_ text: String, isStale: Bool) -> some View {
         if isStale {
-            Label(text, systemImage: "exclamationmark.triangle.fill")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Color.rightTrainAmber)
-                .lineLimit(1)
+            StaleFreshnessText(text: text)
                 .fixedSize(horizontal: true, vertical: false)
-                .accessibilityLabel("Live data may be out of date. \(text)")
         } else {
             LiveFreshnessText(text: text)
                 .fixedSize(horizontal: true, vertical: false)
         }
     }
 
+    /// "Departures from London Kings Cross between 08:02 and 10:02" for a
+    /// Search Pin; "From London Kings Cross" for one train, whose sign
+    /// already says how it's running.
     private func pillStatusText(presentation: ActiveWindowPresentation) -> String {
+        let origin = JourneyFormatting.originStationText(presentation.heroRecommendation.journey)
         if presentation.heroIsPinnedTrain {
-            if let statusDisplay = ActiveWindowPresentation.heroStatusDisplay(for: presentation.heroRecommendation) {
-                return "\(statusDisplay.text) · live"
-            }
-            return "On time · live"
+            return "From \(origin)"
         }
-        return windowRangeText
+        return windowRangeText(from: origin)
     }
 
     @ViewBuilder
@@ -242,10 +234,11 @@ struct ActiveWindowView: View {
         now: Date
     ) -> some View {
         VStack(alignment: .leading, spacing: RTSpacing.small) {
-            Text("Other trains in this search")
+            Text("Other options")
                 .font(.subheadline.weight(.semibold))
                 .foregroundStyle(.secondary)
                 .padding(.horizontal, 2)
+                .accessibilityAddTraits(.isHeader)
 
             // A concourse board: chronological, cancelled trains in place,
             // as the station shows them.
@@ -355,17 +348,16 @@ struct ActiveWindowView: View {
         return trimmed
     }
 
-    /// "Departures between 08:00 and 10:00": what a Search Pin watches, in
-    /// clock times rather than a window length.
-    private var windowRangeText: String {
+    /// What a Search Pin watches, in clock times rather than a window length.
+    private func windowRangeText(from origin: String) -> String {
         guard let start = DateFormatting.date(from: window.departureStart) else {
-            return "Departures in the next \(window.windowMinutes) min"
+            return "Departures from \(origin) in the next \(window.windowMinutes) min"
         }
         let end = start.addingTimeInterval(TimeInterval(window.windowMinutes) * 60)
         let formatter = DateFormatter()
         formatter.timeZone = TimeZone(identifier: "Europe/London")
         formatter.dateFormat = "HH:mm"
-        return "Departures between \(formatter.string(from: start)) and \(formatter.string(from: end))"
+        return "Departures from \(origin) between \(formatter.string(from: start)) and \(formatter.string(from: end))"
     }
 
     private func shouldPresentOfflineGlance(for recommendation: DirectWindowRecommendation) -> Bool {

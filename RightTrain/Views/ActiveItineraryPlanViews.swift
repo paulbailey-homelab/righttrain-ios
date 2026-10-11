@@ -311,12 +311,7 @@ private struct ActiveItineraryStatusHeader: View {
     @ViewBuilder
     private var freshness: some View {
         if isStale {
-            Label(content.freshnessText, systemImage: "exclamationmark.triangle.fill")
-                .font(.subheadline.weight(.semibold))
-                .foregroundStyle(Color.rightTrainAmber)
-                .lineLimit(1)
-                .minimumScaleFactor(0.82)
-                .accessibilityLabel("Live data may be out of date. \(content.freshnessText)")
+            StaleFreshnessText(text: content.freshnessText)
         } else {
             LiveFreshnessText(text: content.freshnessText)
         }
