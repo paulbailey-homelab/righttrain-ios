@@ -188,8 +188,11 @@ private struct SearchResultRowLayout<Status: View>: View {
                 Text(subtitleText)
                     .font(.subheadline)
                     .foregroundStyle(.secondary)
-                    .lineLimit(1)
-                    .minimumScaleFactor(0.85)
+                    // Two lines rather than "Avanti West…": the list is short
+                    // and the operator and "via" station are what tell
+                    // rows apart.
+                    .lineLimit(2)
+                    .fixedSize(horizontal: false, vertical: true)
 
                 status()
             }

@@ -251,6 +251,9 @@ struct PerspectiveActiveItineraryView: View {
                 // actions, so a separate glance card would only repeat them.
                 ActiveItineraryStatusHeader(
                     content: presentation.liveGlanceContent(now: context.date, isOffline: isOffline),
+                    originText: itinerary.selectedItinerary.legs.first.map {
+                        JourneyFormatting.originStationText($0.journeyResult)
+                    },
                     isStale: isOffline || presentation.isDataStale(now: context.date)
                 )
                 phaseView
@@ -275,7 +278,14 @@ struct PerspectiveActiveItineraryView: View {
 
 private struct ActiveItineraryStatusHeader: View {
     var content: ActiveWindowPresentation.LiveGlanceContent
+    /// Where the journey starts. The navigation bar carries the destination.
+    var originText: String?
     var isStale: Bool
+
+    private var subtitle: String? {
+        let parts = [originText.map { "From \($0)" }, content.routeContextText].compactMap { $0 }
+        return parts.isEmpty ? nil : parts.joined(separator: " · ")
+    }
 
     var body: some View {
         VStack(alignment: .leading, spacing: 4) {
@@ -292,15 +302,9 @@ private struct ActiveItineraryStatusHeader: View {
                 }
             }
 
-            Text(content.routeTitle)
-                .font(.title3.weight(.bold))
-                .lineLimit(2)
-                .fixedSize(horizontal: false, vertical: true)
-                .padding(.top, 2)
-
-            if let routeContextText = content.routeContextText {
-                Text(routeContextText)
-                    .font(.subheadline)
+            if let subtitle {
+                Text(subtitle)
+                    .font(.subheadline.weight(.medium))
                     .foregroundStyle(.secondary)
                     .lineLimit(1)
             }
@@ -375,6 +379,7 @@ struct ActiveItineraryView: View {
                             },
                             loadDetail: loadDetail
                         )
+                        .itinerarySecondaryCard()
                     }
 
                     if presentation.canBoardFirstLeg, let firstLeg = option.legs.first {
@@ -427,8 +432,6 @@ struct ActiveItineraryView: View {
         let alternatives = presentation.alternativeItineraries
         if !alternatives.isEmpty {
             VStack(alignment: .leading, spacing: RTSpacing.listItem) {
-                Divider()
-
                 Button {
                     withAnimation(.snappy) {
                         showsAlternatives.toggle()
@@ -457,7 +460,7 @@ struct ActiveItineraryView: View {
                     }
                 }
             }
-            .lightSurfaceForeground()
+            .itinerarySecondaryCard()
             .confirmationDialog(
                 "Monitor this route instead?",
                 isPresented: switchConfirmationPresented,

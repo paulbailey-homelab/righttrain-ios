@@ -64,16 +64,18 @@ struct CloudKitSnapshot: Equatable {
 final class CloudKitPreferenceStore: CloudKitPreferenceStoring {
     private(set) var availability: CloudKitAvailability = .unknown
 
-    private let container: CKContainer
-    private let database: CKDatabase
+    private let containerIdentifier: String
+    /// Created on first use, not in `init`: `CKContainer(identifier:)` traps in
+    /// a build without the iCloud entitlement (unsigned simulator builds), and
+    /// the store is built at launch whether or not anything reads CloudKit.
+    private lazy var container = CKContainer(identifier: containerIdentifier)
+    private var database: CKDatabase { container.privateCloudDatabase }
     private let zoneID: CKRecordZone.ID
     private let logger = Logger(subsystem: Bundle.main.bundleIdentifier ?? "com.righttrain.ios", category: "cloudkit")
     private var zoneEnsured = false
 
     init(containerIdentifier: String) {
-        let container = CKContainer(identifier: containerIdentifier)
-        self.container = container
-        self.database = container.privateCloudDatabase
+        self.containerIdentifier = containerIdentifier
         self.zoneID = CKRecordZone.ID(zoneName: CloudKitSchema.zoneName, ownerName: CKCurrentUserDefaultName)
     }
 
