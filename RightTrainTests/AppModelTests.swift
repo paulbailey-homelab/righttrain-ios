@@ -785,7 +785,7 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(apiClient.registerAccountRequests.last?.accessToken, "device-token")
         XCTAssertEqual(model.authViewModel.portableAccount?.account.state, "active")
         XCTAssertEqual(model.authViewModel.oneTimeRecoveryCode, "shown-once-to-user")
-        XCTAssertEqual(model.authViewModel.accountStatusMessage, "Account preferences are ready to use on another device.")
+        XCTAssertEqual(model.authViewModel.accountStatusMessage, "Your account is ready to use on another device.")
         XCTAssertEqual(sessionStore.session?.portableAccount?.account.state, "active")
         XCTAssertFalse(String(describing: sessionStore.session).contains("shown-once-to-user"))
 
@@ -1224,11 +1224,11 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
-    func testSearchPinFollowsDirectResultsWhenRoutingTurnsOnAfterTheSearch() async {
-        // The search screen re-reads capabilities each time it shows. A
-        // failed read leaves direct-only results on screen, and a later good
-        // one turns routing back on before the pin: the pin still has to
-        // watch the direct trains the traveller was looking at.
+    func testSearchPinFollowsDirectResultsOnScreen() async {
+        // Direct-only results are on screen: the pin has to watch those
+        // trains, not turn the top route into an itinerary. (A capability
+        // change clears the results, so there is nothing on screen to
+        // follow after one; that is covered by the next test.)
         let apiClient = FakeAPIClient()
         let sessionStore = FakeSessionStore()
         sessionStore.session = TestFactory.storedSession(accessToken: "create-token")
@@ -1243,7 +1243,6 @@ final class AppModelTests: XCTestCase {
         model.origin = TestFactory.station(crs: "AAA", name: "Origin")
         model.destination = TestFactory.station(crs: "ZZZ", name: "Destination")
         await model.loadRecommendations()
-        model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: true))
 
         await model.createActiveWindow()
 
@@ -1252,6 +1251,27 @@ final class AppModelTests: XCTestCase {
         XCTAssertEqual(apiClient.createWindowRequests.last?.input.destinationCrs, "ZZZ")
         XCTAssertEqual(model.activeWindow?.id, "window-1")
         XCTAssertNil(model.activeItinerary)
+    }
+
+    @MainActor
+    func testRoutingCapabilityChangeClearsSearchResults() async {
+        let apiClient = FakeAPIClient()
+        let sessionStore = FakeSessionStore()
+        sessionStore.session = TestFactory.storedSession(accessToken: "create-token")
+        apiClient.currentUserResult = .success(TestFactory.user())
+        apiClient.activeWindowResult = .failure(TestFactory.notFoundError())
+        apiClient.recommendationsResult = .success(TestFactory.recommendationResponse([TestFactory.recommendation(serviceID: 202)]))
+        let model = makeModel(apiClient: apiClient, sessionStore: sessionStore)
+        await model.bootstrap()
+        model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: false))
+        model.origin = TestFactory.station(crs: "AAA", name: "Origin")
+        model.destination = TestFactory.station(crs: "ZZZ", name: "Destination")
+        await model.loadRecommendations()
+        XCTAssertNotNil(model.windowSetupViewModel.recommendationResponse)
+
+        model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: true))
+
+        XCTAssertNil(model.windowSetupViewModel.recommendationResponse)
     }
 
     @MainActor
@@ -1405,7 +1425,7 @@ final class AppModelTests: XCTestCase {
         let model = makeModel(apiClient: apiClient)
         model.windowSetupViewModel.applyAppCapabilities(AppCapabilitiesResponse(multiLegRoutingEnabled: true))
         model.origin = TestFactory.station(crs: "AAA", name: "Origin")
-        apiClient.stationSearchResultsByQuery["pet"] = [TestFactory.station(crs: "PBO", name: "Peterborough")]
+        apiClient.stationSearchResultsByQuery["PET"] = [TestFactory.station(crs: "PBO", name: "Peterborough")]
 
         let results = try await model.windowSetupViewModel.searchDestinationStations(query: "pet")
 
@@ -1421,7 +1441,9 @@ final class AppModelTests: XCTestCase {
         sessionStore.session = TestFactory.storedSession(accessToken: "create-token")
         apiClient.currentUserResult = .success(TestFactory.user())
         apiClient.activeWindowResult = .success(TestFactory.window(id: "old-window"))
-        let selectedRoute = TestFactory.itinerary(stableKey: "route-2")
+        // A single-leg result is pinned as a direct train, so this needs a change.
+        let legs = [TestFactory.itineraryLeg(legIndex: 0), TestFactory.itineraryLeg(legIndex: 1)]
+        let selectedRoute = TestFactory.itinerary(stableKey: "route-2", legs: legs, connections: [TestFactory.itineraryConnection()])
         apiClient.createItineraryResult = .success(TestFactory.itinerarySubscription(id: "itinerary-2", selectedItinerary: selectedRoute))
         let model = makeModel(apiClient: apiClient, sessionStore: sessionStore)
         await model.bootstrap()
@@ -2772,25 +2794,25 @@ final class AppModelTests: XCTestCase {
     }
 
     @MainActor
-    func testCommuteRoutinesRefreshAndCreateUseBearerToken() async {
+    func testCommuteRoutinesLoadFromAndSaveToCloudKit() async {
         let apiClient = FakeAPIClient()
         let sessionStore = FakeSessionStore()
+        let cloudKitStore = FakeCloudKitPreferenceStore()
         let routine = TestFactory.commuteRoutine(id: "routine-create")
+        // Already migrated, so CloudKit is the source of truth.
+        cloudKitStore.snapshot = CloudKitSnapshot(preferences: nil, routines: [routine], seededAt: Date())
         sessionStore.session = TestFactory.storedSession(accessToken: "commute-token")
         apiClient.currentUserResult = .success(TestFactory.user())
         apiClient.activeWindowResult = .failure(TestFactory.notFoundError())
-        apiClient.commuteRoutinesResult = .success([routine])
-        apiClient.commuteRoutineResult = .success(routine)
         apiClient.stationSearchResultsByQuery = [
             "AAA": [TestFactory.station(crs: "AAA", name: "Origin")],
             "BBB": [TestFactory.station(crs: "BBB", name: "Destination")]
         ]
-        let model = makeModel(apiClient: apiClient, sessionStore: sessionStore)
+        let model = makeModel(apiClient: apiClient, sessionStore: sessionStore, cloudKitStore: cloudKitStore)
 
         await model.bootstrap()
 
         XCTAssertEqual(model.commuteRoutines.map(\.id), ["routine-create"])
-        XCTAssertEqual(apiClient.listCommuteRoutineAccessTokens.last, "commute-token")
         XCTAssertEqual(model.commuteRoutinesViewModel.stationName(for: "AAA"), "Origin")
         XCTAssertEqual(model.commuteRoutinesViewModel.stationName(for: "BBB"), "Destination")
 
@@ -2808,30 +2830,31 @@ final class AppModelTests: XCTestCase {
         )
         await model.commuteRoutinesViewModel.createRoutine(input)
 
-        XCTAssertEqual(apiClient.createCommuteRoutineRequests.last?.accessToken, "commute-token")
-        XCTAssertEqual(apiClient.createCommuteRoutineRequests.last?.input.autoArmLeadMinutes, 30)
+        XCTAssertEqual(cloudKitStore.savedRoutines.last?.name, "Morning")
+        XCTAssertEqual(cloudKitStore.savedRoutines.last?.autoArmLeadMinutes, 30)
+        XCTAssertEqual(model.commuteRoutines.first?.name, "Morning")
+        XCTAssertTrue(apiClient.createCommuteRoutineRequests.isEmpty)
     }
 
     @MainActor
-    func testCommuteStationDefaultsUpdateReplacesStoredUser() async {
+    func testCommuteStationDefaultsAreSavedToCloudKitNormalised() async {
         let apiClient = FakeAPIClient()
         let sessionStore = FakeSessionStore()
+        let cloudKitStore = FakeCloudKitPreferenceStore()
+        cloudKitStore.snapshot = CloudKitSnapshot(preferences: nil, routines: [], seededAt: Date())
         sessionStore.session = TestFactory.storedSession(accessToken: "defaults-token")
         apiClient.currentUserResult = .success(TestFactory.user())
         apiClient.activeWindowResult = .failure(TestFactory.notFoundError())
-        apiClient.commuteRoutinesResult = .success([])
-        var updatedUser = TestFactory.user()
-        updatedUser.stationDefaults = UserStationDefaults(homeStationCrs: "BTN", workStationCrs: "LBG")
-        apiClient.updateStationDefaultsResult = .success(updatedUser)
-        let model = makeModel(apiClient: apiClient, sessionStore: sessionStore)
+        let model = makeModel(apiClient: apiClient, sessionStore: sessionStore, cloudKitStore: cloudKitStore)
         await model.bootstrap()
 
         await model.commuteRoutinesViewModel.updateStationDefaults(homeStationCRS: "btn", workStationCRS: "lbg")
 
-        XCTAssertEqual(apiClient.updateStationDefaultsRequests.last?.accessToken, "defaults-token")
-        XCTAssertEqual(apiClient.updateStationDefaultsRequests.last?.input.homeStationCrs, "BTN")
-        XCTAssertEqual(model.user?.stationDefaults.workStationCrs, "LBG")
-        XCTAssertEqual(sessionStore.session?.user.stationDefaults.homeStationCrs, "BTN")
+        XCTAssertEqual(cloudKitStore.savedStationDefaults.last?.home, "BTN")
+        XCTAssertEqual(cloudKitStore.savedStationDefaults.last?.work, "LBG")
+        XCTAssertEqual(model.commuteRoutinesViewModel.stationDefaults.homeStationCrs, "BTN")
+        XCTAssertEqual(model.commuteRoutinesViewModel.stationDefaults.workStationCrs, "LBG")
+        XCTAssertTrue(apiClient.updateStationDefaultsRequests.isEmpty)
     }
 
     @MainActor
@@ -2987,7 +3010,8 @@ final class AppModelTests: XCTestCase {
         applicationStateProvider: FakeApplicationStateProvider = FakeApplicationStateProvider(),
         activeJourneyCache: ActiveJourneyCache? = nil,
         journeyMutationQueue: JourneyMutationQueue? = nil,
-        preferences: UserDefaults? = nil
+        preferences: UserDefaults? = nil,
+        cloudKitStore: FakeCloudKitPreferenceStore? = nil
     ) -> AppModel {
         let storeKitSubscriptionService = storeKitSubscriptionService ?? FakeStoreKitSubscriptionService()
         let journeyMutationQueue = journeyMutationQueue ?? JourneyMutationQueue(defaults: makeIsolatedDefaults())
@@ -3004,7 +3028,10 @@ final class AppModelTests: XCTestCase {
             applicationStateProvider: applicationStateProvider,
             activeJourneyCache: activeJourneyCache,
             journeyMutationQueue: journeyMutationQueue,
-            searchPreferences: preferences ?? makeIsolatedDefaults()
+            searchPreferences: preferences ?? makeIsolatedDefaults(),
+            // The test host has no iCloud account, so the real store would
+            // report commutes as unreachable.
+            cloudKitStore: cloudKitStore ?? FakeCloudKitPreferenceStore()
         )
     }
 

@@ -1,11 +1,30 @@
 name: iOS Tests
 
 on:
+  pull_request:
+    branches:
+      - main
+      - testflight-internal
+      - testflight
+    paths:
+      - "RightTrain/**"
+      - "RightTrainLiveActivityExtension/**"
+      - "RightTrainTests/**"
+      - "RightTrain.xcodeproj/**"
+      - ".github/workflows/ios-tests.yaml"
   workflow_dispatch:
+
+# A newer push to the same PR makes the older run pointless, and macOS
+# runner minutes are the expensive kind.
+concurrency:
+  group: ios-tests-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
 
 jobs:
   xctest:
-    runs-on: macos-15
+    # The app targets iOS 26, so it needs an Xcode with that SDK.
+    runs-on: macos-26
+    timeout-minutes: 45
 
     steps:
       - name: Check out repository
@@ -22,11 +41,28 @@ jobs:
           fi
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
 
+      # Ad-hoc signed, not unsigned: the app uses the Keychain and CloudKit,
+      # which need the entitlements an unsigned build drops. Serial, because
+      # parallel clone simulators fail to launch the host app.
       - name: Run XCTest
         run: |
+          set -o pipefail
           xcodebuild \
             -project RightTrain.xcodeproj \
             -scheme RightTrain \
             -destination "id=${{ steps.simulator.outputs.udid }}" \
-            CODE_SIGNING_ALLOWED=NO \
+            -parallel-testing-enabled NO \
+            -resultBundlePath "$RUNNER_TEMP/RightTrain.xcresult" \
+            CODE_SIGN_IDENTITY=- \
+            CODE_SIGNING_ALLOWED=YES \
+            CODE_SIGNING_REQUIRED=YES \
+            DEVELOPMENT_TEAM= \
             test
+
+      - name: Upload test results
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: RightTrain.xcresult
+          path: ${{ runner.temp }}/RightTrain.xcresult
+          retention-days: 7
