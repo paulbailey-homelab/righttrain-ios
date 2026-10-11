@@ -107,15 +107,6 @@ struct ActiveWindowView: View {
 
             // ── Hero block ────────────────────────────────────────────────
             if showsHero {
-                // Names the sign, as "Other options" names the board below:
-                // without it the two read as the same kind of thing.
-                Text(presentation.heroIsPinnedTrain ? "Your train" : "Recommended train")
-                    .font(.subheadline.weight(.semibold))
-                    .foregroundStyle(.secondary)
-                    .padding(.horizontal, 2)
-                    .padding(.bottom, RTSpacing.small)
-                    .accessibilityAddTraits(.isHeader)
-
                 StatusFirstHeroBlock(
                     presentation: presentation,
                     countdown: heroCountdown,
@@ -212,7 +203,7 @@ struct ActiveWindowView: View {
         }
     }
 
-    /// "Departures from London Kings Cross between 08:02 and 10:02" for a
+    /// "From London Kings Cross, 08:02 to 10:02" for a
     /// Search Pin; "From London Kings Cross" for one train, whose sign
     /// already says how it's running.
     private func pillStatusText(presentation: ActiveWindowPresentation) -> String {
@@ -256,38 +247,15 @@ struct ActiveWindowView: View {
         }
     }
 
+    /// Under the pinned train's sign: a way into the calling points, and one
+    /// line on what RightTrain is doing. The platform and time are on the
+    /// sign, so they aren't said a second time here.
     private func pinnedNextStepCard(
         presentation: ActiveWindowPresentation,
         countdown: ActiveWindowPresentation.CountdownDisplay,
         surface: RTSurface
     ) -> some View {
-        let journey = presentation.heroRecommendation.journey
-
-        return VStack(alignment: .leading, spacing: 0) {
-            HStack(alignment: .top, spacing: RTSpacing.compact) {
-                Image(systemName: countdown.isDeparted ? "tram.fill" : "figure.walk")
-                    .font(.body.weight(.semibold))
-                    .foregroundStyle(surface.accent)
-                    .frame(width: RTSize.iconMedium)
-
-                VStack(alignment: .leading, spacing: 4) {
-                    Text(pinnedNextStepTitle(journey: journey, countdown: countdown))
-                        .font(.subheadline.weight(.semibold))
-                        .foregroundStyle(Color.rightTrainInk)
-                        .fixedSize(horizontal: false, vertical: true)
-
-                    Text(pinnedNextStepMessage(countdown: countdown))
-                        .font(.footnote)
-                        .foregroundStyle(.secondary)
-                        .fixedSize(horizontal: false, vertical: true)
-                }
-                Spacer(minLength: 0)
-            }
-            .padding(.vertical, RTSpacing.compact)
-
-            Divider()
-                .padding(.leading, RTSize.iconMedium + RTSpacing.compact)
-
+        VStack(alignment: .leading, spacing: RTSpacing.small) {
             Button {
                 Task { await loadDetail(presentation.heroRecommendation) }
             } label: {
@@ -303,27 +271,18 @@ struct ActiveWindowView: View {
                 .font(.body)
                 .foregroundStyle(Color.rightTrainActionInk)
                 .frame(minHeight: RTSize.tapTarget)
+                .padding(.horizontal, RTSpacing.cardPadding)
+                .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
                 .contentShape(Rectangle())
             }
             .buttonStyle(.plain)
-        }
-        .padding(.horizontal, RTSpacing.cardPadding)
-        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
-    }
 
-    private func pinnedNextStepTitle(
-        journey: JourneyResult,
-        countdown: ActiveWindowPresentation.CountdownDisplay
-    ) -> String {
-        if countdown.isDeparted {
-            return "Follow the stops for this journey"
+            Text(pinnedNextStepMessage(countdown: countdown))
+                .font(.footnote)
+                .foregroundStyle(.secondary)
+                .fixedSize(horizontal: false, vertical: true)
+                .padding(.horizontal, 2)
         }
-        let departure = JourneyFormatting.departureText(journey)
-        let platform = ActiveWindowPresentation.platformDisplay(for: journey).primary
-        if let readablePlatform = readablePlatform(platform) {
-            return "Go to platform \(readablePlatform) for \(departure)"
-        }
-        return "Watch for the platform before \(departure)"
     }
 
     private func pinnedNextStepMessage(countdown: ActiveWindowPresentation.CountdownDisplay) -> String {
@@ -333,29 +292,16 @@ struct ActiveWindowView: View {
         return "RightTrain will keep watching this train and alert you if the platform, time, or status changes."
     }
 
-    private func readablePlatform(_ value: String) -> String? {
-        let trimmed = value.trimmingCharacters(in: .whitespacesAndNewlines)
-        guard !trimmed.isEmpty,
-              trimmed != "-",
-              trimmed.uppercased() != "TBC" else {
-            return nil
-        }
-        if trimmed.uppercased().hasPrefix("P"), trimmed.count > 1 {
-            return String(trimmed.dropFirst())
-        }
-        return trimmed
-    }
-
     /// What a Search Pin watches, in clock times rather than a window length.
     private func windowRangeText(from origin: String) -> String {
         guard let start = DateFormatting.date(from: window.departureStart) else {
-            return "Departures from \(origin) in the next \(window.windowMinutes) min"
+            return "From \(origin), next \(window.windowMinutes) min"
         }
         let end = start.addingTimeInterval(TimeInterval(window.windowMinutes) * 60)
         let formatter = DateFormatter()
         formatter.timeZone = TimeZone(identifier: "Europe/London")
         formatter.dateFormat = "HH:mm"
-        return "Departures from \(origin) between \(formatter.string(from: start)) and \(formatter.string(from: end))"
+        return "From \(origin), \(formatter.string(from: start)) to \(formatter.string(from: end))"
     }
 
     private func shouldPresentOfflineGlance(for recommendation: DirectWindowRecommendation) -> Bool {
@@ -518,7 +464,8 @@ struct ActiveOnTrainJourneyView: View {
                 kind: .journey,
                 showsKindBadge: false,
                 showsActionMenu: false,
-                title: "\(JourneyFormatting.isArrived(journey) ? "Arrived at" : "On board to") \(JourneyFormatting.destinationStationText(journey))",
+                // The navigation bar already names the destination.
+                title: JourneyFormatting.isArrived(journey) ? "Arrived" : "On board",
                 summary: journeyPinSummary,
                 statusText: anomalousStatus?.text,
                 statusTone: anomalousStatus?.tone ?? .accent,

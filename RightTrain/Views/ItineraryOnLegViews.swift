@@ -35,12 +35,17 @@ struct ItineraryOnLegView: View {
                     }
                 }
 
-                if let connection = itinerary.nextConnection, !approachingInterchange {
-                    connectionCard(connection)
-                }
-
-                if let onward = itinerary.onwardLeg, !approachingInterchange {
-                    onwardCard(onward)
+                if !approachingInterchange,
+                   itinerary.nextConnection != nil || itinerary.onwardLeg != nil {
+                    VStack(alignment: .leading, spacing: 0) {
+                        if let connection = itinerary.nextConnection {
+                            connectionCard(connection)
+                        }
+                        if let onward = itinerary.onwardLeg {
+                            onwardCard(onward)
+                        }
+                    }
+                    .itinerarySecondaryCard()
                 }
 
                 if presentation.canBoardOnwardLeg, let onwardLeg = itinerary.onwardLeg {
@@ -131,9 +136,8 @@ struct ItineraryOnLegView: View {
                     .foregroundStyle(.tertiary)
             }
         }
-        .padding(.top, RTSpacing.small)
+        .padding(.bottom, RTSpacing.small)
         .frame(maxWidth: .infinity, alignment: .leading)
-        .overlay(alignment: .top) { Divider() }
         .lightSurfaceForeground()
         // Interchange risk must reach VoiceOver as text — the pill colour
         // alone is not a status signal.

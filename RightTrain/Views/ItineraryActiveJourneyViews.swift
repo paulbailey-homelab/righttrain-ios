@@ -124,6 +124,9 @@ struct ActiveItineraryHeader: View {
     }
 }
 
+/// The pinned itinerary's stack: the sign sits straight on the page like the
+/// direct Pin's, and only the secondary content (route chain, connection,
+/// other routes) gets a card, via `itinerarySecondaryCard()`.
 struct ActiveItineraryCard<Content: View>: View {
     private let content: () -> Content
 
@@ -132,12 +135,21 @@ struct ActiveItineraryCard<Content: View>: View {
     }
 
     var body: some View {
-        VStack(alignment: .leading, spacing: 14) {
+        VStack(alignment: .leading, spacing: RTSpacing.compact) {
             content()
         }
-        .padding(RTSpacing.cardPadding)
-        .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
-        .lightSurfaceForeground()
+    }
+}
+
+extension View {
+    /// A solid content card for the secondary rows under an itinerary's sign.
+    func itinerarySecondaryCard() -> some View {
+        self
+            .padding(.horizontal, RTSpacing.cardPadding)
+            .padding(.vertical, RTSpacing.compact)
+            .frame(maxWidth: .infinity, alignment: .leading)
+            .background(Color.rightTrainPaperCream, in: RoundedRectangle(cornerRadius: RTRadius.card, style: .continuous))
+            .lightSurfaceForeground()
     }
 }
 

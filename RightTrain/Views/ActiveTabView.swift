@@ -92,15 +92,10 @@ struct ActiveTabView: View {
             .background(activeSurface.bg.ignoresSafeArea())
             .animation(.easeInOut(duration: 0.4), value: activeSurface)
             .navigationTitle(navigationTitleText)
-            // A live journey needs the first screenful for guidance, so the
-            // large title only appears when there is nothing pinned.
-            .navigationBarTitleDisplayMode(activePrimaryContent == .empty ? .large : .inline)
+            // The large title matches the other tabs; the header lines under
+            // it are one row each so the sign stays in the first screenful.
+            .navigationBarTitleDisplayMode(.large)
             .toolbar {
-                if activePrimaryContent != .empty {
-                    ToolbarItem(placement: .principal) {
-                        fittedRouteTitle
-                    }
-                }
                 if activeWindowViewModel.canShareActiveJourney {
                     ToolbarItem(placement: .topBarTrailing) {
                         shareJourneyButton
@@ -190,29 +185,6 @@ struct ActiveTabView: View {
 
     private var navigationTitleText: String {
         routeTitle?.destination ?? "Pinned"
-    }
-
-    /// The inline title: just the destination, shortening to its
-    /// sixteen-character name rather than being cut off mid-word. Where
-    /// the journey starts is said on the page, under the bar.
-    @ViewBuilder
-    private var fittedRouteTitle: some View {
-        if let title = routeTitle {
-            ViewThatFits(in: .horizontal) {
-                Text(title.destination).fixedSize()
-                Text(title.compactDestination).fixedSize()
-                Text(title.compactDestination).truncationMode(.tail)
-            }
-            .font(.headline)
-            .lineLimit(1)
-            .accessibilityElement(children: .ignore)
-            .accessibilityLabel("To \(title.destination), from \(title.origin)")
-            .accessibilityAddTraits(.isHeader)
-        } else {
-            Text("Pinned")
-                .font(.headline)
-                .accessibilityAddTraits(.isHeader)
-        }
     }
 
     private var activePrimaryContent: ActiveTabPrimaryContent {
@@ -393,15 +365,11 @@ private struct NoActiveJourneyView: View {
     }
 }
 
-/// The pinned journey's title, in station names only.
+/// The pinned journey's title: the destination, in station names only.
 private struct PinnedRouteTitle {
     var destination: String
-    var compactDestination: String
-    var origin: String
 
     init(first: JourneyResult, last: JourneyResult) {
         destination = JourneyFormatting.destinationStationText(last)
-        compactDestination = JourneyFormatting.compactDestinationStationText(last)
-        origin = JourneyFormatting.originStationText(first)
     }
 }

@@ -53,7 +53,11 @@ struct CommuteRoutinesView: View {
             if viewModel.isWaitingOnICloud {
                 iCloudUnavailableSection
             }
-            routinesSection
+            // With iCloud off the empty list isn't "no commutes", it's
+            // commutes we can't read, and the notice above already says so.
+            if !(viewModel.isWaitingOnICloud && viewModel.routines.isEmpty) {
+                routinesSection
+            }
             defaultsSection
         }
         .readableContentMargins()
