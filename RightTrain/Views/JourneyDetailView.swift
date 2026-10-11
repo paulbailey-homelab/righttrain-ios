@@ -331,15 +331,18 @@ struct JourneyDetailView: View {
     }
 
     /// "Calling at Moorgate 11:58": the traveller's stop and when the train
-    /// gets there, unless that's where it ends up anyway.
+    /// gets there. Where the train terminates there, just "Arrives 11:58",
+    /// since the destination column already names it.
     private func signCallingAt(_ detail: JourneyDetail) -> String? {
-        guard !detail.cancelled,
-              let stop = destinationStop(detail),
-              stop.id != detail.stops.last?.id else {
+        guard !detail.cancelled, let stop = destinationStop(detail) else {
             return nil
         }
-        let arrival = stop.timing?.current ?? stop.publicArrival ?? stop.publicDeparture
-        return ["Calling at \(BoardText.station(stop))", arrival.map { String($0.prefix(5)) }]
+        let arrival = (stop.timing?.current ?? stop.publicArrival ?? stop.publicDeparture)
+            .map { String($0.prefix(5)) }
+        if stop.id == detail.stops.last?.id {
+            return arrival.map { "Arrives \($0)" }
+        }
+        return ["Calling at \(BoardText.station(stop))", arrival]
             .compactMap { $0 }
             .joined(separator: " ")
     }

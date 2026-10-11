@@ -51,7 +51,9 @@ to `design/review-screenshots/`, which is git-ignored.
   double-height platform and countdown; no clock, since the phone shows one)
   and a concourse departures board for the other trains in the search (Time,
   Destination, Plat, Expected, a dim "Calling at Stockport 10:25" line with
-  the traveller's arrival, cancelled trains in place). Journey detail has
+  the traveller's arrival, cancelled trains in place). Wherever a sign
+  shows that line, a train terminating at the traveller's stop reads
+  "Arrives 10:25" instead, so the destination isn't said twice. Journey detail has
   two: a platform indicator for the train (train line, "Calling at" line
   with the traveller's arrival, scrolling message with any delay reason,
   operator and coaches, double-height platform) and a calling points board

@@ -1694,3 +1694,26 @@ final class StationDistanceCalculatorTests: XCTestCase {
         XCTAssertNil(StationDistanceCalculator.summary(latitude: 51.3, longitude: -0.5, stops: []))
     }
 }
+
+final class BoardCallingAtTests: XCTestCase {
+    func testTrainEndingAtTheTravellersStopSaysArrives() {
+        let journey = TestFactory.journey(destinationName: "Edinburgh", finalDestinationName: "Edinburgh")
+
+        let line = BoardText.callingAt(journey)
+
+        XCTAssertTrue(line.hasPrefix("Arrives "), line)
+        XCTAssertFalse(line.contains("Edinburgh"), line)
+    }
+
+    func testTrainRunningBeyondTheTravellersStopNamesIt() {
+        let journey = TestFactory.journey(destinationName: "Edinburgh", finalDestinationName: "Aberdeen")
+
+        XCTAssertTrue(BoardText.callingAt(journey).hasPrefix("Calling at Edinburgh "))
+    }
+
+    func testUnknownFinalDestinationKeepsCallingAt() {
+        let journey = TestFactory.journey(destinationName: "Edinburgh", finalDestinationName: nil)
+
+        XCTAssertTrue(BoardText.callingAt(journey).hasPrefix("Calling at Edinburgh "))
+    }
+}

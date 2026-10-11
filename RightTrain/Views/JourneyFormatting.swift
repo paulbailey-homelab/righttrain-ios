@@ -48,6 +48,21 @@ enum JourneyFormatting {
         )
     }
 
+    /// Whether the traveller gets off where the train terminates, so a sign
+    /// can say "Arrives 12:39" instead of repeating the destination.
+    static func endsAtTravellerDestination(_ journey: JourneyResult) -> Bool {
+        func same(_ lhs: String?, _ rhs: String?) -> Bool? {
+            guard let lhs = nonEmpty(lhs), let rhs = nonEmpty(rhs) else {
+                return nil
+            }
+            return lhs.caseInsensitiveCompare(rhs) == .orderedSame
+        }
+        return same(journey.finalDestinationTpl, journey.destinationTpl)
+            ?? same(journey.finalDestinationCrs, journey.destinationCrs)
+            ?? same(journey.finalDestinationName, journey.destinationName)
+            ?? false
+    }
+
     static func originStationText(_ journey: JourneyResult) -> String {
         stationDisplayName(
             name: journey.originName,

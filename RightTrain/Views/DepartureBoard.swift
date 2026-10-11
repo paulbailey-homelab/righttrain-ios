@@ -110,11 +110,17 @@ enum BoardText {
     }
 
     /// "Calling at Stockport 10:25": the traveller's stop, in Darwin's
-    /// short form, and when the train is expected there.
+    /// short form, and when the train is expected there. Where the train
+    /// terminates at that stop the destination column already names it, so
+    /// the line is just "Arrives 10:25".
     static func callingAt(_ journey: JourneyResult) -> String {
         let arrival = JourneyFormatting.arrivalDisplay(journey)
+        let time = arrival.currentText ?? arrival.scheduledText
+        if JourneyFormatting.endsAtTravellerDestination(journey) {
+            return "Arrives \(time)"
+        }
         let station = JourneyFormatting.compactDestinationStationText(journey)
-        return "Calling at \(station) \(arrival.currentText ?? arrival.scheduledText)"
+        return "Calling at \(station) \(time)"
     }
 
     /// The Plat column: the bare number, or "-" until one is known.
