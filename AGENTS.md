@@ -33,6 +33,11 @@ make build   # headless simulator build
 make test    # XCTest on a simulator (override TEST_DESTINATION if needed)
 ```
 
+Pull requests run the XCTest suite in GitHub Actions (`.github/workflows/ios-tests.yaml`).
+Run it ad-hoc signed, not with `CODE_SIGNING_ALLOWED=NO`: the app uses the
+Keychain and CloudKit, which need the entitlements an unsigned build drops.
+`CKContainer` is created lazily so an unsigned build still launches.
+
 iOS changes need an Xcode build or XCTest run; there is nothing to verify them
 without one. Visual review screenshots (`make ios-screenshots-app`) are written
 to `design/review-screenshots/`, which is git-ignored.

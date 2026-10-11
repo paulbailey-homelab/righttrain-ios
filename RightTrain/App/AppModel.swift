@@ -81,7 +81,8 @@ final class AppCoordinator {
         connectivityService: ConnectivityService? = nil,
         activeJourneyCache: ActiveJourneyCache? = nil,
         journeyMutationQueue: JourneyMutationQueue? = nil,
-        searchPreferences: UserDefaults = .standard
+        searchPreferences: UserDefaults = .standard,
+        cloudKitStore: (any CloudKitPreferenceStoring)? = nil
     ) {
         let operationState = AppOperationState()
         let connectivityService = connectivityService ?? ConnectivityService()
@@ -123,7 +124,7 @@ final class AppCoordinator {
             registrationContextFactory: registrationContextFactory,
             accessTokenProvider: { authViewModel.usableAccessToken }
         )
-        let cloudKitPreferenceStore = CloudKitPreferenceStore(
+        let cloudKitPreferenceStore = cloudKitStore ?? CloudKitPreferenceStore(
             containerIdentifier: AppConfig.cloudKitContainerIdentifier
         )
         let commutePreArmScheduler = CommutePreArmScheduler(apiClient: apiClient)
