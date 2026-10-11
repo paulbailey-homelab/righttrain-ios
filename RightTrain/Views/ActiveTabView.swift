@@ -166,69 +166,62 @@ struct ActiveTabView: View {
         }
     }
 
-    /// The pinned route, "London Euston → Stockport", as a station board
-    /// names where it is; "Pinned" when nothing is. Shorter forms are for
-    /// the inline title when the full names don't fit.
-    private var routeTitleForms: [String] {
+    /// Where the pinned journey goes and where it starts, in station names:
+    /// codes like "KGX → EDB" mean little to most travellers. Each holds the
+    /// full name, then Darwin's sixteen-character one ("Manchester Picc")
+    /// for when the full name doesn't fit. Nil when nothing is pinned.
+    private var routeTitle: PinnedRouteTitle? {
         switch activePrimaryContent {
         case .itinerary:
-            guard let itinerary = activeWindowViewModel.activeItinerary else { break }
-            let legs = itinerary.selectedItinerary.legs
-            guard let first = legs.first, let last = legs.last else {
-                return [ActiveItineraryPresentation(itinerary: itinerary).routeTitle]
-            }
-            return Self.routeTitleForms(first: first.journeyResult, last: last.journeyResult)
+            guard let itinerary = activeWindowViewModel.activeItinerary,
+                  let first = itinerary.selectedItinerary.legs.first,
+                  let last = itinerary.selectedItinerary.legs.last else { break }
+            return PinnedRouteTitle(first: first.journeyResult, last: last.journeyResult)
         case .window, .onBoardWindow:
             guard let window = activeWindowViewModel.activeWindow else { break }
             let presentation = ActiveWindowPresentation(window: window)
             let journey = presentation.recommendations.first?.journey ?? window.selectedRecommendation.journey
-            return Self.routeTitleForms(first: journey, last: journey)
+            return PinnedRouteTitle(first: journey, last: journey)
         case .empty:
             break
         }
-        return ["Pinned"]
-    }
-
-    /// Full names, then Darwin's sixteen-character names ("Manchester
-    /// Picc"), then CRS codes ("EUS → SPT").
-    private static func routeTitleForms(first: JourneyResult, last: JourneyResult) -> [String] {
-        [
-            JourneyFormatting.routeTitle(
-                origin: JourneyFormatting.originStationText(first),
-                destination: JourneyFormatting.destinationStationText(last)
-            ),
-            JourneyFormatting.routeTitle(
-                origin: JourneyFormatting.compactOriginStationText(first),
-                destination: JourneyFormatting.compactDestinationStationText(last)
-            ),
-            JourneyFormatting.routeTitle(origin: first.originCrs, destination: last.destinationCrs)
-        ]
+        return nil
     }
 
     private var navigationTitleText: String {
-        routeTitleForms.first ?? "Pinned"
+        routeTitle?.destination ?? "Pinned"
     }
 
-    /// The inline title: the longest form of the route that fits between
-    /// the bar's buttons, so a long route shortens its station names rather
-    /// than being cut off mid-word.
+    /// The inline title: the destination, with "from" and the origin under
+    /// it, each shortening to its sixteen-character name rather than being
+    /// cut off mid-word.
+    @ViewBuilder
     private var fittedRouteTitle: some View {
-        let forms = routeTitleForms
-        let full = forms.first ?? "Pinned"
-        let short = forms.dropFirst().first ?? full
-        let codes = forms.last ?? short
-        return ViewThatFits(in: .horizontal) {
-            Text(full).fixedSize()
-            Text(short).fixedSize()
-            Text(codes).fixedSize()
-            // Nothing fits: the codes, cut off at the end.
-            Text(codes).truncationMode(.tail)
+        if let title = routeTitle {
+            VStack(spacing: 0) {
+                ViewThatFits(in: .horizontal) {
+                    Text(title.destination).fixedSize()
+                    Text(title.compactDestination).fixedSize()
+                    Text(title.compactDestination).truncationMode(.tail)
+                }
+                .font(.headline)
+                ViewThatFits(in: .horizontal) {
+                    Text("from \(title.origin)").fixedSize()
+                    Text("from \(title.compactOrigin)").fixedSize()
+                    Text("from \(title.compactOrigin)").truncationMode(.tail)
+                }
+                .font(.caption)
+                .foregroundStyle(.secondary)
+            }
+            .lineLimit(1)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel("\(title.destination), from \(title.origin)")
+            .accessibilityAddTraits(.isHeader)
+        } else {
+            Text("Pinned")
+                .font(.headline)
+                .accessibilityAddTraits(.isHeader)
         }
-        .lineLimit(1)
-        .font(.headline)
-        .accessibilityElement(children: .ignore)
-        .accessibilityLabel(full)
-        .accessibilityAddTraits(.isHeader)
     }
 
     private var activePrimaryContent: ActiveTabPrimaryContent {
@@ -406,5 +399,20 @@ private struct NoActiveJourneyView: View {
             primaryAction: .init(label: prompt.primaryActionText, systemImage: "magnifyingglass", perform: planAction)
         )
         .accessibilityHint("Opens route and time setup.")
+    }
+}
+
+/// The pinned journey's title, in station names only.
+private struct PinnedRouteTitle {
+    var destination: String
+    var compactDestination: String
+    var origin: String
+    var compactOrigin: String
+
+    init(first: JourneyResult, last: JourneyResult) {
+        destination = JourneyFormatting.destinationStationText(last)
+        compactDestination = JourneyFormatting.compactDestinationStationText(last)
+        origin = JourneyFormatting.originStationText(first)
+        compactOrigin = JourneyFormatting.compactOriginStationText(first)
     }
 }

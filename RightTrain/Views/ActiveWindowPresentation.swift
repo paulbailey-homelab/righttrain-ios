@@ -3,6 +3,7 @@ import Foundation
 struct ActiveWindowPresentation {
     private static let justDepartedVisibilityInterval: TimeInterval = 5 * 60
     private static let staleDataInterval: TimeInterval = 5 * 60
+    private static let staleWarningLeadTime: TimeInterval = 15 * 60
 
     enum JourneyMomentKind: String, Equatable {
         case noActiveJourney
@@ -265,7 +266,8 @@ struct ActiveWindowPresentation {
             return .offline
         }
         if let updatedAt = recommendation.journey.realtimeUpdatedAt.flatMap(DateFormatting.date(from:)),
-           now.timeIntervalSince(updatedAt) > staleDataInterval {
+           now.timeIntervalSince(updatedAt) > staleDataInterval,
+           realtimeGapMatters(departure: currentDepartureDate(for: recommendation), now: now) {
             return .staleData
         }
         if JourneyFormatting.isCancelled(recommendation.journey) ||
@@ -304,6 +306,18 @@ struct ActiveWindowPresentation {
         case .onFinalLeg:
             return .onBoard
         }
+    }
+
+    /// Whether old realtime is worth a warning. A train that leaves in half
+    /// an hour often hasn't started from its origin yet, so Darwin has
+    /// nothing new to say about it and an hour-old update is normal. Only
+    /// close to departure, or once it's running, does a quiet feed mean the
+    /// screen might be wrong.
+    static func realtimeGapMatters(departure: Date?, now: Date) -> Bool {
+        guard let departure else {
+            return true
+        }
+        return departure.timeIntervalSince(now) <= staleWarningLeadTime
     }
 
     static func freshnessText(updatedAt: Date?, now: Date = Date()) -> String {

@@ -67,11 +67,11 @@ struct RightTrainLiveActivityWidget: Widget {
                     } else if statusKind != .good {
                         // Already falls back to its bare symbol via
                         // ViewThatFits, keeping "+18" whenever it fits.
-                        StatusGlyph(kind: statusKind, delayMinutes: context.state.selectedTrain?.delayMinutes ?? context.state.delayMinutes)
+                        StatusGlyph(kind: statusKind, delayMinutes: context.state.selectedTrain?.delayMinutes ?? context.state.delayMinutes, board: true)
                     } else if !isOnboardTrain(context), let platform = departurePlatform(for: context) {
                         CompactPlatformText(platform: platform, confirmed: context.state.platformConfirmed)
                     } else {
-                        StatusGlyph(kind: statusKind, delayMinutes: context.state.selectedTrain?.delayMinutes ?? context.state.delayMinutes)
+                        StatusGlyph(kind: statusKind, delayMinutes: context.state.selectedTrain?.delayMinutes ?? context.state.delayMinutes, board: true)
                     }
                 }
             } minimal: {
@@ -80,13 +80,14 @@ struct RightTrainLiveActivityWidget: Widget {
                     StatusGlyph(
                         kind: statusKind,
                         delayMinutes: context.state.selectedTrain?.delayMinutes ?? context.state.delayMinutes,
-                        showsText: false
+                        showsText: false,
+                        board: true
                     )
                 } else if let platform = islandPlatform(for: context) {
                     // An on-time tick says nothing; the platform is the
                     // one thing worth a glance when the island is shared.
-                    PlatformTile.activity(
-                        PlatformValue(platform.value, confirmed: platform.confirmed),
+                    IslandBoardPlatform(
+                        platform: PlatformValue(platform.value, confirmed: platform.confirmed),
                         role: platform.role
                     )
                 }
@@ -285,10 +286,11 @@ private struct CompactLeadingMetric: View {
     var context: ActivityViewContext<RightTrainLiveActivityAttributes>
 
     var body: some View {
+        // The island is always black, so it reads as a small platform
+        // sign: amber dot-matrix, like the Lock Screen and the app.
         Text(time)
-            .font(.caption.weight(.semibold))
-            .foregroundStyle(isDelayed ? Color.rightTrainLate : Color.rightTrainActivityText)
-            .monospacedDigit()
+            .font(BoardFont.font(.subheadline, weight: .bold))
+            .foregroundStyle(DepartureBoardStyle.amber)
             .lineLimit(1)
             .minimumScaleFactor(0.62)
             .allowsTightening(true)
@@ -443,7 +445,7 @@ private struct IslandTrainSummary: View {
         HStack(alignment: .firstTextBaseline, spacing: 6) {
             IslandStatusText(kind: train.statusKind, delayMinutes: train.delayMinutes)
             if train.statusKind != .cancelled {
-                IslandCountdownText(date: targetDate, prefix: mode == .arrival ? "· arrives in " : "· in ")
+                IslandCountdownText(date: targetDate, prefix: mode == .arrival ? "arrives in " : "in ")
             }
         }
         .frame(maxWidth: .infinity, alignment: .leading)
@@ -470,7 +472,7 @@ private struct IslandItinerarySummary: View {
                     date: state.resolvedPhase.isOnboard
                         ? train.arrivalDate ?? train.scheduledArrivalDate
                         : train.departureDate ?? train.scheduledDepartureDate,
-                    prefix: state.resolvedPhase.isOnboard ? "· arrives in " : "· in "
+                    prefix: state.resolvedPhase.isOnboard ? "arrives in " : "in "
                 )
             } else {
                 IslandSummaryText(text: state.compactItinerarySummaryText)
@@ -489,9 +491,8 @@ private struct IslandCountdownText: View {
     var body: some View {
         if let date, date > Date() {
             MinuteRelativeText(date: date, prefix: prefix)
-                .font(.subheadline)
-                .foregroundStyle(Color.rightTrainActivitySecondaryText)
-                .monospacedDigit()
+                .font(BoardFont.font(.subheadline))
+                .foregroundStyle(DepartureBoardStyle.dimAmber)
                 .lineLimit(1)
                 .minimumScaleFactor(0.74)
         }
@@ -507,16 +508,12 @@ private struct IslandStatusText: View {
     }
 
     var body: some View {
-        HStack(spacing: 4) {
-            Image(systemName: kind.symbolName)
-                .imageScale(.small)
-            Text(text)
-                .lineLimit(1)
-                .minimumScaleFactor(0.74)
-                .allowsTightening(true)
-        }
-        .font(.subheadline.weight(.semibold))
-        .foregroundStyle(tint)
+        Text(text)
+            .lineLimit(1)
+            .minimumScaleFactor(0.74)
+            .allowsTightening(true)
+            .font(BoardFont.font(.subheadline, weight: .bold))
+            .foregroundStyle(DepartureBoardStyle.amber)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
     }
@@ -542,8 +539,8 @@ private struct IslandSummaryText: View {
 
     var body: some View {
         Text(text)
-            .font(.subheadline.weight(.semibold))
-            .foregroundStyle(Color.rightTrainActivityText)
+            .font(BoardFont.font(.subheadline, weight: .bold))
+            .foregroundStyle(DepartureBoardStyle.amber)
             .lineLimit(1)
             .minimumScaleFactor(0.74)
             .allowsTightening(true)
@@ -564,7 +561,42 @@ private struct CompactPlatformText: View {
     var accessibilityPrefix: String = "Platform"
 
     var body: some View {
-        PlatformTile.activity(PlatformValue(platform, confirmed: confirmed), role: accessibilityPrefix)
+        IslandBoardPlatform(platform: PlatformValue(platform, confirmed: confirmed), role: accessibilityPrefix)
+    }
+}
+
+/// "Plat 4" in the island's sign lettering: amber once confirmed, dim while
+/// it's only expected. Just the number where "Plat" won't fit.
+private struct IslandBoardPlatform: View {
+    var platform: PlatformValue
+    var role = "Platform"
+    var style: Font.TextStyle = .subheadline
+    /// Under its own "Plat" caption, as in the expanded island.
+    var numberOnly = false
+
+    var body: some View {
+        let number = platform.number ?? "TBC"
+        ViewThatFits(in: .horizontal) {
+            if !numberOnly {
+                Text("Plat \(number)").fixedSize()
+            }
+            Text(number).fixedSize()
+        }
+        .font(BoardFont.font(style, weight: .bold))
+        .foregroundStyle(platform.state == .confirmed || platform.isChanged ? DepartureBoardStyle.amber : DepartureBoardStyle.dimAmber)
+        .lineLimit(1)
+        .accessibilityElement(children: .ignore)
+        .accessibilityLabel(accessibilityLabel)
+    }
+
+    private var accessibilityLabel: String {
+        guard let number = platform.number else {
+            return "\(role) to be confirmed"
+        }
+        if let previous = platform.previousNumber {
+            return "\(role) changed to \(number), was \(previous)"
+        }
+        return platform.state == .confirmed ? "\(role) \(number)" : "\(role) \(number), expected"
     }
 }
 
@@ -626,11 +658,11 @@ private struct CompactPlatformChangeText: View {
             if showsIcon {
                 Image(systemName: "arrow.left.arrow.right")
                     .font(.caption2.weight(.bold))
-                    .foregroundStyle(Color.rightTrainLate)
+                    .foregroundStyle(DepartureBoardStyle.amber)
                     .accessibilityHidden(true)
             }
-            PlatformTile.activity(
-                PlatformValue(change.currentPlatform, confirmed: true, previous: change.previousPlatform)
+            IslandBoardPlatform(
+                platform: PlatformValue(change.currentPlatform, confirmed: true, previous: change.previousPlatform)
             )
         }
     }
@@ -682,13 +714,14 @@ private struct IslandPlatformMetric: View {
     var edge: IslandExpandedEdge = .trailing
 
     var body: some View {
-        ActivityCaptionedPlatformTile(
-            platform: platform,
-            size: .medium,
-            role: role,
-            alignment: edge.horizontalAlignment,
-            captionFont: .caption2.weight(.medium)
-        )
+        VStack(alignment: edge.horizontalAlignment, spacing: 0) {
+            Text(platform.isChanged ? "New plat" : "Plat")
+                .font(BoardFont.font(.caption2))
+                .foregroundStyle(DepartureBoardStyle.dimAmber)
+                .lineLimit(1)
+                .accessibilityHidden(true)
+            IslandBoardPlatform(platform: platform, role: role, style: .title3, numberOnly: true)
+        }
         .frame(maxWidth: .infinity, alignment: edge.alignment)
         // Keep clear of the island's rounded shoulders.
         .padding(edge.paddingEdges, 6)
@@ -1702,16 +1735,16 @@ private struct IslandTitle: View {
     var body: some View {
         VStack(spacing: 2) {
             Text(title)
-                .font(.headline)
-                .foregroundStyle(Color.rightTrainActivityText)
+                .font(BoardFont.font(.headline, weight: .bold))
+                .foregroundStyle(DepartureBoardStyle.amber)
                 .lineLimit(1)
                 .minimumScaleFactor(0.58)
                 .allowsTightening(true)
                 .truncationMode(.middle)
             if let subtitle, !subtitle.isEmpty {
                 Text(subtitle)
-                    .font(.caption2)
-                    .foregroundStyle(Color.rightTrainActivitySecondaryText)
+                    .font(BoardFont.font(.caption2))
+                    .foregroundStyle(DepartureBoardStyle.dimAmber)
                     .lineLimit(1)
                     .minimumScaleFactor(0.58)
                     .allowsTightening(true)
@@ -1764,7 +1797,7 @@ private struct IslandTitle: View {
     }
 
     private func approachingSubtitle(_ interchange: RightTrainLiveActivityAttributes.ContentState.Interchange) -> String {
-        "Next \(onwardDeparture(interchange)) · \(marginText(interchange))"
+        "Next \(onwardDeparture(interchange)), \(marginText(interchange))"
     }
 
     private func onwardDeparture(_ interchange: RightTrainLiveActivityAttributes.ContentState.Interchange) -> String {
@@ -2448,21 +2481,21 @@ private struct ActivityTimeText: View {
 private struct IslandEdgeMetric: View {
     var label: String
     var value: String
+    /// Unused since the island became a sign, which is amber throughout;
+    /// lateness is in the status line below.
     var tint: Color = .rightTrainActivityText
     var edge: IslandExpandedEdge = .leading
 
     var body: some View {
         VStack(alignment: edge.horizontalAlignment, spacing: 0) {
             Text(label)
-                .font(.caption2.weight(.medium))
-                .foregroundStyle(Color.rightTrainActivitySecondaryText)
+                .font(BoardFont.font(.caption2))
+                .foregroundStyle(DepartureBoardStyle.dimAmber)
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Text(value)
-                .font(.title3.weight(.semibold))
-                .fontDesign(.rounded)
-                .foregroundStyle(tint)
-                .monospacedDigit()
+                .font(BoardFont.font(.title3, weight: .bold))
+                .foregroundStyle(DepartureBoardStyle.amber)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
                 .allowsTightening(true)
@@ -2631,12 +2664,31 @@ private struct StatusGlyph: View {
     var kind: RightTrainLiveActivityAttributes.StatusKind
     var delayMinutes: Int? = nil
     var showsText = true
+    /// In the Dynamic Island: sign lettering ("+18", "Cancelled") in amber
+    /// rather than a symbol, since the island is drawn as a sign.
+    var board = false
 
     private var tint: Color {
         kind.tint(delayMinutes: delayMinutes ?? 0)
     }
 
     var body: some View {
+        if board {
+            ViewThatFits(in: .horizontal) {
+                Text(glyphText).fixedSize()
+                Text(String(glyphText.prefix(4))).fixedSize()
+            }
+            .font(BoardFont.font(.subheadline, weight: .bold))
+            .foregroundStyle(DepartureBoardStyle.amber)
+            .lineLimit(1)
+            .accessibilityElement(children: .ignore)
+            .accessibilityLabel(accessibilityLabel)
+        } else {
+            symbolBody
+        }
+    }
+
+    private var symbolBody: some View {
         ViewThatFits(in: .horizontal) {
             if showsText {
                 HStack(spacing: 3) {

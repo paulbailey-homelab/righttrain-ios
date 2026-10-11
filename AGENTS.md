@@ -47,7 +47,8 @@ to `design/review-screenshots/`, which is git-ignored.
   housing, a recessed black display with an unlit dot grid, and amber
   single-dot lettering that glows faintly. Everything on a sign uses the face;
   nothing off a sign does. Pinned has two, as a station does: the platform
-  indicator for the pinned train (train line, scrolling message,
+  indicator for the pinned train (train line, scrolling message whose
+  calling points stop at the traveller's station,
   double-height platform and countdown; no clock, since the phone shows one)
   and a concourse departures board for the other trains in the search (Time,
   Destination, Plat, Expected, a dim "Calling at Stockport 10:25" line with
@@ -73,7 +74,9 @@ to `design/review-screenshots/`, which is git-ignored.
   train's platform indicator before boarding and when approaching a change,
   the carriage display on a leg with the change on its message line. Their
   Lock Screen Live Activity is the same sign; the connection and onward-leg
-  cards stay system cards.
+  cards stay system cards. The Dynamic Island, always black, is a small sign
+  too: amber dot-matrix in every presentation ("08:30", "Plat 4", "+18"),
+  dim amber for labels and expected platforms; only its buttons stay system.
   Search results, the multi-leg leg card and app chrome stay in the system
   face.
   Signs keep amber on black in both appearances, use sign wording ("Exp 08:36", "Cancelled", Darwin's sixteen-character station

@@ -2347,9 +2347,22 @@ final class AppModelTests: XCTestCase {
             .monitoringBeforeDeparture
         )
 
-        var staleJourney = TestFactory.journey(
+        // Twenty minutes out, a quiet feed is normal: no warning.
+        var quietJourney = TestFactory.journey(
             scheduledDeparture: "2026-01-10T10:30:00.000Z",
             scheduledArrival: "2026-01-10T11:20:00.000Z",
+            originPlatform: "4",
+            realtimePlatform: "4"
+        )
+        quietJourney.realtimeUpdatedAt = "2026-01-10T09:10:00.000Z"
+        XCTAssertEqual(
+            ActiveWindowPresentation.journeyMoment(for: TestFactory.recommendation(journey: quietJourney), now: now),
+            .monitoringBeforeDeparture
+        )
+
+        var staleJourney = TestFactory.journey(
+            scheduledDeparture: "2026-01-10T10:20:00.000Z",
+            scheduledArrival: "2026-01-10T11:10:00.000Z",
             originPlatform: "4",
             realtimePlatform: "4"
         )

@@ -120,13 +120,24 @@ struct ActiveItineraryPresentation {
     }
 
     /// Matches the direct Pin: realtime older than five minutes shouldn't be
-    /// presented as live.
+    /// presented as live, once that could matter.
     func isDataStale(now: Date = Date()) -> Bool {
         let selected = selectedItinerary ?? itinerary.selectedItinerary
-        guard let updatedAt = latestRealtimeUpdate(in: selected) else {
+        guard let updatedAt = latestRealtimeUpdate(in: selected),
+              now.timeIntervalSince(updatedAt) > 5 * 60 else {
             return false
         }
-        return now.timeIntervalSince(updatedAt) > 5 * 60
+        // Before boarding, only worth a warning close to the first train.
+        switch phase {
+        case .planning, .atOrigin:
+            let departure = selected.legs.first.flatMap { leg in
+                let display = JourneyFormatting.departureDisplay(leg.journeyResult)
+                return display.currentDate ?? display.scheduledDate
+            }
+            return ActiveWindowPresentation.realtimeGapMatters(departure: departure, now: now)
+        case .onLeg, .approachingInterchange, .onFinalLeg:
+            return true
+        }
     }
 
     func routeContextText(for selected: ItineraryRecommendation) -> String? {
