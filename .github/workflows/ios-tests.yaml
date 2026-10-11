@@ -41,23 +41,6 @@ jobs:
           fi
           echo "udid=$udid" >> "$GITHUB_OUTPUT"
 
-      - name: Get Xcode version
-        id: xcode
-        run: echo "version=$(xcodebuild -version | tr '\n' ' ' | tr -s ' ' | tr ' ' '-')" >> "$GITHUB_OUTPUT"
-
-      # Build products only: there are no package dependencies to cache. The
-      # key changes every run so each run saves what it built; the restore
-      # key picks up the newest earlier build for the same Xcode. A miss
-      # costs a full build, nothing worse. PRs can read the base branch's
-      # caches, so the first run on a new branch is usually warm.
-      - name: Cache DerivedData
-        uses: actions/cache@v4
-        with:
-          path: DerivedData
-          key: deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-${{ github.sha }}
-          restore-keys: |
-            deriveddata-${{ runner.os }}-${{ steps.xcode.outputs.version }}-
-
       # Ad-hoc signed, not unsigned: the app uses the Keychain and CloudKit,
       # which need the entitlements an unsigned build drops. Serial, because
       # parallel clone simulators fail to launch the host app.
@@ -68,7 +51,6 @@ jobs:
             -project RightTrain.xcodeproj \
             -scheme RightTrain \
             -destination "id=${{ steps.simulator.outputs.udid }}" \
-            -derivedDataPath DerivedData \
             -parallel-testing-enabled NO \
             -resultBundlePath "$RUNNER_TEMP/RightTrain.xcresult" \
             CODE_SIGN_IDENTITY=- \
