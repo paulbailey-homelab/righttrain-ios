@@ -149,7 +149,7 @@ enum BoardText {
             sentences.append(reason.hasSuffix(".") ? reason : "\(reason).")
         }
 
-        if let detail, let callingPoints = callingPoints(detail, after: journey.originTpl) {
+        if let detail, let callingPoints = callingPoints(detail, after: journey.originTpl, until: journey.destinationTpl) {
             sentences.append(callingPoints)
         }
 
@@ -170,15 +170,19 @@ enum BoardText {
     }
 
     /// "Calling at: Stockport (10:02) and Manchester Piccadilly (10:12)."
-    /// Every stop with a public time after the traveller boards, to the end
-    /// of the run; nil when there are none, as for a train's last stop.
-    static func callingPoints(_ detail: JourneyDetail, after originTPL: String) -> String? {
-        let origin = JourneyFormatting.segmentStopRange(
+    /// Every stop with a public time after the traveller boards, up to and
+    /// including where they get off (the end of the run if that isn't
+    /// found); stops beyond it are no use to them. Nil when there are none.
+    static func callingPoints(_ detail: JourneyDetail, after originTPL: String, until destinationTPL: String?) -> String? {
+        let range = JourneyFormatting.segmentStopRange(
             detail.stops,
             originTPL: originTPL,
-            destinationTPL: nil
-        ).origin
-        let stops = detail.stops.dropFirst(origin + 1).compactMap { stop -> String? in
+            destinationTPL: destinationTPL
+        )
+        guard range.destination > range.origin else {
+            return nil
+        }
+        let stops = detail.stops[(range.origin + 1)...range.destination].compactMap { stop -> String? in
             guard let time = nonEmpty(stop.publicArrival) ?? nonEmpty(stop.publicDeparture) else {
                 return nil
             }

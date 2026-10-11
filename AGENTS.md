@@ -47,7 +47,8 @@ to `design/review-screenshots/`, which is git-ignored.
   housing, a recessed black display with an unlit dot grid, and amber
   single-dot lettering that glows faintly. Everything on a sign uses the face;
   nothing off a sign does. Pinned has two, as a station does: the platform
-  indicator for the pinned train (train line, scrolling message,
+  indicator for the pinned train (train line, scrolling message whose
+  calling points stop at the traveller's station,
   double-height platform and countdown; no clock, since the phone shows one)
   and a concourse departures board for the other trains in the search (Time,
   Destination, Plat, Expected, a dim "Calling at Stockport 10:25" line with
