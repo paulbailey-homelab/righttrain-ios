@@ -230,7 +230,7 @@ struct ActiveWindowView: View {
             }
             return "On time · live"
         }
-        return "Watching \(windowDurationText)"
+        return windowRangeText
     }
 
     @ViewBuilder
@@ -355,17 +355,17 @@ struct ActiveWindowView: View {
         return trimmed
     }
 
-    private var windowDurationText: String {
-        let minutes = window.windowMinutes
-        guard minutes >= 60 else {
-            return "\(minutes)m window"
+    /// "Departures between 08:00 and 10:00": what a Search Pin watches, in
+    /// clock times rather than a window length.
+    private var windowRangeText: String {
+        guard let start = DateFormatting.date(from: window.departureStart) else {
+            return "Departures in the next \(window.windowMinutes) min"
         }
-        let hours = minutes / 60
-        let remainder = minutes % 60
-        if remainder == 0 {
-            return "\(hours)h window"
-        }
-        return "\(hours)h \(remainder)m window"
+        let end = start.addingTimeInterval(TimeInterval(window.windowMinutes) * 60)
+        let formatter = DateFormatter()
+        formatter.timeZone = TimeZone(identifier: "Europe/London")
+        formatter.dateFormat = "HH:mm"
+        return "Departures between \(formatter.string(from: start)) and \(formatter.string(from: end))"
     }
 
     private func shouldPresentOfflineGlance(for recommendation: DirectWindowRecommendation) -> Bool {
