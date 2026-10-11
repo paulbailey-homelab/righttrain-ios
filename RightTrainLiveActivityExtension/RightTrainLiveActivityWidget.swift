@@ -289,7 +289,7 @@ private struct CompactLeadingMetric: View {
         // The island is always black, so it reads as a small platform
         // sign: amber dot-matrix, like the Lock Screen and the app.
         Text(time)
-            .font(BoardFont.font(.subheadline, weight: .bold))
+            .font(BoardFont.font(.subheadline))
             .foregroundStyle(DepartureBoardStyle.amber)
             .lineLimit(1)
             .minimumScaleFactor(0.62)
@@ -512,7 +512,7 @@ private struct IslandStatusText: View {
             .lineLimit(1)
             .minimumScaleFactor(0.74)
             .allowsTightening(true)
-            .font(BoardFont.font(.subheadline, weight: .bold))
+            .font(BoardFont.font(.subheadline))
             .foregroundStyle(DepartureBoardStyle.amber)
         .accessibilityElement(children: .ignore)
         .accessibilityLabel(accessibilityLabel)
@@ -539,7 +539,7 @@ private struct IslandSummaryText: View {
 
     var body: some View {
         Text(text)
-            .font(BoardFont.font(.subheadline, weight: .bold))
+            .font(BoardFont.font(.subheadline))
             .foregroundStyle(DepartureBoardStyle.amber)
             .lineLimit(1)
             .minimumScaleFactor(0.74)
@@ -582,7 +582,7 @@ private struct IslandBoardPlatform: View {
             }
             Text(number).fixedSize()
         }
-        .font(BoardFont.font(style, weight: .bold))
+        .font(BoardFont.font(style))
         .foregroundStyle(platform.state == .confirmed || platform.isChanged ? DepartureBoardStyle.amber : DepartureBoardStyle.dimAmber)
         .lineLimit(1)
         .accessibilityElement(children: .ignore)
@@ -1735,7 +1735,7 @@ private struct IslandTitle: View {
     var body: some View {
         VStack(spacing: 2) {
             Text(title)
-                .font(BoardFont.font(.headline, weight: .bold))
+                .font(BoardFont.font(.headline))
                 .foregroundStyle(DepartureBoardStyle.amber)
                 .lineLimit(1)
                 .minimumScaleFactor(0.58)
@@ -2494,7 +2494,7 @@ private struct IslandEdgeMetric: View {
                 .lineLimit(1)
                 .minimumScaleFactor(0.8)
             Text(value)
-                .font(BoardFont.font(.title3, weight: .bold))
+                .font(BoardFont.font(.title3))
                 .foregroundStyle(DepartureBoardStyle.amber)
                 .lineLimit(1)
                 .minimumScaleFactor(0.6)
@@ -2678,7 +2678,7 @@ private struct StatusGlyph: View {
                 Text(glyphText).fixedSize()
                 Text(String(glyphText.prefix(4))).fixedSize()
             }
-            .font(BoardFont.font(.subheadline, weight: .bold))
+            .font(BoardFont.font(.subheadline))
             .foregroundStyle(DepartureBoardStyle.amber)
             .lineLimit(1)
             .accessibilityElement(children: .ignore)

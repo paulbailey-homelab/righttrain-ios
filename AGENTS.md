@@ -75,7 +75,8 @@ to `design/review-screenshots/`, which is git-ignored.
   the carriage display on a leg with the change on its message line. Their
   Lock Screen Live Activity is the same sign; the connection and onward-leg
   cards stay system cards. The Dynamic Island, always black, is a small sign
-  too: amber dot-matrix in every presentation ("08:30", "Plat 4", "+18"),
+  too: amber dot-matrix, regular weight (bold is too wide there), in every
+  presentation ("08:30", "Plat 4", "+18"),
   dim amber for labels and expected platforms; only its buttons stay system.
   Search results, the multi-leg leg card and app chrome stay in the system
   face.

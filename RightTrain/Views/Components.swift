@@ -285,6 +285,22 @@ struct LiveFreshnessText: View {
     }
 }
 
+/// LiveFreshnessText once the data is old enough to matter: the same size
+/// and place, in amber with an outline triangle, so it reads as a note
+/// rather than an alarm.
+struct StaleFreshnessText: View {
+    var text: String
+
+    var body: some View {
+        Label(text, systemImage: "exclamationmark.triangle")
+            .font(.caption.weight(.medium))
+            .lineLimit(1)
+            .minimumScaleFactor(0.82)
+            .foregroundStyle(Color.rightTrainAmber)
+            .accessibilityLabel("Live data may be out of date. \(text)")
+    }
+}
+
 struct NextActionCallout: View {
     var text: String
     var tone: StatusPill.Tone = .accent
