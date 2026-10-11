@@ -74,7 +74,9 @@ to `design/review-screenshots/`, which is git-ignored.
   train's platform indicator before boarding and when approaching a change,
   the carriage display on a leg with the change on its message line. Their
   Lock Screen Live Activity is the same sign; the connection and onward-leg
-  cards stay system cards.
+  cards stay system cards. The Dynamic Island, always black, is a small sign
+  too: amber dot-matrix in every presentation ("08:30", "Plat 4", "+18"),
+  dim amber for labels and expected platforms; only its buttons stay system.
   Search results, the multi-leg leg card and app chrome stay in the system
   face.
   Signs keep amber on black in both appearances, use sign wording ("Exp 08:36", "Cancelled", Darwin's sixteen-character station

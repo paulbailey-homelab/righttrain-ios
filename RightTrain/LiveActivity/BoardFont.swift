@@ -8,7 +8,7 @@ import SwiftUI
 // The rule: the face appears only on a sign, a drawn display object with a
 // lit dot-matrix face, and everything on a sign uses it. The signs are the
 // platform indicator and concourse board on Pinned, and the Lock Screen Live
-// Activity. Search results and app chrome stay in the system face. The face has no £, · or arrows; sign copy avoids them. A
+// Activity and Dynamic Island. Search results and app chrome stay in the system face. The face has no £, · or arrows; sign copy avoids them. A
 // missing font falls back to the system face rather than failing.
 
 enum BoardFont {
