@@ -170,4 +170,82 @@ final class CommutePreArmPlannerTests: XCTestCase {
         XCTAssertEqual(CommutePreArmPlanner.parseDepartureTime("07:42")?.hour, 7)
         XCTAssertEqual(CommutePreArmPlanner.parseDepartureTime("07:42:00")?.minute, 42)
     }
+
+    // MARK: - Scheduler
+
+    private func queuedArm(
+        id: String,
+        departureStart: String,
+        windowMinutes: Int = 120,
+        armedAt: Date? = nil
+    ) -> ScheduledArm {
+        ScheduledArm(
+            id: id,
+            originCrs: "HDW",
+            destinationCrs: "KGX",
+            departureStart: date(departureStart),
+            windowMinutes: windowMinutes,
+            armLeadMinutes: 30,
+            notificationsEnabled: true,
+            windowSubscriptionId: armedAt == nil ? nil : "window-\(id)",
+            armedAt: armedAt,
+            expiresAt: date(departureStart).addingTimeInterval(TimeInterval(windowMinutes * 60))
+        )
+    }
+
+    /// A commute list that comes back empty must empty the queue too, or the
+    /// backend keeps arming departures for up to a week and sends "your
+    /// commute is being watched" for commutes the app no longer shows.
+    @MainActor
+    func testAnEmptyCommuteListRemovesEverythingStillQueued() async {
+        let apiClient = FakeAPIClient()
+        apiClient.scheduledArms = [
+            queuedArm(id: "tuesday", departureStart: "2026-09-29T06:42:00Z"),
+            queuedArm(id: "wednesday", departureStart: "2026-09-30T06:42:00Z"),
+            queuedArm(id: "armed", departureStart: "2026-09-28T06:42:00Z", armedAt: date("2026-09-28T06:12:00Z")),
+        ]
+        let scheduler = CommutePreArmScheduler(apiClient: apiClient)
+
+        await scheduler.synchronise(routines: [], accessToken: "token", now: date("2026-09-28T06:20:00Z"))
+
+        XCTAssertTrue(apiClient.preArmRequests.isEmpty)
+        XCTAssertEqual(Set(apiClient.deleteScheduledArmRequests.map(\.id)), ["tuesday", "wednesday"])
+        XCTAssertEqual(apiClient.scheduledArms.map(\.id), ["armed"])
+    }
+
+    @MainActor
+    func testAMovedCommuteRemovesTheOldTimeAndKeepsTheNewOne() async {
+        let now = date("2026-09-28T05:00:00Z")
+        let apiClient = FakeAPIClient()
+        apiClient.scheduledArms = [
+            queuedArm(id: "old-time", departureStart: "2026-09-29T06:42:00Z"),
+            queuedArm(id: "new-time", departureStart: "2026-09-29T07:12:00Z"),
+        ]
+        let scheduler = CommutePreArmScheduler(apiClient: apiClient)
+
+        await scheduler.synchronise(routines: [routine(departureTime: "08:12")], accessToken: "token", now: now)
+
+        XCTAssertEqual(apiClient.preArmRequests.count, 1)
+        XCTAssertEqual(apiClient.deleteScheduledArmRequests.map(\.id), ["old-time"])
+    }
+
+    @MainActor
+    func testAFailedQueueReadIsRetriedOnTheNextSynchronise() async {
+        let now = date("2026-09-28T05:00:00Z")
+        let apiClient = FakeAPIClient()
+        apiClient.listScheduledArmsError = TestFailure.unimplemented
+        let scheduler = CommutePreArmScheduler(apiClient: apiClient)
+
+        await scheduler.synchronise(routines: [], accessToken: "token", now: now)
+        apiClient.listScheduledArmsError = nil
+        apiClient.scheduledArms = [queuedArm(id: "stale", departureStart: "2026-09-29T06:42:00Z")]
+        await scheduler.synchronise(routines: [], accessToken: "token", now: now.addingTimeInterval(60))
+
+        XCTAssertEqual(apiClient.listScheduledArmsRequests.count, 2)
+        XCTAssertEqual(apiClient.deleteScheduledArmRequests.map(\.id), ["stale"])
+
+        // Once reconciled, the same empty week is left alone until the interval passes.
+        await scheduler.synchronise(routines: [], accessToken: "token", now: now.addingTimeInterval(120))
+        XCTAssertEqual(apiClient.listScheduledArmsRequests.count, 2)
+    }
 }

@@ -148,6 +148,10 @@ final class CommuteRoutinesCloudKitTests: XCTestCase {
         XCTAssertTrue(viewModel.routines.isEmpty)
         XCTAssertTrue(viewModel.isWaitingOnICloud)
         XCTAssertTrue(apiClient.preArmRequests.isEmpty)
+        // An unreadable iCloud is not an empty commute list, so nothing queued
+        // on the backend may be removed on its account.
+        XCTAssertTrue(apiClient.listScheduledArmsRequests.isEmpty)
+        XCTAssertTrue(apiClient.deleteScheduledArmRequests.isEmpty)
         XCTAssertTrue(cloudKit.seedCalls.isEmpty)
     }
 

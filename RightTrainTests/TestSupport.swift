@@ -109,6 +109,8 @@ final class FakeAPIClient: APIClienting {
     var deleteCommuteRoutineError: Error?
     var preArmError: Error?
     var preArmResponse: PreArmCommuteDeparturesResponse?
+    var scheduledArms: [ScheduledArm] = []
+    var listScheduledArmsError: Error?
     var deleteUserError: Error?
     var registerLiveActivityTokenError: Error?
     var registerLiveActivityPushToStartTokenError: Error?
@@ -171,6 +173,8 @@ final class FakeAPIClient: APIClienting {
     var updateCommuteRoutineRequests: [(id: String, input: CommuteRoutineMutationRequest, accessToken: String)] = []
     var deleteCommuteRoutineRequests: [(id: String, accessToken: String)] = []
     var preArmRequests: [(input: PreArmCommuteDeparturesRequest, accessToken: String)] = []
+    var listScheduledArmsRequests: [String] = []
+    var deleteScheduledArmRequests: [(id: String, accessToken: String)] = []
     var registerLiveActivityTokenRequests: [(windowID: String, activityKind: String, input: RegisterLiveActivityTokenRequest, accessToken: String)] = []
     var registerItineraryLiveActivityTokenRequests: [(itineraryID: String, activityKind: String, input: RegisterLiveActivityTokenRequest, accessToken: String)] = []
     var registerLiveActivityPushToStartTokenRequests: [(clientDeviceID: String, activityID: String, input: RegisterLiveActivityTokenRequest, accessToken: String)] = []
@@ -559,6 +563,19 @@ final class FakeAPIClient: APIClienting {
             scheduled: [],
             skipped: []
         )
+    }
+
+    func listScheduledArms(accessToken: String) async throws -> [ScheduledArm] {
+        listScheduledArmsRequests.append(accessToken)
+        if let listScheduledArmsError {
+            throw listScheduledArmsError
+        }
+        return scheduledArms
+    }
+
+    func deleteScheduledArm(id: String, accessToken: String) async throws {
+        deleteScheduledArmRequests.append((id, accessToken))
+        scheduledArms.removeAll { $0.id == id }
     }
 
     func registerLiveActivityToken(
