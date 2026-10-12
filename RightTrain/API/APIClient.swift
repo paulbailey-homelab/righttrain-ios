@@ -102,6 +102,8 @@ protocol APIClienting {
     func updateCommuteRoutine(id: String, input: CommuteRoutineMutationRequest, accessToken: String) async throws -> CommuteRoutine
     func deleteCommuteRoutine(id: String, accessToken: String) async throws
     func preArmCommuteDepartures(input: PreArmCommuteDeparturesRequest, accessToken: String) async throws -> PreArmCommuteDeparturesResponse
+    func listScheduledArms(accessToken: String) async throws -> [ScheduledArm]
+    func deleteScheduledArm(id: String, accessToken: String) async throws
     func registerLiveActivityToken(
         windowSubscriptionID: String,
         activityKind: String,
@@ -758,6 +760,18 @@ struct APIClient {
             method: "POST",
             accessToken: accessToken,
             body: input
+        )
+    }
+
+    func listScheduledArms(accessToken: String) async throws -> [ScheduledArm] {
+        try await send(path: "/v1/commute/pre-arms", accessToken: accessToken)
+    }
+
+    func deleteScheduledArm(id: String, accessToken: String) async throws {
+        try await send(
+            path: "/v1/commute/pre-arms/\(id)",
+            method: "DELETE",
+            accessToken: accessToken
         )
     }
 

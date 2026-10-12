@@ -115,8 +115,15 @@ final class CommutePreArmScheduler {
         self.apiClient = apiClient
     }
 
-    /// Posts the next week of departures, unless the same week has already
-    /// been posted recently.
+    /// Brings the backend's queue in line with the next week of departures:
+    /// posts what the routines want, and removes anything queued that they no
+    /// longer want. Skipped when the same week was synchronised recently.
+    ///
+    /// The removal matters as much as the post. The queue outlives the
+    /// routines that filled it by up to a week, so a commute deleted, paused
+    /// or moved to another time, or a list that came back empty, would
+    /// otherwise keep arming windows and sending "your commute is being
+    /// watched" for a commute the app no longer shows.
     ///
     /// Failures are swallowed: pre-arming runs behind the user's back, and a
     /// backend that is briefly unreachable is not something to interrupt them
@@ -124,14 +131,10 @@ final class CommutePreArmScheduler {
     func synchronise(routines: [CommuteRoutine], accessToken: String, now: Date = Date()) async {
         guard !isPosting else { return }
         let departures = CommutePreArmPlanner.departures(for: routines, from: now)
-        guard !departures.isEmpty else {
-            // Nothing to arm is a real state — every routine paused, or none
-            // yet — and clearing the signature means the next routine added
-            // posts immediately rather than waiting out the interval.
-            lastPostedSignature = nil
-            return
-        }
 
+        // An empty week has a signature too, so that "nothing wanted" is
+        // reconciled once and then left alone, and the first routine added
+        // afterwards changes the signature and posts straight away.
         let signature = Self.signature(for: departures)
         if signature == lastPostedSignature,
            let lastPostedAt,
@@ -141,22 +144,86 @@ final class CommutePreArmScheduler {
 
         isPosting = true
         defer { isPosting = false }
-        do {
-            let response = try await apiClient.preArmCommuteDepartures(
-                input: PreArmCommuteDeparturesRequest(departures: departures),
-                accessToken: accessToken
-            )
+
+        var succeeded = true
+        if !departures.isEmpty {
+            do {
+                let response = try await apiClient.preArmCommuteDepartures(
+                    input: PreArmCommuteDeparturesRequest(departures: departures),
+                    accessToken: accessToken
+                )
+                logger.notice("pre-armed \(response.scheduled.count, privacy: .public) departures, \(response.skipped.count, privacy: .public) skipped")
+                if !response.skipped.isEmpty {
+                    let reasons = Set(response.skipped.map(\.reason)).sorted().joined(separator: ",")
+                    BetaDiagnostics.record("prearm_skipped", details: "count=\(response.skipped.count) reasons=\(reasons)")
+                }
+            } catch {
+                succeeded = false
+                logger.error("pre-arm post failed: \(error.localizedDescription, privacy: .public)")
+                BetaDiagnostics.record("prearm_failed", details: error.localizedDescription, severity: .warning)
+            }
+        }
+
+        let reconciled = await removeUnwantedArms(keeping: departures, accessToken: accessToken)
+        if !reconciled {
+            succeeded = false
+        }
+
+        if succeeded {
             lastPostedSignature = signature
             lastPostedAt = now
-            logger.notice("pre-armed \(response.scheduled.count, privacy: .public) departures, \(response.skipped.count, privacy: .public) skipped")
-            if !response.skipped.isEmpty {
-                let reasons = Set(response.skipped.map(\.reason)).sorted().joined(separator: ",")
-                BetaDiagnostics.record("prearm_skipped", details: "count=\(response.skipped.count) reasons=\(reasons)")
-            }
-        } catch {
-            logger.error("pre-arm post failed: \(error.localizedDescription, privacy: .public)")
-            BetaDiagnostics.record("prearm_failed", details: error.localizedDescription, severity: .warning)
         }
+    }
+
+    /// Deletes queued departures the current routines do not produce. Returns
+    /// false when the queue could not be read or a delete failed, so the next
+    /// synchronise tries again rather than waiting out the interval.
+    ///
+    /// Only departures not yet armed are removed. An armed one already has its
+    /// window subscription, which deleting the queue row would not stop; that
+    /// window is a pin the user can see and cancel like any other.
+    private func removeUnwantedArms(keeping departures: [PreArmCommuteDeparture], accessToken: String) async -> Bool {
+        let queued: [ScheduledArm]
+        do {
+            queued = try await apiClient.listScheduledArms(accessToken: accessToken)
+        } catch {
+            logger.error("pre-arm list failed: \(error.localizedDescription, privacy: .public)")
+            BetaDiagnostics.record("prearm_list_failed", details: error.localizedDescription, severity: .warning)
+            return false
+        }
+
+        let wanted = Set(departures.map {
+            Self.queueKey(origin: $0.originCrs, destination: $0.destinationCrs, departureStart: $0.departureStart, windowMinutes: $0.windowMinutes)
+        })
+        let unwanted = queued.filter { arm in
+            arm.armedAt == nil && !wanted.contains(
+                Self.queueKey(origin: arm.originCrs, destination: arm.destinationCrs, departureStart: arm.departureStart, windowMinutes: arm.windowMinutes)
+            )
+        }
+        guard !unwanted.isEmpty else { return true }
+
+        var removed = 0
+        for arm in unwanted {
+            do {
+                try await apiClient.deleteScheduledArm(id: arm.id, accessToken: accessToken)
+                removed += 1
+            } catch APIError.server(let statusCode, _, _, _) where statusCode == 404 {
+                // Already gone, armed and pruned, or removed by another device.
+                removed += 1
+            } catch {
+                logger.error("pre-arm delete failed: \(error.localizedDescription, privacy: .public)")
+            }
+        }
+        logger.notice("removed \(removed, privacy: .public) of \(unwanted.count, privacy: .public) unwanted pre-armed departures")
+        BetaDiagnostics.record("prearm_removed", details: "removed=\(removed) unwanted=\(unwanted.count) queued=\(queued.count)")
+        return removed == unwanted.count
+    }
+
+    /// What identifies one queued departure. The backend truncates the start
+    /// to the minute and stores it in UTC, so the comparison does the same.
+    static func queueKey(origin: String, destination: String, departureStart: Date, windowMinutes: Int) -> String {
+        let minute = Int((departureStart.timeIntervalSince1970 / 60).rounded(.down))
+        return "\(origin.uppercased())>\(destination.uppercased())@\(minute)/\(windowMinutes)"
     }
 
     func clearState() {
